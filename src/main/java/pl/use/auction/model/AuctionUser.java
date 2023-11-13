@@ -18,4 +18,13 @@ public class AuctionUser {
     private String email;
 
     private String password;
+
+    @Override
+    public String toString() {
+        return "AuctionUser{" +
+                "id=" + id +
+                ", email='" + email + '\'' +
+                ", password='" + password + '\'' +
+                '}';
+    }
 }
