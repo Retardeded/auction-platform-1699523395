@@ -19,12 +19,17 @@ public class AuctionUser {
 
     private String password;
 
+    private boolean isVerified = false;
+    private String verificationToken;
+
+
     @Override
     public String toString() {
         return "AuctionUser{" +
                 "id=" + id +
                 ", email='" + email + '\'' +
                 ", password='" + password + '\'' +
+                ", verificationToken='" + verificationToken + '\'' +
                 '}';
     }
 }

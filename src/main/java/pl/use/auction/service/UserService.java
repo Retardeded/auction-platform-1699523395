@@ -1,6 +1,8 @@
 package pl.use.auction.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -24,19 +26,33 @@ public class UserService implements UserDetailsService {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
-    public AuctionUser registerNewUser(UserRegistrationDto registrationDto) {
+    @Autowired
+    private JavaMailSender mailSender;
+
+    public void sendVerificationEmail(AuctionUser user, String token) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(user.getEmail());
+        message.setSubject("Verify your email");
+        message.setText("Thank you for registering. Please click the link below to verify your email: \n"
+                + "http://localhost:8080/verify?token=" + token);
+        mailSender.send(message);
+    }
+
+    public AuctionUser registerNewUser(UserRegistrationDto registrationDto, String token) {
         AuctionUser auctionUser = new AuctionUser();
         auctionUser.setEmail(registrationDto.getEmail());
         auctionUser.setPassword(passwordEncoder.encode(registrationDto.getPassword()));
+        auctionUser.setVerificationToken(token);
         return userRepository.save(auctionUser);
     }
 
     public boolean authenticateUser(UserLoginDto userLoginDto) {
         Optional<AuctionUser> user = userRepository.findByEmail(userLoginDto.getEmail());
-        var users = getAllUsers();
-        System.out.println(users);
-        if (user.isPresent() && user.get().getPassword().equals(userLoginDto.getPassword())) {
-            return true;
+        if (user.isPresent()) {
+            AuctionUser auctionUser = user.get();
+            if (passwordEncoder.matches(userLoginDto.getPassword(), auctionUser.getPassword()) && auctionUser.isVerified()) {
+                return true;
+            }
         }
         return false;
     }
@@ -54,6 +70,11 @@ public class UserService implements UserDetailsService {
         }
 
         AuctionUser auctionUser = user.get();
+        if (!auctionUser.isVerified()) {
+            throw new UsernameNotFoundException("User not verified");
+        }
+
         return new User(auctionUser.getEmail(), auctionUser.getPassword(), new ArrayList<>());
     }
+
 }
