@@ -27,6 +27,15 @@ public class SecurityConfig {
                         .usernameParameter("email")
                         .defaultSuccessUrl("/home", true)
                         .permitAll())
+                .logout(logout -> logout
+                        .logoutSuccessUrl("/login?logout") // Redirect after logout
+                        .invalidateHttpSession(true) // Invalidate session
+                        .deleteCookies("JSESSIONID") // Delete cookies
+                )
+                .sessionManagement(session -> session
+                        .sessionFixation().migrateSession() // Protect against session fixation attacks
+                        .maximumSessions(1).expiredUrl("/login?expired") // Handle concurrent sessions
+                )
                 .exceptionHandling(exception -> exception
                         .accessDeniedPage("/login"));
 

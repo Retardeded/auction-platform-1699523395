@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import pl.use.auction.dto.UserRegistrationDto;
 import pl.use.auction.model.AuctionUser;
 import pl.use.auction.repository.UserRepository;
@@ -29,17 +30,17 @@ public class RegistrationController {
     }
 
     @PostMapping("/register")
-    public String registerUserAccount(@ModelAttribute("userRegister") UserRegistrationDto registrationDto) {
+    public String registerUserAccount(@ModelAttribute("userRegister") UserRegistrationDto registrationDto,
+                                      RedirectAttributes redirectAttributes) {
         String verificationToken = UUID.randomUUID().toString();
         var newUser = userService.registerNewUser(registrationDto, verificationToken);
 
-        System.out.println(newUser);
-
         userService.sendVerificationEmail(newUser, verificationToken);
+        redirectAttributes.addFlashAttribute("email", newUser.getEmail());
         return "redirect:/thank-you";
     }
     @GetMapping("/thank-you")
-    public String thankYou() {
+    public String thankYou(Model model) {
         return "thank-you"; // name of the HTML file without the extension
     }
 
