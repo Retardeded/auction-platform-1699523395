@@ -46,17 +46,6 @@ public class UserService implements UserDetailsService {
         return userRepository.save(auctionUser);
     }
 
-    public boolean authenticateUser(UserLoginDto userLoginDto) {
-        Optional<AuctionUser> user = userRepository.findByEmail(userLoginDto.getEmail());
-        if (user.isPresent()) {
-            AuctionUser auctionUser = user.get();
-            if (passwordEncoder.matches(userLoginDto.getPassword(), auctionUser.getPassword()) && auctionUser.isVerified()) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     public List<AuctionUser> getAllUsers() {
         return userRepository.findAll();
     }
@@ -65,7 +54,7 @@ public class UserService implements UserDetailsService {
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
         Optional<AuctionUser> user = userRepository.findByEmail(email);
 
-        if (!user.isPresent()) {
+        if (user.isEmpty()) {
             throw new UsernameNotFoundException("User not found with email: " + email);
         }
 
