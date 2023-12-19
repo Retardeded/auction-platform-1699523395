@@ -1,6 +1,8 @@
 package pl.use.auction.service;
 
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.core.userdetails.User;
@@ -13,9 +15,11 @@ import pl.use.auction.dto.UserRegistrationDto;
 import pl.use.auction.model.AuctionUser;
 import pl.use.auction.repository.UserRepository;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 public class UserService implements UserDetailsService {
@@ -28,12 +32,18 @@ public class UserService implements UserDetailsService {
     @Autowired
     private JavaMailSender mailSender;
 
+    @Value("${spring.mail.username}")
+    private String fromEmailAddress;
+
+    @Value("${app.url}")
+    private String appUrl;
+
     public void sendVerificationEmail(AuctionUser user, String token) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(user.getEmail());
         message.setSubject("Verify your email");
         message.setText("Thank you for registering. Please click the link below to verify your email: \n"
-                + "http://localhost:8080/verify?token=" + token);
+                + appUrl + "/verify?token=" + token);
         mailSender.send(message);
     }
 
@@ -63,6 +73,54 @@ public class UserService implements UserDetailsService {
         }
 
         return new User(auctionUser.getEmail(), auctionUser.getPassword(), new ArrayList<>());
+    }
+
+    @Transactional
+    public void processForgotPassword(String userEmail) {
+        Optional<AuctionUser> userOptional = userRepository.findByEmail(userEmail);
+        if (userOptional.isPresent()) {
+            AuctionUser user = userOptional.get();
+
+            String token = UUID.randomUUID().toString();
+            user.setResetToken(token);
+            user.setResetTokenExpiryTime(LocalDateTime.now().plusHours(1)); // Token valid for 1 hour
+            userRepository.save(user);
+
+            String resetUrl = appUrl + "/reset-password?token=" + token;
+
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setTo(userEmail);
+            message.setSubject("Password Reset Request");
+            message.setText("To reset your password, click the link below:\n" + resetUrl);
+            mailSender.send(message);
+        } else {
+            // Optionally handle the case where the email does not exist in the database
+        }
+    }
+
+    @Transactional
+    public void resetPassword(String token, String newPassword) {
+        // Find the user by the reset token
+        Optional<AuctionUser> userOptional = userRepository.findByResetToken(token);
+
+        if (userOptional.isPresent()) {
+            AuctionUser user = userOptional.get();
+
+            if (user.getResetTokenExpiryTime().isAfter(LocalDateTime.now())) {
+
+                user.setPassword(passwordEncoder.encode(newPassword));
+                user.setResetToken(null);
+                user.setResetTokenExpiryTime(null);
+
+                userRepository.save(user);
+            } else {
+                // Token has expired
+                // Handle the expired token case appropriately
+            }
+        } else {
+            // Token is invalid
+            // Handle the invalid token case appropriately
+        }
     }
 
 }

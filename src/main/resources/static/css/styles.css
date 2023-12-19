@@ -12,6 +12,9 @@ body {
 form, button {
     margin-top: 20px;
 }
+form {
+    margin-bottom: 10px;
+}
 .container {
     background: #fff;
     padding: 20px;

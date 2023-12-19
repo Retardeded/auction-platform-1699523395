@@ -20,6 +20,10 @@ public class SecurityConfig {
                         .requestMatchers(new AntPathRequestMatcher("/login")).permitAll()
                         .requestMatchers(new AntPathRequestMatcher("/thank-you")).permitAll()
                         .requestMatchers(new AntPathRequestMatcher("/verify")).permitAll()
+                        .requestMatchers(new AntPathRequestMatcher("/forgot-password")).permitAll()
+                        .requestMatchers(new AntPathRequestMatcher("/password-reset-requested")).permitAll()
+                        .requestMatchers(new AntPathRequestMatcher("/reset-password")).permitAll()
+                        .requestMatchers(new AntPathRequestMatcher("/password-reset-success")).permitAll()
                         .requestMatchers(new AntPathRequestMatcher("/css/**")).permitAll()
                         .anyRequest().authenticated())
                 .formLogin(form -> form
