@@ -12,6 +12,8 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import pl.use.auction.dto.UserRegistrationDto;
+import pl.use.auction.exception.InvalidTokenException;
+import pl.use.auction.exception.TokenExpiredException;
 import pl.use.auction.model.AuctionUser;
 import pl.use.auction.repository.UserRepository;
 
@@ -93,14 +95,11 @@ public class UserService implements UserDetailsService {
             message.setSubject("Password Reset Request");
             message.setText("To reset your password, click the link below:\n" + resetUrl);
             mailSender.send(message);
-        } else {
-            // Optionally handle the case where the email does not exist in the database
         }
     }
 
     @Transactional
     public void resetPassword(String token, String newPassword) {
-        // Find the user by the reset token
         Optional<AuctionUser> userOptional = userRepository.findByResetToken(token);
 
         if (userOptional.isPresent()) {
@@ -114,12 +113,10 @@ public class UserService implements UserDetailsService {
 
                 userRepository.save(user);
             } else {
-                // Token has expired
-                // Handle the expired token case appropriately
+                throw new TokenExpiredException("The token has expired.");
             }
         } else {
-            // Token is invalid
-            // Handle the invalid token case appropriately
+            throw new InvalidTokenException("The token is invalid.");
         }
     }
 

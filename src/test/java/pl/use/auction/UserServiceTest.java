@@ -6,16 +6,21 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import pl.use.auction.dto.UserRegistrationDto;
+import pl.use.auction.exception.InvalidTokenException;
+import pl.use.auction.exception.TokenExpiredException;
 import pl.use.auction.model.AuctionUser;
 import pl.use.auction.repository.UserRepository;
 import pl.use.auction.service.UserService;
+import org.mockito.ArgumentCaptor;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.mockito.Mockito.*;
@@ -36,6 +41,8 @@ public class UserServiceTest {
     @InjectMocks
     private UserService userService;
 
+    @Value("${app.url}")
+    private String appUrl;
 
     @Test
     public void whenRegisterNewUser_thenSaveUser() {
@@ -111,6 +118,83 @@ public class UserServiceTest {
         SimpleMailMessage sentEmail = mailCaptor.getValue();
         assertEquals("test@example.com", sentEmail.getTo()[0]);
         assertEquals("Verify your email", sentEmail.getSubject());
-        assertTrue(sentEmail.getText().contains("http://localhost:8080/verify?token=" + token));
+        assertTrue(sentEmail.getText().contains( appUrl + "/verify?token=" + token));
+    }
+
+    @Test
+    public void whenProcessForgotPassword_thenGenerateTokenAndSendEmail() {
+        String userEmail = "test@example.com";
+        AuctionUser user = new AuctionUser();
+        user.setEmail(userEmail);
+        user.setVerified(true);
+
+        when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(user));
+
+        ArgumentCaptor<AuctionUser> userCaptor = ArgumentCaptor.forClass(AuctionUser.class);
+
+        userService.processForgotPassword(userEmail);
+
+        verify(userRepository).save(userCaptor.capture());
+        AuctionUser savedUser = userCaptor.getValue();
+        assertNotNull(savedUser.getResetToken());
+        assertTrue(savedUser.getResetTokenExpiryTime().isAfter(LocalDateTime.now()));
+
+        ArgumentCaptor<SimpleMailMessage> mailCaptor = ArgumentCaptor.forClass(SimpleMailMessage.class);
+        verify(mailSender).send(mailCaptor.capture());
+
+        SimpleMailMessage sentEmail = mailCaptor.getValue();
+        assertEquals(userEmail, sentEmail.getTo()[0]);
+        assertTrue(sentEmail.getText().contains(appUrl + "/reset-password?token=" + savedUser.getResetToken()));
+    }
+
+    @Test
+    public void whenResetPasswordWithValidToken_thenResetPassword() {
+        String token = "validToken";
+        String newPassword = "newPassword";
+        AuctionUser user = new AuctionUser();
+        user.setEmail("user@example.com");
+        user.setResetToken(token);
+        user.setResetTokenExpiryTime(LocalDateTime.now().plusHours(1));
+
+        when(userRepository.findByResetToken(token)).thenReturn(Optional.of(user));
+        when(passwordEncoder.encode(newPassword)).thenReturn("encodedNewPassword");
+
+        ArgumentCaptor<AuctionUser> userCaptor = ArgumentCaptor.forClass(AuctionUser.class);
+
+        userService.resetPassword(token, newPassword);
+
+        verify(userRepository).save(userCaptor.capture());
+        AuctionUser updatedUser = userCaptor.getValue();
+        assertEquals("encodedNewPassword", updatedUser.getPassword());
+        assertNull(updatedUser.getResetToken());
+        assertNull(updatedUser.getResetTokenExpiryTime());
+    }
+
+    @Test
+    public void whenResetPasswordWithExpiredToken_thenThrowTokenExpiredException() {
+        String token = "expiredToken";
+        String newPassword = "newPassword";
+        AuctionUser user = new AuctionUser();
+        user.setEmail("user@example.com");
+        user.setResetToken(token);
+        user.setResetTokenExpiryTime(LocalDateTime.now().minusHours(1)); // Token has expired
+
+        when(userRepository.findByResetToken(token)).thenReturn(Optional.of(user));
+
+        assertThrows(TokenExpiredException.class, () -> {
+            userService.resetPassword(token, newPassword);
+        });
+    }
+
+    @Test
+    public void whenResetPasswordWithInvalidToken_thenThrowInvalidTokenException() {
+        String token = "invalidToken";
+        String newPassword = "newPassword";
+
+        when(userRepository.findByResetToken(token)).thenReturn(Optional.empty());
+
+        assertThrows(InvalidTokenException.class, () -> {
+            userService.resetPassword(token, newPassword);
+        });
     }
 }
