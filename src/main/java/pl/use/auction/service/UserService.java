@@ -15,6 +15,7 @@ import pl.use.auction.dto.UserRegistrationDto;
 import pl.use.auction.exception.InvalidTokenException;
 import pl.use.auction.exception.TokenExpiredException;
 import pl.use.auction.model.AuctionUser;
+import pl.use.auction.model.PasswordChangeResult;
 import pl.use.auction.repository.UserRepository;
 
 import java.time.LocalDateTime;
@@ -76,6 +77,20 @@ public class UserService implements UserDetailsService {
         }
 
         return new User(auctionUser.getEmail(), auctionUser.getPassword(), new ArrayList<>());
+    }
+    @Transactional
+    public PasswordChangeResult changeUserPassword(String oldPassword, String newPassword, String confirmNewPassword, AuctionUser user) {
+        if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
+            return PasswordChangeResult.INVALID_OLD_PASSWORD;
+        }
+
+        if (!newPassword.equals(confirmNewPassword)) {
+            return PasswordChangeResult.PASSWORD_MISMATCH;
+        }
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+        return PasswordChangeResult.SUCCESS;
     }
 
     @Transactional
