@@ -15,17 +15,17 @@ public class ForgotPasswordController {
 
     @GetMapping("/forgot-password")
     public String displayForgotPasswordPage() {
-        return "forgot-password";
+        return "authentication/forgot-password";
     }
 
     @PostMapping("/forgot-password")
     public String processForgotPasswordForm(@RequestParam("email") String userEmail) {
         userService.processForgotPassword(userEmail);
-        return "redirect:/password-reset-requested";
+        return "redirect:/authentication/password-reset-requested";
     }
 
     @GetMapping("/password-reset-requested")
     public String displayPasswordResetRequested() {
-        return "password-reset-requested";
+        return "authentication/password-reset-requested";
     }
 }

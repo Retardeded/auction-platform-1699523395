@@ -26,9 +26,8 @@ public class RegistrationController {
     @GetMapping("/register")
     public String showRegistrationForm(Model model) {
         model.addAttribute("userRegister", new UserRegistrationDto());
-        return "register";
+        return "authentication/register";
     }
-
     @PostMapping("/register")
     public String registerUserAccount(@ModelAttribute("userRegister") UserRegistrationDto registrationDto,
                                       RedirectAttributes redirectAttributes) {
@@ -37,11 +36,11 @@ public class RegistrationController {
 
         userService.sendVerificationEmail(newUser, verificationToken);
         redirectAttributes.addFlashAttribute("email", newUser.getEmail());
-        return "redirect:/thank-you";
+        return "redirect:/authentication/thank-you";
     }
     @GetMapping("/thank-you")
     public String thankYou(Model model) {
-        return "thank-you"; // name of the HTML file without the extension
+        return "authentication/thank-you"; // name of the HTML file without the extension
     }
 
     @GetMapping("/verify")
@@ -54,7 +53,7 @@ public class RegistrationController {
 
             System.out.println("User Verified: " + auctionUser.getEmail());
 
-            return "redirect:/login";
+            return "redirect:/authentication/login";
         } else {
             return "error";
         }

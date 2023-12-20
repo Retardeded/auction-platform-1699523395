@@ -52,6 +52,7 @@ public class UserService implements UserDetailsService {
     public AuctionUser registerNewUser(UserRegistrationDto registrationDto, String token) {
         AuctionUser auctionUser = new AuctionUser();
         auctionUser.setEmail(registrationDto.getEmail());
+        auctionUser.setUsername(registrationDto.getUsername());
         auctionUser.setPassword(passwordEncoder.encode(registrationDto.getPassword()));
         auctionUser.setVerificationToken(token);
         return userRepository.save(auctionUser);

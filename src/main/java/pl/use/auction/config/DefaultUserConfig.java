@@ -17,6 +17,7 @@ public class DefaultUserConfig {
             if (userRepository.findByEmail("default@gmail.com").isEmpty()) {
                 AuctionUser defaultUser = new AuctionUser();
                 defaultUser.setEmail("default@gmail.com");
+                defaultUser.setUsername("default");
                 defaultUser.setPassword(passwordEncoder.encode("default"));
                 defaultUser.setVerified(true);
                 userRepository.save(defaultUser);

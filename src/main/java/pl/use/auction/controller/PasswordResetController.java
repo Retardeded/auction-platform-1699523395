@@ -20,7 +20,7 @@ public class PasswordResetController {
     @GetMapping("/reset-password")
     public String displayResetPasswordPage(@RequestParam("token") String token, Model model) {
         model.addAttribute("token", token);
-        return "reset-password";
+        return "authentication/reset-password";
     }
 
     @PostMapping("/reset-password")
@@ -36,11 +36,11 @@ public class PasswordResetController {
         } catch (InvalidTokenException ex) {
             redirectAttributes.addFlashAttribute("error", "The reset token is invalid.");
         }
-        return "redirect:/reset-password?token=" + token;
+        return "redirect:/authentication/reset-password?token=" + token;
     }
 
     @GetMapping("/password-reset-success")
     public String displayPasswordResetSuccess() {
-        return "password-reset-success";
+        return "authentication/password-reset-success";
     }
 }
