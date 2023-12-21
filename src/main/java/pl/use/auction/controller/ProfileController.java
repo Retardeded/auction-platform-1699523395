@@ -11,10 +11,15 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import pl.use.auction.model.Auction;
 import pl.use.auction.model.AuctionUser;
 import pl.use.auction.model.PasswordChangeResult;
+import pl.use.auction.repository.AuctionRepository;
 import pl.use.auction.repository.UserRepository;
 import pl.use.auction.service.UserService;
+
+import java.time.LocalDateTime;
+import java.util.List;
 
 @Controller
 public class ProfileController {
@@ -24,6 +29,24 @@ public class ProfileController {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private AuctionRepository auctionRepository;
+
+    @GetMapping("/profile/auctions")
+    public String viewUserAuctions(Model model, Authentication authentication) {
+        String currentUserName = authentication.getName();
+        AuctionUser user = userRepository.findByEmail(currentUserName)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+        List<Auction> ongoingAuctions = auctionRepository.findByUserAndEndTimeAfter(user, LocalDateTime.now());
+        List<Auction> pastAuctions = auctionRepository.findByUserAndEndTimeBefore(user, LocalDateTime.now());
+
+        model.addAttribute("ongoingAuctions", ongoingAuctions);
+        model.addAttribute("pastAuctions", pastAuctions);
+
+        return "user-auctions";
+    }
 
     @GetMapping("/profile")
     public String viewProfile(Model model) {
