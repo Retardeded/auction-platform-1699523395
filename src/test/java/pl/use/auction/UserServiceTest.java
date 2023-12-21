@@ -16,6 +16,7 @@ import pl.use.auction.dto.UserRegistrationDto;
 import pl.use.auction.exception.InvalidTokenException;
 import pl.use.auction.exception.TokenExpiredException;
 import pl.use.auction.model.AuctionUser;
+import pl.use.auction.model.PasswordChangeResult;
 import pl.use.auction.repository.UserRepository;
 import pl.use.auction.service.UserService;
 import org.mockito.ArgumentCaptor;
@@ -196,5 +197,53 @@ public class UserServiceTest {
         assertThrows(InvalidTokenException.class, () -> {
             userService.resetPassword(token, newPassword);
         });
+    }
+
+    @Test
+    public void whenChangePasswordWithValidOldPassword_thenSuccess() {
+        String oldPassword = "oldPassword";
+        String newPassword = "newPassword";
+        AuctionUser user = new AuctionUser();
+        user.setEmail("user@example.com");
+        user.setPassword(passwordEncoder.encode(oldPassword));
+
+        when(passwordEncoder.matches(oldPassword, user.getPassword())).thenReturn(true);
+
+        PasswordChangeResult result = userService.changeUserPassword(oldPassword, newPassword, newPassword, user);
+
+        verify(userRepository).save(any(AuctionUser.class));
+        assertEquals(PasswordChangeResult.SUCCESS, result);
+    }
+
+    @Test
+    public void whenChangePasswordWithInvalidOldPassword_thenFail() {
+        String oldPassword = "oldPassword";
+        String invalidOldPassword = "invalidOldPassword";
+        String newPassword = "newPassword";
+        AuctionUser user = new AuctionUser();
+        user.setEmail("user@example.com");
+        user.setPassword(passwordEncoder.encode(oldPassword));
+
+        when(passwordEncoder.matches(invalidOldPassword, user.getPassword())).thenReturn(false);
+
+        PasswordChangeResult result = userService.changeUserPassword(invalidOldPassword, newPassword, newPassword, user);
+
+        assertEquals(PasswordChangeResult.INVALID_OLD_PASSWORD, result);
+    }
+
+    @Test
+    public void whenChangePasswordWithMismatchedNewPasswords_thenFail() {
+        String oldPassword = "oldPassword";
+        String newPassword = "newPassword";
+        String confirmPassword = "confirmPassword";
+        AuctionUser user = new AuctionUser();
+        user.setEmail("user@example.com");
+        user.setPassword(passwordEncoder.encode(oldPassword));
+
+        when(passwordEncoder.matches(oldPassword, user.getPassword())).thenReturn(true);
+
+        PasswordChangeResult result = userService.changeUserPassword(oldPassword, newPassword, confirmPassword, user);
+
+        assertEquals(PasswordChangeResult.PASSWORD_MISMATCH, result);
     }
 }

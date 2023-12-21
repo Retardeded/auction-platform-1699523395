@@ -45,26 +45,24 @@ public class ProfileController {
         model.addAttribute("ongoingAuctions", ongoingAuctions);
         model.addAttribute("pastAuctions", pastAuctions);
 
-        return "user-auctions";
+        return "profile/user-auctions";
     }
 
     @GetMapping("/profile")
-    public String viewProfile(Model model) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    public String viewProfile(Model model, Authentication authentication) {
         String currentUserName = authentication.getName();
 
         AuctionUser user = userRepository.findByEmail(currentUserName).orElse(null);
         model.addAttribute("user", user);
-        return "profile";
+        return "profile/profile";
     }
 
     @GetMapping("/profile/edit")
-    public String editProfile(Model model) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    public String editProfile(Model model, Authentication authentication) {
         String currentUserName = authentication.getName();
         AuctionUser user = userRepository.findByEmail(currentUserName).orElse(null);
         model.addAttribute("user", user);
-        return "profile-edit";
+        return "profile/profile-edit";
     }
 
     @GetMapping("/profile/change-password")
@@ -74,7 +72,7 @@ public class ProfileController {
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
         model.addAttribute("user", user);
-        return "profile-change-password";
+        return "profile/profile-change-password";
     }
 
     @PostMapping("/profile/update")
