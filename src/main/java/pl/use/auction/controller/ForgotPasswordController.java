@@ -21,7 +21,7 @@ public class ForgotPasswordController {
     @PostMapping("/forgot-password")
     public String processForgotPasswordForm(@RequestParam("email") String userEmail) {
         userService.processForgotPassword(userEmail);
-        return "redirect:/authentication/password-reset-requested";
+        return "redirect:/password-reset-requested";
     }
 
     @GetMapping("/password-reset-requested")

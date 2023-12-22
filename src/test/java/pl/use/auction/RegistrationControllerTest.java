@@ -84,7 +84,7 @@ public class RegistrationControllerTest {
                         .param("email", registrationDto.getEmail())
                         .param("password", registrationDto.getPassword()))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/authentication/thank-you"));
+                .andExpect(redirectedUrl("/thank-you"));
 
         ArgumentCaptor<UserRegistrationDto> userCaptor = ArgumentCaptor.forClass(UserRegistrationDto.class);
         ArgumentCaptor<String> tokenCaptor = ArgumentCaptor.forClass(String.class);

@@ -72,7 +72,7 @@ public class ProfileController {
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
         model.addAttribute("user", user);
-        return "profile/profile-change-password";
+        return "profile/change-password";
     }
 
     @PostMapping("/profile/update")
@@ -97,7 +97,8 @@ public class ProfileController {
                                  @RequestParam("newPassword") String newPassword,
                                  @RequestParam("confirmNewPassword") String confirmNewPassword,
                                  Authentication authentication,
-                                 RedirectAttributes redirectAttributes) {
+                                 RedirectAttributes redirectAttributes,
+                                 Model model) {
         AuctionUser user = userRepository.findByEmail(authentication.getName())
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
@@ -105,18 +106,19 @@ public class ProfileController {
 
         switch (result) {
             case INVALID_OLD_PASSWORD:
-                redirectAttributes.addFlashAttribute("error", "The current password is incorrect.");
+                model.addAttribute("error", "The current password is incorrect.");
                 break;
             case PASSWORD_MISMATCH:
-                redirectAttributes.addFlashAttribute("error", "The new passwords do not match.");
+                model.addAttribute("error", "The new passwords do not match.");
+                break;
+            default:
+                model.addAttribute("error", "Password change failed.");
                 break;
             case SUCCESS:
                 redirectAttributes.addFlashAttribute("message", "Password changed successfully!");
-                break;
-            default:
-                redirectAttributes.addFlashAttribute("error", "Password change failed.");
+                return "redirect:/profile";
         }
-
-        return "redirect:/profile";
+        model.addAttribute("user", user);
+        return "profile/change-password";
     }
 }
