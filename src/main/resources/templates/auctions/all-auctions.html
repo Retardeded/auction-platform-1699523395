@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <title>All Ongoing Auctions</title>
+  <link th:href="@{/css/styles.css}" rel="stylesheet" />
+  <link th:href="@{/css/auction.css}" rel="stylesheet" />
+</head>
+<body>
+<div class="container">
+  <h1>All Ongoing Auctions</h1>
+  <div th:each="auction : ${ongoingAuctions}" class="auction-item">
+    <div class="auction-detail"><strong>Title:</strong> <span th:text="${auction.title}"></span></div>
+    <div class="auction-detail"><strong>Ends:</strong> <span th:text="${#temporals.format(auction.endTime, 'yyyy-MM-dd HH:mm')}"></span></div>
+    <div class="auction-detail"><strong>Current Bid:</strong> <span th:text="${auction.currentBid}"></span></div>
+  </div>
+
+  <button onclick="window.location.href='/auctions/create';" class="btn">Create Auction</button>
+
+  <a href="/home" class="btn">Back to Home</a>
+</div>
+</body>
+</html>

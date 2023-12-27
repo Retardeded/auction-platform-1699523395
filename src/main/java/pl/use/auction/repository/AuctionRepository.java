@@ -12,4 +12,6 @@ public interface AuctionRepository extends JpaRepository<Auction, Long> {
     List<Auction> findByUserAndEndTimeBefore(AuctionUser user, LocalDateTime now); // Past auctions
 
     List<Auction> findByUser(AuctionUser user);
+
+    List<Auction> findByEndTimeAfter(LocalDateTime time);
 }

@@ -3,31 +3,24 @@
 <head>
   <title>User Auctions</title>
   <link th:href="@{/css/styles.css}" rel="stylesheet" />
+  <link th:href="@{/css/auction.css}" rel="stylesheet" /> <!-- Include auction.css -->
 </head>
 <body>
 <div class="container">
   <h1>User Auctions</h1>
 
   <h2>Ongoing Auctions</h2>
-  <div th:each="auction : ${ongoingAuctions}">
-    <p th:text="${auction.title}"></p>
-    <p th:text="${auction.description}"></p>
-    <p>Starts: <span th:text="${#temporals.format(auction.startTime, 'yyyy-MM-dd HH:mm')}"></span></p>
-    <p>Ends: <span th:text="${#temporals.format(auction.endTime, 'yyyy-MM-dd HH:mm')}"></span></p>
-    <p>Starting Price: <span th:text="${auction.startingPrice}"></span></p>
-    <p>Current Bid: <span th:text="${auction.currentBid}"></span></p>
-    <p>Status: <span th:text="${auction.status}"></span></p>
+  <div th:each="auction : ${ongoingAuctions}" class="auction-item">
+    <div class="auction-detail"><strong>Title:</strong> <span th:text="${auction.title}"></span></div>
+    <div class="auction-detail"><strong>Ends:</strong> <span th:text="${#temporals.format(auction.endTime, 'yyyy-MM-dd HH:mm')}"></span></div>
+    <div class="auction-detail"><strong>Current Bid:</strong> <span th:text="${auction.currentBid}"></span></div>
   </div>
 
   <h2>Past Auctions</h2>
-  <div th:each="auction : ${pastAuctions}">
-    <p th:text="${auction.title}"></p>
-    <p th:text="${auction.description}"></p>
-    <p>Starts: <span th:text="${#temporals.format(auction.startTime, 'yyyy-MM-dd HH:mm')}"></span></p>
-    <p>Ends: <span th:text="${#temporals.format(auction.endTime, 'yyyy-MM-dd HH:mm')}"></span></p>
-    <p>Starting Price: <span th:text="${auction.startingPrice}"></span></p>
-    <p>Current Bid: <span th:text="${auction.currentBid}"></span></p>
-    <p>Status: <span th:text="${auction.status}"></span></p>
+  <div th:each="auction : ${pastAuctions}" class="auction-item">
+    <div class="auction-detail"><strong>Title:</strong> <span th:text="${auction.title}"></span></div>
+    <div class="auction-detail"><strong>Ends:</strong> <span th:text="${#temporals.format(auction.endTime, 'yyyy-MM-dd HH:mm')}"></span></div>
+    <div class="auction-detail"><strong>Final Bid:</strong> <span th:text="${auction.currentBid}"></span></div>
   </div>
 
   <a href="/profile" class="btn">Back to Profile</a>

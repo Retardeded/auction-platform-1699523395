@@ -15,48 +15,59 @@ import java.time.LocalDateTime;
 @Configuration
 public class DefaultUserConfig {
 
-    //class purely used for easier developing/testing stuff
     @Bean
-    CommandLineRunner createDefaultUserAndAuctions(UserRepository userRepository,
-                                                   AuctionRepository auctionRepository,
-                                                   PasswordEncoder passwordEncoder) {
+    CommandLineRunner createDefaultUsersAndAuctions(UserRepository userRepository,
+                                                    AuctionRepository auctionRepository,
+                                                    PasswordEncoder passwordEncoder) {
         return args -> {
-            AuctionUser defaultUser;
-            if (userRepository.findByEmail("default@gmail.com").isEmpty()) {
-                defaultUser = new AuctionUser();
-                defaultUser.setEmail("default@gmail.com");
-                defaultUser.setUsername("default");
-                defaultUser.setPassword(passwordEncoder.encode("default"));
-                defaultUser.setVerified(true);
-                userRepository.save(defaultUser);
-            } else {
-                defaultUser = userRepository.findByEmail("default@gmail.com").get();
-            }
+            AuctionUser defaultUser = createUserIfNotFound(userRepository, passwordEncoder, "default@gmail.com", "default", "default");
+
+            AuctionUser anotherUser = createUserIfNotFound(userRepository, passwordEncoder, "another@gmail.com", "another", "another");
 
             if (auctionRepository.findByUser(defaultUser).isEmpty()) {
-                // Create some sample ongoing and past auctions
-                Auction ongoingAuction = new Auction();
-                ongoingAuction.setTitle("Ongoing Auction 1");
-                ongoingAuction.setDescription("Description of ongoing auction");
-                ongoingAuction.setStartTime(LocalDateTime.now().minusDays(1));
-                ongoingAuction.setEndTime(LocalDateTime.now().plusDays(1));
-                ongoingAuction.setStartingPrice(BigDecimal.valueOf(100));
-                ongoingAuction.setCurrentBid(BigDecimal.valueOf(150));
-                ongoingAuction.setStatus("ONGOING");
-                ongoingAuction.setUser(defaultUser);
-                auctionRepository.save(ongoingAuction);
+                createSampleAuctions(auctionRepository, defaultUser);
+            }
 
-                Auction pastAuction = new Auction();
-                pastAuction.setTitle("Past Auction 1");
-                pastAuction.setDescription("Description of past auction");
-                pastAuction.setStartTime(LocalDateTime.now().minusDays(10));
-                pastAuction.setEndTime(LocalDateTime.now().minusDays(5));
-                pastAuction.setStartingPrice(BigDecimal.valueOf(50));
-                pastAuction.setCurrentBid(BigDecimal.valueOf(75));
-                pastAuction.setStatus("ENDED");
-                pastAuction.setUser(defaultUser);
-                auctionRepository.save(pastAuction);
+            if (auctionRepository.findByUser(anotherUser).isEmpty()) {
+                createSampleAuctions(auctionRepository, anotherUser);
             }
         };
+    }
+
+    private AuctionUser createUserIfNotFound(UserRepository userRepository, PasswordEncoder passwordEncoder, String email, String username, String password) {
+        return userRepository.findByEmail(email).orElseGet(() -> {
+            AuctionUser user = new AuctionUser();
+            user.setEmail(email);
+            user.setUsername(username);
+            user.setPassword(passwordEncoder.encode(password));
+            user.setVerified(true);
+            return userRepository.save(user);
+        });
+    }
+
+    private void createSampleAuctions(AuctionRepository auctionRepository, AuctionUser user) {
+        String userIdentifier = user.getUsername().equals("default") ? "Default" : "Another";
+
+        Auction ongoingAuction = new Auction();
+        ongoingAuction.setTitle(userIdentifier + " User's Ongoing Auction");
+        ongoingAuction.setDescription("This is an ongoing auction created by " + userIdentifier + " user.");
+        ongoingAuction.setStartTime(LocalDateTime.now().minusDays(1));
+        ongoingAuction.setEndTime(LocalDateTime.now().plusDays(1));
+        ongoingAuction.setStartingPrice(BigDecimal.valueOf(100));
+        ongoingAuction.setCurrentBid(BigDecimal.valueOf(150));
+        ongoingAuction.setStatus("ONGOING");
+        ongoingAuction.setUser(user);
+        auctionRepository.save(ongoingAuction);
+
+        Auction pastAuction = new Auction();
+        pastAuction.setTitle(userIdentifier + " User's Past Auction");
+        pastAuction.setDescription("This is a past auction created by " + userIdentifier + " user.");
+        pastAuction.setStartTime(LocalDateTime.now().minusDays(10));
+        pastAuction.setEndTime(LocalDateTime.now().minusDays(5));
+        pastAuction.setStartingPrice(BigDecimal.valueOf(50));
+        pastAuction.setCurrentBid(BigDecimal.valueOf(75));
+        pastAuction.setStatus("ENDED");
+        pastAuction.setUser(user);
+        auctionRepository.save(pastAuction);
     }
 }
