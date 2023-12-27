@@ -2,16 +2,20 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <title>Home</title>
-    <!-- Add any CSS or JS links here -->
+    <link th:href="@{/css/styles.css}" rel="stylesheet" />
+    <link th:href="@{/css/home.css}" rel="stylesheet" /> <!-- Link to the home page CSS -->
 </head>
 <body>
-<h1>Welcome to the Home Page!</h1>
-<p>Logged in as: <span th:text="${username}"></span></p>
+<div class="container">
+    <h1>Welcome to the Home Page!</h1>
+    <p>Logged in as: <span th:text="${username}"></span></p>
 
-<form action="/logout" method="post">
-    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
-    <button type="submit">Logout</button>
-</form>
+    <button onclick="window.location.href='/profile';">View Profile</button>
 
+    <form action="/logout" method="post">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+        <button type="submit">Logout</button>
+    </form>
+</div>
 </body>
 </html>

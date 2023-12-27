@@ -3,6 +3,7 @@ package pl.use.auction.controller;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -26,22 +27,31 @@ public class RegistrationController {
     @GetMapping("/register")
     public String showRegistrationForm(Model model) {
         model.addAttribute("userRegister", new UserRegistrationDto());
-        return "register";
+        return "authentication/register";
     }
-
     @PostMapping("/register")
     public String registerUserAccount(@ModelAttribute("userRegister") UserRegistrationDto registrationDto,
-                                      RedirectAttributes redirectAttributes) {
-        String verificationToken = UUID.randomUUID().toString();
-        var newUser = userService.registerNewUser(registrationDto, verificationToken);
-
-        userService.sendVerificationEmail(newUser, verificationToken);
-        redirectAttributes.addFlashAttribute("email", newUser.getEmail());
-        return "redirect:/thank-you";
+                                      BindingResult result, RedirectAttributes redirectAttributes) {
+        if (result.hasErrors()) {
+            redirectAttributes.addFlashAttribute("org.springframework.validation.BindingResult.userRegister", result);
+            redirectAttributes.addFlashAttribute("userRegister", registrationDto);
+            return "redirect:/register";
+        }
+        try {
+            String verificationToken = UUID.randomUUID().toString();
+            var newUser = userService.registerNewUser(registrationDto, verificationToken);
+            userService.sendVerificationEmail(newUser, verificationToken);
+            redirectAttributes.addFlashAttribute("email", newUser.getEmail());
+            return "redirect:/thank-you";
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("registrationError", e.getMessage());
+            return "redirect:/register";
+        }
     }
+
     @GetMapping("/thank-you")
     public String thankYou(Model model) {
-        return "thank-you"; // name of the HTML file without the extension
+        return "authentication/thank-you";
     }
 
     @GetMapping("/verify")
@@ -54,7 +64,7 @@ public class RegistrationController {
 
             System.out.println("User Verified: " + auctionUser.getEmail());
 
-            return "redirect:/login";
+            return "redirect:/authentication/login";
         } else {
             return "error";
         }

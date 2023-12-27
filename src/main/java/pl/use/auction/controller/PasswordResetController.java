@@ -13,20 +13,25 @@ import pl.use.auction.service.UserService;
 
 @Controller
 public class PasswordResetController {
-
     @Autowired
     private UserService userService;
 
     @GetMapping("/reset-password")
     public String displayResetPasswordPage(@RequestParam("token") String token, Model model) {
         model.addAttribute("token", token);
-        return "reset-password";
+        return "authentication/reset-password";
     }
 
     @PostMapping("/reset-password")
     public String processResetPassword(@RequestParam("token") String token,
                                        @RequestParam("password") String password,
+                                       @RequestParam("confirmPassword") String confirmPassword,
                                        RedirectAttributes redirectAttributes) {
+        if (!password.equals(confirmPassword)) {
+            redirectAttributes.addFlashAttribute("error", "Passwords do not match.");
+            return "redirect:/reset-password?token=" + token;
+        }
+
         try {
             userService.resetPassword(token, password);
             redirectAttributes.addFlashAttribute("message", "Your password has been reset successfully.");
@@ -36,11 +41,12 @@ public class PasswordResetController {
         } catch (InvalidTokenException ex) {
             redirectAttributes.addFlashAttribute("error", "The reset token is invalid.");
         }
+
         return "redirect:/reset-password?token=" + token;
     }
 
     @GetMapping("/password-reset-success")
     public String displayPasswordResetSuccess() {
-        return "password-reset-success";
+        return "authentication/password-reset-success";
     }
 }

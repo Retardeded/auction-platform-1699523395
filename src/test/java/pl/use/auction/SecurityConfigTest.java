@@ -68,6 +68,7 @@ public class SecurityConfigTest {
 
         AuctionUser testUser = new AuctionUser();
         testUser.setEmail("testUser@example.com");
+        testUser.setUsername("testUser");
         testUser.setPassword(passwordEncoder.encode("userPassword"));
         testUser.setVerified(true);
         userRepository.save(testUser);

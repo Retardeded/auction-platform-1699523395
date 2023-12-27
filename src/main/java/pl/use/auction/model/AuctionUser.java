@@ -3,6 +3,8 @@ package pl.use.auction.model;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
 import java.time.LocalDateTime;
@@ -18,7 +20,14 @@ public class AuctionUser {
     @Email
     @Column(unique = true)
     private String email;
-
+    @NotEmpty
+    @Size(min = 4, max = 20)
+    private String username;
+    private String firstName;
+    private String lastName;
+    private String location;
+    private String phoneNumber;
+    @NotEmpty
     private String password;
 
     private boolean isVerified = false;

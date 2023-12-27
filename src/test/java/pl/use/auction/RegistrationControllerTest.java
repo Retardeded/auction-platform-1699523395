@@ -65,7 +65,7 @@ public class RegistrationControllerTest {
     public void whenGetRegister_thenReturnsRegistrationView() throws Exception {
         mockMvc.perform(get("/register"))
                 .andExpect(status().isOk())
-                .andExpect(view().name("register"));
+                .andExpect(view().name("authentication/register")); // Updated view name
     }
 
     @Test
@@ -107,7 +107,7 @@ public class RegistrationControllerTest {
 
         mockMvc.perform(get("/verify").param("token", token))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/login"));
+                .andExpect(redirectedUrl("/authentication/login"));
 
         verify(userRepository).save(mockUser);
         assertTrue(mockUser.isVerified());
