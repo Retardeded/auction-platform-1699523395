@@ -54,6 +54,18 @@ public class ProfileController {
         return "profile/user-auctions";
     }
 
+    @GetMapping("/profile/highest-bids")
+    public String viewUserHighestBids(Model model, Authentication authentication) {
+        String currentUserName = authentication.getName();
+        AuctionUser user = userRepository.findByEmail(currentUserName)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+        List<Auction> highestBidAuctions = auctionRepository.findByHighestBidder(user);
+        model.addAttribute("highestBidAuctions", highestBidAuctions);
+
+        return "profile/highest-bids";
+    }
+
     @GetMapping("/profile")
     public String viewProfile(Model model, Authentication authentication) {
         String currentUserName = authentication.getName();

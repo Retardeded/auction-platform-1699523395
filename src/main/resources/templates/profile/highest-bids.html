@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <title>My Highest Bids</title>
+  <link th:href="@{/css/styles.css}" rel="stylesheet" />
+</head>
+<body>
+<div class="container">
+  <h1>My Highest Bids</h1>
+  <div th:if="${highestBidAuctions.isEmpty()}">No current highest bids.</div>
+  <div th:each="auction : ${highestBidAuctions}" class="auction-item">
+    <h3 th:text="${auction.title}"></h3>
+    <p th:text="${auction.description}"></p>
+    <p>Ends: <span th:text="${#temporals.format(auction.endTime, 'yyyy-MM-dd HH:mm')}"></span></p>
+    <p>Your Bid: <span th:text="${auction.highestBid}"></span></p>
+  </div>
+  <a href="/profile" class="btn">Back to Profile</a>
+</div>
+</body>
+</html>

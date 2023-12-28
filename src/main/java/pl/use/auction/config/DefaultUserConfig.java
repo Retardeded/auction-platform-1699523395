@@ -24,12 +24,16 @@ public class DefaultUserConfig {
 
             AuctionUser anotherUser = createUserIfNotFound(userRepository, passwordEncoder, "another@gmail.com", "another", "another");
 
+            AuctionUser another3User = createUserIfNotFound(userRepository, passwordEncoder, "basic@gmail.com", "basic", "basic");
+
             if (auctionRepository.findByAuctionCreator(defaultUser).isEmpty()) {
                 createSampleAuctions(auctionRepository, defaultUser);
             }
-
             if (auctionRepository.findByAuctionCreator(anotherUser).isEmpty()) {
                 createSampleAuctions(auctionRepository, anotherUser);
+            }
+            if (auctionRepository.findByAuctionCreator(another3User).isEmpty()) {
+                createSampleAuctions(auctionRepository, another3User);
             }
         };
     }
@@ -46,28 +50,34 @@ public class DefaultUserConfig {
     }
 
     private void createSampleAuctions(AuctionRepository auctionRepository, AuctionUser user) {
-        String userIdentifier = user.getUsername().equals("default") ? "Default" : "Another";
+        String userIdentifier = user.getUsername().toUpperCase();
 
-        Auction ongoingAuction = new Auction();
-        ongoingAuction.setTitle(userIdentifier + " User's Ongoing Auction");
-        ongoingAuction.setDescription("This is an ongoing auction created by " + userIdentifier + " user.");
-        ongoingAuction.setStartTime(LocalDateTime.now().minusDays(1));
-        ongoingAuction.setEndTime(LocalDateTime.now().plusDays(1));
-        ongoingAuction.setStartingPrice(BigDecimal.valueOf(100));
-        ongoingAuction.setHighestBid(BigDecimal.valueOf(150));
-        ongoingAuction.setStatus("ONGOING");
-        ongoingAuction.setAuctionCreator(user);
-        auctionRepository.save(ongoingAuction);
+        // Array of sample auction titles, descriptions, and status (ongoing or expired)
+        String[][] auctionData = {
+                {"Vintage Camera", "A classic vintage camera in excellent condition.", "ONGOING"},
+                {"Antique Vase", "A beautiful antique vase, perfect for collectors.", "EXPIRED"},
+                {"Signed Book", "A book signed by its famous author.", "ONGOING"},
+                {"Handmade Jewelry", "Exquisite handmade jewelry with unique design.", "EXPIRED"},
+                {"Rare Vinyl Record", "A rare vinyl record for music enthusiasts.", "ONGOING"}
+        };
 
-        Auction pastAuction = new Auction();
-        pastAuction.setTitle(userIdentifier + " User's Past Auction");
-        pastAuction.setDescription("This is a past auction created by " + userIdentifier + " user.");
-        pastAuction.setStartTime(LocalDateTime.now().minusDays(10));
-        pastAuction.setEndTime(LocalDateTime.now().minusDays(5));
-        pastAuction.setStartingPrice(BigDecimal.valueOf(50));
-        pastAuction.setHighestBid(BigDecimal.valueOf(75));
-        pastAuction.setStatus("ENDED");
-        pastAuction.setAuctionCreator(user);
-        auctionRepository.save(pastAuction);
+        // Create multiple auctions with different characteristics
+        for (int i = 0; i < auctionData.length; i++) {
+            Auction auction = new Auction();
+            auction.setTitle(userIdentifier + " User's " + auctionData[i][0]);
+            auction.setDescription(auctionData[i][1]);
+            if ("ONGOING".equals(auctionData[i][2])) {
+                auction.setStartTime(LocalDateTime.now().minusDays(i));
+                auction.setEndTime(LocalDateTime.now().plusDays(i + 1));
+            } else { // EXPIRED
+                auction.setStartTime(LocalDateTime.now().minusDays(i + 5));
+                auction.setEndTime(LocalDateTime.now().minusDays(i + 1));
+            }
+            auction.setStartingPrice(BigDecimal.valueOf(50 + i * 10));
+            auction.setHighestBid(BigDecimal.valueOf(75 + i * 10));
+            auction.setStatus(auctionData[i][2]);
+            auction.setAuctionCreator(user);
+            auctionRepository.save(auction);
+        }
     }
 }

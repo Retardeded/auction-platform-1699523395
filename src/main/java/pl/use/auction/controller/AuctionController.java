@@ -96,6 +96,7 @@ public class AuctionController {
                 .filter(auction -> !auction.getAuctionCreator().equals(currentUser))
                 .collect(Collectors.toList());
 
+        model.addAttribute("currentUser", currentUser);
         model.addAttribute("ongoingAuctions", ongoingAuctions);
         return "auctions/all-auctions";
     }

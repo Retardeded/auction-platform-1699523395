@@ -51,6 +51,11 @@ label {
 }
 
 .success-message{
+    color: blue;
+    font-weight: bold;
+}
+
+.winning-message{
     color: green;
     font-weight: bold;
 }
