@@ -8,10 +8,10 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 public interface AuctionRepository extends JpaRepository<Auction, Long> {
-    List<Auction> findByUserAndEndTimeAfter(AuctionUser user, LocalDateTime now); // Ongoing auctions
-    List<Auction> findByUserAndEndTimeBefore(AuctionUser user, LocalDateTime now); // Past auctions
+    List<Auction> findByAuctionCreatorAndEndTimeAfter(AuctionUser user, LocalDateTime now);
+    List<Auction> findByAuctionCreatorAndEndTimeBefore(AuctionUser user, LocalDateTime now);
 
-    List<Auction> findByUser(AuctionUser user);
+    List<Auction> findByAuctionCreator(AuctionUser user);
 
     List<Auction> findByEndTimeAfter(LocalDateTime time);
 }

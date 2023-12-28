@@ -24,11 +24,11 @@ public class DefaultUserConfig {
 
             AuctionUser anotherUser = createUserIfNotFound(userRepository, passwordEncoder, "another@gmail.com", "another", "another");
 
-            if (auctionRepository.findByUser(defaultUser).isEmpty()) {
+            if (auctionRepository.findByAuctionCreator(defaultUser).isEmpty()) {
                 createSampleAuctions(auctionRepository, defaultUser);
             }
 
-            if (auctionRepository.findByUser(anotherUser).isEmpty()) {
+            if (auctionRepository.findByAuctionCreator(anotherUser).isEmpty()) {
                 createSampleAuctions(auctionRepository, anotherUser);
             }
         };
@@ -54,9 +54,9 @@ public class DefaultUserConfig {
         ongoingAuction.setStartTime(LocalDateTime.now().minusDays(1));
         ongoingAuction.setEndTime(LocalDateTime.now().plusDays(1));
         ongoingAuction.setStartingPrice(BigDecimal.valueOf(100));
-        ongoingAuction.setCurrentBid(BigDecimal.valueOf(150));
+        ongoingAuction.setHighestBid(BigDecimal.valueOf(150));
         ongoingAuction.setStatus("ONGOING");
-        ongoingAuction.setUser(user);
+        ongoingAuction.setAuctionCreator(user);
         auctionRepository.save(ongoingAuction);
 
         Auction pastAuction = new Auction();
@@ -65,9 +65,9 @@ public class DefaultUserConfig {
         pastAuction.setStartTime(LocalDateTime.now().minusDays(10));
         pastAuction.setEndTime(LocalDateTime.now().minusDays(5));
         pastAuction.setStartingPrice(BigDecimal.valueOf(50));
-        pastAuction.setCurrentBid(BigDecimal.valueOf(75));
+        pastAuction.setHighestBid(BigDecimal.valueOf(75));
         pastAuction.setStatus("ENDED");
-        pastAuction.setUser(user);
+        pastAuction.setAuctionCreator(user);
         auctionRepository.save(pastAuction);
     }
 }

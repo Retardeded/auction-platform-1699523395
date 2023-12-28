@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <title>Place Bid</title>
+  <link th:href="@{/css/styles.css}" rel="stylesheet" />
+</head>
+<body>
+<div class="container">
+  <h1>Place Bid</h1>
+  <div th:if="${errorMessage}" class="error-message">
+    <p th:text="${errorMessage}"></p>
+  </div>
+  <form th:action="@{/auctions/bid}" method="post">
+    <input type="hidden" name="auctionId" th:value="${auctionId}" />
+    <label for="bidAmount">Bid Amount:</label>
+    <input type="number" id="bidAmount" name="bidAmount" th:value="${currentHighestBid}" min="0" step="0.01" required />
+    <button type="submit">Place Bid</button>
+  </form>
+  <a href="/auctions/all">Back to Auctions</a>
+</div>
+</body>
+</html>

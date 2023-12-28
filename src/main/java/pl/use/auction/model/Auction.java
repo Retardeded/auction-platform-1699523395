@@ -19,11 +19,14 @@ public class Auction {
     private String description;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    private AuctionUser user;
+    private AuctionUser auctionCreator;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    private AuctionUser highestBidder;
 
     private LocalDateTime startTime;
     private LocalDateTime endTime;
     private BigDecimal startingPrice;
-    private BigDecimal currentBid;
+    private BigDecimal highestBid;
     private String status;
 }

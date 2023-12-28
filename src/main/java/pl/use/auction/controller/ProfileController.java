@@ -20,6 +20,7 @@ import pl.use.auction.service.UserService;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Controller
 public class ProfileController {
@@ -39,8 +40,13 @@ public class ProfileController {
         AuctionUser user = userRepository.findByEmail(currentUserName)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
-        List<Auction> ongoingAuctions = auctionRepository.findByUserAndEndTimeAfter(user, LocalDateTime.now());
-        List<Auction> pastAuctions = auctionRepository.findByUserAndEndTimeBefore(user, LocalDateTime.now());
+        List<Auction> allUserAuctions = user.getCreatedAuctions();
+        List<Auction> ongoingAuctions = allUserAuctions.stream()
+                .filter(auction -> auction.getEndTime().isAfter(LocalDateTime.now()))
+                .collect(Collectors.toList());
+        List<Auction> pastAuctions = allUserAuctions.stream()
+                .filter(auction -> auction.getEndTime().isBefore(LocalDateTime.now()))
+                .collect(Collectors.toList());
 
         model.addAttribute("ongoingAuctions", ongoingAuctions);
         model.addAttribute("pastAuctions", pastAuctions);

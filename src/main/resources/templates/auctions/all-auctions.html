@@ -9,9 +9,15 @@
 <div class="container">
   <h1>All Ongoing Auctions</h1>
   <div th:each="auction : ${ongoingAuctions}" class="auction-item">
+    <div class="auction-detail"><strong>ID:</strong> <span th:text="${auction.id}"></span></div>
     <div class="auction-detail"><strong>Title:</strong> <span th:text="${auction.title}"></span></div>
     <div class="auction-detail"><strong>Ends:</strong> <span th:text="${#temporals.format(auction.endTime, 'yyyy-MM-dd HH:mm')}"></span></div>
-    <div class="auction-detail"><strong>Current Bid:</strong> <span th:text="${auction.currentBid}"></span></div>
+    <div class="auction-detail"><strong>Highest Bid:</strong> <span th:text="${auction.highestBid}"></span></div>
+    <a th:href="@{/auctions/bid/{id}(id=${auction.id})}">Place Bid</a>
+  </div>
+
+  <div th:if="${successMessage}" class="success-message">
+    <p th:text="${successMessage}"></p>
   </div>
 
   <button onclick="window.location.href='/auctions/create';" class="btn">Create Auction</button>
