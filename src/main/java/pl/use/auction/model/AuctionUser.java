@@ -43,6 +43,14 @@ public class AuctionUser {
     @OneToMany(mappedBy = "highestBidder")
     private List<Auction> bidAuctions;
 
+    @ManyToMany
+    @JoinTable(
+            name = "observed_auctions",
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "auction_id")
+    )
+    private List<Auction> observedAuctions;
+
     @Override
     public String toString() {
         return "AuctionUser{" +

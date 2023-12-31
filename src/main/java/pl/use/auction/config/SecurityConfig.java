@@ -25,6 +25,7 @@ public class SecurityConfig {
                         .requestMatchers(new AntPathRequestMatcher("/reset-password")).permitAll()
                         .requestMatchers(new AntPathRequestMatcher("/password-reset-success")).permitAll()
                         .requestMatchers(new AntPathRequestMatcher("/css/**")).permitAll()
+                        .requestMatchers(new AntPathRequestMatcher("/js/**")).permitAll()
                         .anyRequest().authenticated())
                 .formLogin(form -> form
                         .loginPage("/login")

@@ -1,6 +1,7 @@
 package pl.use.auction.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -58,9 +59,8 @@ public class AuctionController {
             redirectAttributes.addFlashAttribute("successMessage", "Bid placed successfully!");
             return "redirect:/auctions/all";
         } else {
-            model.addAttribute("errorMessage", "Bid not high enough!");
-            model.addAttribute("auctionId", auctionId); // Include this to render the form again
-            return "auctions/place-bid";
+            redirectAttributes.addFlashAttribute("errorMessage", "Bid not high enough!");
+            return "redirect:/auctions/" + auctionId;
         }
     }
 
@@ -99,5 +99,38 @@ public class AuctionController {
         model.addAttribute("currentUser", currentUser);
         model.addAttribute("ongoingAuctions", ongoingAuctions);
         return "auctions/all-auctions";
+    }
+
+    @GetMapping("/auctions/{id}")
+    public String viewAuctionDetail(@PathVariable("id") Long auctionId, Model model, Authentication authentication) {
+        AuctionUser user = userRepository.findByEmail(authentication.getName())
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        Auction auction = auctionRepository.findById(auctionId)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid auction Id: " + auctionId));
+        model.addAttribute("auction", auction);
+        model.addAttribute("currentUser", user);
+        return "auctions/auction-detail";
+    }
+
+    @GetMapping("/add-to-watchlist/{auctionId}")
+    public ResponseEntity<?> addToWatchlist(@PathVariable Long auctionId, Authentication authentication, RedirectAttributes redirectAttributes) {
+        AuctionUser currentUser = userRepository.findByEmail(authentication.getName())
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        Auction auction = auctionRepository.findById(auctionId)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid auction Id:" + auctionId));
+        auctionService.addToWatchlist(currentUser, auction);
+        redirectAttributes.addFlashAttribute("watchMessage", "Added to watchlist.");
+        return ResponseEntity.ok("Added to watchlist");
+    }
+
+    @GetMapping("/remove-from-watchlist/{auctionId}")
+    public ResponseEntity<?> removeFromWatchlist(@PathVariable Long auctionId, Authentication authentication, RedirectAttributes redirectAttributes) {
+        AuctionUser currentUser = userRepository.findByEmail(authentication.getName())
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        Auction auction = auctionRepository.findById(auctionId)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid auction Id:" + auctionId));
+        auctionService.removeFromWatchlist(currentUser, auction);
+        redirectAttributes.addFlashAttribute("watchMessage", "Removed from watchlist.");
+        return ResponseEntity.ok("Removed from watchlist");
     }
 }

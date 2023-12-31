@@ -1,0 +1,29 @@
+.container {
+    position: relative;
+}
+
+.detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.title-area {
+  flex-basis: 70%;
+}
+
+.watch-button-area {
+  flex-basis: 30%;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.watch-button-detail {
+    font-size: 1.5em;
+    min-width: 120px;
+    text-align: center;
+    padding: 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}

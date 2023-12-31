@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <title>Observed Auctions</title>
+  <link th:href="@{/css/styles.css}" rel="stylesheet"/>
+</head>
+<body>
+<div class="container">
+  <h1>Observed Auctions</h1>
+  <div th:if="${observedAuctions.isEmpty()}" class="alert alert-info">
+    You are not observing any auctions.
+  </div>
+  <div th:each="auction : ${observedAuctions}" class="auction-item">
+    <h3 th:text="${auction.title}">Auction Title</h3>
+    <p th:text="${auction.description}">Auction Description</p>
+    <p>Ends: <span th:text="${#temporals.format(auction.endTime, 'yyyy-MM-dd HH:mm')}">End Time</span></p>
+    <p>Current Highest Bid: <span th:text="${auction.highestBid}">Highest Bid</span></p>
+    <p th:if="${auction.highestBidder != null and auction.highestBidder.id == currentUser.id}" class="winning-message">
+      You are currently winning this auction!
+    </p>
+  </div>
+  <a th:href="@{/profile}" class="btn">Back to Profile</a>
+</div>
+</body>
+</html>

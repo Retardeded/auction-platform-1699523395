@@ -6,10 +6,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import pl.use.auction.model.Auction;
 import pl.use.auction.model.AuctionUser;
@@ -64,6 +61,19 @@ public class ProfileController {
         model.addAttribute("highestBidAuctions", highestBidAuctions);
 
         return "profile/highest-bids";
+    }
+
+    @GetMapping("/profile/observed-auctions")
+    public String showObservedAuctions(Model model, Authentication authentication) {
+        String currentUserName = authentication.getName();
+        AuctionUser currentUser = userRepository.findByEmail(currentUserName)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+        List<Auction> observedAuctions = currentUser.getObservedAuctions();
+        model.addAttribute("currentUser", currentUser); // Pass the current user to the model
+        model.addAttribute("observedAuctions", observedAuctions);
+
+        return "profile/observed-auctions";
     }
 
     @GetMapping("/profile")
