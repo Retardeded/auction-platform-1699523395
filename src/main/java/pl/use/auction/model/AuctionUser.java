@@ -9,6 +9,7 @@ import lombok.Getter;
 import lombok.Setter;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 
 @Getter
 @Setter
@@ -49,7 +50,7 @@ public class AuctionUser {
             joinColumns = @JoinColumn(name = "user_id"),
             inverseJoinColumns = @JoinColumn(name = "auction_id")
     )
-    private List<Auction> observedAuctions;
+    private Set<Auction> observedAuctions;
 
     @Override
     public String toString() {

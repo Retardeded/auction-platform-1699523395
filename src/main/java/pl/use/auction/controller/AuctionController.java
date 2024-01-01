@@ -32,16 +32,6 @@ public class AuctionController {
     @Autowired
     private AuctionService auctionService;
 
-    @GetMapping("/auctions/bid/{id}")
-    public String showPlaceBidPage(@PathVariable("id") Long auctionId, Model model) {
-        Auction auction = auctionRepository.findById(auctionId)
-                .orElseThrow(() -> new IllegalArgumentException("Invalid auction Id: " + auctionId));
-
-        model.addAttribute("auctionId", auctionId);
-        model.addAttribute("currentHighestBid", auction.getHighestBid());
-        return "auctions/place-bid";
-    }
-
     @PostMapping("/auctions/bid")
     public String placeBid(@RequestParam("auctionId") Long auctionId,
                            @RequestParam("bidAmount") BigDecimal bidAmount,

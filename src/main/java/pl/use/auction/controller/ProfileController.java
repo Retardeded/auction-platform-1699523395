@@ -17,6 +17,7 @@ import pl.use.auction.service.UserService;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Controller
@@ -69,7 +70,7 @@ public class ProfileController {
         AuctionUser currentUser = userRepository.findByEmail(currentUserName)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
-        List<Auction> observedAuctions = currentUser.getObservedAuctions();
+        Set<Auction> observedAuctions = currentUser.getObservedAuctions();
         model.addAttribute("currentUser", currentUser); // Pass the current user to the model
         model.addAttribute("observedAuctions", observedAuctions);
 
