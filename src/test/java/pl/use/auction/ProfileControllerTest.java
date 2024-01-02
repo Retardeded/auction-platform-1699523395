@@ -11,20 +11,21 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.ui.Model;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.thymeleaf.spring6.SpringTemplateEngine;
 import org.thymeleaf.spring6.view.ThymeleafViewResolver;
 import org.thymeleaf.templateresolver.ClassLoaderTemplateResolver;
 import pl.use.auction.controller.ProfileController;
 import pl.use.auction.model.Auction;
 import pl.use.auction.model.AuctionUser;
+import pl.use.auction.model.PasswordChangeResult;
 import pl.use.auction.repository.UserRepository;
 import pl.use.auction.repository.AuctionRepository;
 import pl.use.auction.service.UserService;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.*;
@@ -50,6 +51,12 @@ public class ProfileControllerTest {
 
     @InjectMocks
     private ProfileController profileController;
+
+    @Mock
+    private Model model;
+
+    @Mock
+    private Authentication authentication;
 
     @BeforeEach
     public void setup() {
@@ -111,11 +118,116 @@ public class ProfileControllerTest {
         SecurityContextHolder.clearContext();
     }
 
-    @Mock
-    private Model model;
+    @Test
+    void testShowChangePasswordForm() {
+        AuctionUser user = new AuctionUser();
+        user.setEmail("user@example.com");
+
+        when(authentication.getName()).thenReturn("user@example.com");
+        when(userRepository.findByEmail("user@example.com")).thenReturn(Optional.of(user));
+
+        String viewName = profileController.showChangePasswordForm(model, authentication);
+
+        verify(userRepository).findByEmail("user@example.com");
+        verify(model).addAttribute("user", user);
+
+        assertEquals("profile/change-password", viewName);
+    }
+
+    @Test
+    void testUpdateProfile() {
+        AuctionUser existingUser = new AuctionUser();
+        existingUser.setEmail("existing@example.com");
+
+        AuctionUser updatedUser = new AuctionUser();
+        updatedUser.setUsername("NewUsername");
+        updatedUser.setFirstName("NewFirstName");
+        updatedUser.setLastName("NewLastName");
+        updatedUser.setLocation("NewLocation");
+        updatedUser.setPhoneNumber("NewPhoneNumber");
+
+        when(authentication.getName()).thenReturn("existing@example.com");
+        when(userRepository.findByEmail("existing@example.com")).thenReturn(Optional.of(existingUser));
+
+        String viewName = profileController.updateProfile(updatedUser, authentication);
+
+        verify(userRepository).findByEmail("existing@example.com");
+        verify(userRepository).save(existingUser);
+        assertEquals("NewUsername", existingUser.getUsername());
+        assertEquals("NewFirstName", existingUser.getFirstName());
+        assertEquals("NewLastName", existingUser.getLastName());
+        assertEquals("NewLocation", existingUser.getLocation());
+        assertEquals("NewPhoneNumber", existingUser.getPhoneNumber());
+
+        assertEquals("redirect:/profile", viewName);
+    }
 
     @Mock
-    private Authentication authentication;
+    private RedirectAttributes redirectAttributes;
+
+    @Test
+    void testChangePassword_Success() {
+        String oldPassword = "oldPassword";
+        String newPassword = "newPassword";
+        String confirmNewPassword = "newPassword";
+        AuctionUser user = new AuctionUser();
+        user.setEmail("user@example.com");
+
+        when(authentication.getName()).thenReturn("user@example.com");
+        when(userRepository.findByEmail("user@example.com")).thenReturn(Optional.of(user));
+        when(userService.changeUserPassword(oldPassword, newPassword, confirmNewPassword, user))
+                .thenReturn(PasswordChangeResult.SUCCESS);
+
+        String viewName = profileController.changePassword(oldPassword, newPassword, confirmNewPassword,
+                authentication, redirectAttributes, model);
+
+        verify(userService).changeUserPassword(oldPassword, newPassword, confirmNewPassword, user);
+        verify(redirectAttributes).addFlashAttribute("message", "Password changed successfully!");
+
+        assertEquals("redirect:/profile", viewName);
+    }
+
+    @Test
+    void testChangePassword_InvalidOldPassword() {
+        String oldPassword = "oldPassword";
+        String newPassword = "newPassword";
+        String confirmNewPassword = "newPassword";
+        AuctionUser user = new AuctionUser();
+        user.setEmail("user@example.com");
+
+        when(authentication.getName()).thenReturn("user@example.com");
+        when(userRepository.findByEmail("user@example.com")).thenReturn(Optional.of(user));
+        when(userService.changeUserPassword(oldPassword, newPassword, confirmNewPassword, user))
+                .thenReturn(PasswordChangeResult.INVALID_OLD_PASSWORD);
+
+        String viewName = profileController.changePassword(oldPassword, newPassword, confirmNewPassword,
+                authentication, redirectAttributes, model);
+
+        verify(userService).changeUserPassword(oldPassword, newPassword, confirmNewPassword, user);
+        verify(model).addAttribute("error", "The current password is incorrect.");
+        assertEquals("profile/change-password", viewName);
+    }
+
+    @Test
+    void testChangePassword_PasswordMismatch() {
+        String oldPassword = "oldPassword";
+        String newPassword = "newPassword";
+        String confirmNewPassword = "differentNewPassword";
+        AuctionUser user = new AuctionUser();
+        user.setEmail("user@example.com");
+
+        when(authentication.getName()).thenReturn("user@example.com");
+        when(userRepository.findByEmail("user@example.com")).thenReturn(Optional.of(user));
+        when(userService.changeUserPassword(oldPassword, newPassword, confirmNewPassword, user))
+                .thenReturn(PasswordChangeResult.PASSWORD_MISMATCH);
+
+        String viewName = profileController.changePassword(oldPassword, newPassword, confirmNewPassword,
+                authentication, redirectAttributes, model);
+
+        verify(userService).changeUserPassword(oldPassword, newPassword, confirmNewPassword, user);
+        verify(model).addAttribute("error", "The new passwords do not match.");
+        assertEquals("profile/change-password", viewName);
+    }
 
     @Captor
     private ArgumentCaptor<List<Auction>> ongoingAuctionListCaptor;
@@ -153,13 +265,65 @@ public class ProfileControllerTest {
         LocalDateTime now = LocalDateTime.now();
 
         Auction pastAuction = new Auction();
-        pastAuction.setEndTime(now.minusDays(1)); // End time in the past
+        pastAuction.setEndTime(now.minusDays(1));
         auctions.add(pastAuction);
 
         Auction ongoingAuction = new Auction();
-        ongoingAuction.setEndTime(now.plusDays(1)); // End time in the future
+        ongoingAuction.setEndTime(now.plusDays(1));
         auctions.add(ongoingAuction);
 
         return auctions;
+    }
+
+    @Test
+    void testViewUserHighestBids() {
+        AuctionUser user = new AuctionUser();
+        user.setEmail("user@example.com");
+        Auction specificAuction = createSpecificAuction("Unique Title", new BigDecimal("100.00"));
+        List<Auction> highestBidAuctions = List.of(specificAuction);
+
+        when(authentication.getName()).thenReturn("user@example.com");
+        when(userRepository.findByEmail("user@example.com")).thenReturn(Optional.of(user));
+        when(auctionRepository.findByHighestBidder(user)).thenReturn(highestBidAuctions);
+
+        String viewName = profileController.viewUserHighestBids(model, authentication);
+
+        verify(userRepository).findByEmail("user@example.com");
+        verify(auctionRepository).findByHighestBidder(user);
+        verify(model).addAttribute("highestBidAuctions", highestBidAuctions);
+
+        assertEquals("profile/highest-bids", viewName);
+
+        assertTrue(highestBidAuctions.contains(specificAuction));
+        assertEquals("Unique Title", specificAuction.getTitle());
+        assertEquals(new BigDecimal("100.00"), specificAuction.getHighestBid());
+    }
+
+    private Auction createSpecificAuction(String title, BigDecimal highestBid) {
+        Auction auction = new Auction();
+        auction.setTitle(title);
+        auction.setHighestBid(highestBid);
+        return auction;
+    }
+
+    @Test
+    void testShowObservedAuctions() {
+        AuctionUser currentUser = new AuctionUser();
+        currentUser.setEmail("user@example.com");
+        Set<Auction> observedAuctions = Set.of(createSpecificAuction("Observed Auction", new BigDecimal("50.00")));
+        currentUser.setObservedAuctions(observedAuctions);
+
+        when(authentication.getName()).thenReturn("user@example.com");
+        when(userRepository.findByEmail("user@example.com")).thenReturn(Optional.of(currentUser));
+
+        String viewName = profileController.showObservedAuctions(model, authentication);
+
+        verify(userRepository).findByEmail("user@example.com");
+        verify(model).addAttribute("currentUser", currentUser);
+        verify(model).addAttribute("observedAuctions", observedAuctions);
+
+        assertEquals("profile/observed-auctions", viewName);
+
+        assertTrue(observedAuctions.containsAll(currentUser.getObservedAuctions()));
     }
 }
