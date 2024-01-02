@@ -326,4 +326,39 @@ public class ProfileControllerTest {
 
         assertTrue(observedAuctions.containsAll(currentUser.getObservedAuctions()));
     }
+
+    @Test
+    void testViewMyBidsAndWatches() {
+        AuctionUser currentUser = new AuctionUser();
+        currentUser.setEmail("user@example.com");
+
+        Auction highestBidAuction = createSpecificAuction("Highest Bid Auction", new BigDecimal("100.00"));
+        Auction observedAuction = createSpecificAuction("Observed Auction", new BigDecimal("50.00"));
+
+        List<Auction> highestBidAuctions = List.of(highestBidAuction);
+        Set<Auction> observedAuctions = new HashSet<>();
+        observedAuctions.add(observedAuction);
+
+        when(authentication.getName()).thenReturn("user@example.com");
+        when(userRepository.findByEmail("user@example.com")).thenReturn(Optional.of(currentUser));
+        when(auctionRepository.findByHighestBidder(currentUser)).thenReturn(highestBidAuctions);
+
+        currentUser.setObservedAuctions(observedAuctions);
+
+        String viewName = profileController.viewMyBidsAndWatches(model, authentication);
+
+        verify(userRepository).findByEmail("user@example.com");
+        verify(auctionRepository).findByHighestBidder(currentUser);
+        verify(model).addAttribute(eq("allAuctions"), anyList());
+        verify(model).addAttribute("currentUser", currentUser);
+
+        assertEquals("profile/my-bids-and-watches", viewName);
+
+        ArgumentCaptor<List<Auction>> argument = ArgumentCaptor.forClass(List.class);
+        verify(model).addAttribute(eq("allAuctions"), argument.capture());
+        List<Auction> combinedAuctions = argument.getValue();
+
+        assertTrue(combinedAuctions.containsAll(highestBidAuctions));
+        assertTrue(combinedAuctions.containsAll(observedAuctions));
+    }
 }

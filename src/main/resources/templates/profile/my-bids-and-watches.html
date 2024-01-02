@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <title>Active Bids and Watches</title>
+  <link th:href="@{/css/styles.css}" rel="stylesheet" />
+  <link th:href="@{/css/auction.css}" rel="stylesheet" />
+  <script th:src="@{/js/auction.js}"></script>
+</head>
+<body>
+<div class="container">
+  <h1>Active Bids and Watches</h1>
+
+  <div th:if="${allAuctions.isEmpty()}" class="alert alert-info">
+    You have no active auctions.
+  </div>
+
+  <div th:each="auction : ${allAuctions}" class="auction-item">
+    <a th:href="@{/auctions/{id}(id=${auction.id})}" class="auction-detail-link">
+      <div class="auction-detail"><strong>Title:</strong> <span th:text="${auction.title}"></span></div>
+      <div class="auction-detail"><strong>Ends:</strong> <span th:text="${#temporals.format(auction.endTime, 'yyyy-MM-dd HH:mm')}"></span></div>
+      <div class="auction-detail"><strong>Highest Bid:</strong> <span th:text="${auction.highestBid}"></span></div>
+
+      <div th:if="${auction.highestBidder != null and auction.highestBidder.id == currentUser.id}" class="winning-message">
+        You are currently winning!
+      </div>
+    </a>
+
+    <button th:if="${#lists.contains(currentUser.observedAuctions, auction)}"
+            class="watch-toggle"
+            th:onclick="'handleWatchClick(event, ' + ${auction.id} + ', true)'">
+      Watched
+    </button>
+    <button th:unless="${#lists.contains(currentUser.observedAuctions, auction)}"
+            class="watch-toggle"
+            th:onclick="'handleWatchClick(event, ' + ${auction.id} + ', false)'">
+      Watch
+    </button>
+  </div>
+
+  <a th:href="@{/profile}" class="btn">Back to Profile</a>
+</div>
+</body>
+</html>

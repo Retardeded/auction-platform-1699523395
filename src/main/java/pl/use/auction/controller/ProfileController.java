@@ -16,6 +16,7 @@ import pl.use.auction.repository.UserRepository;
 import pl.use.auction.service.UserService;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -75,6 +76,26 @@ public class ProfileController {
         model.addAttribute("observedAuctions", observedAuctions);
 
         return "profile/observed-auctions";
+    }
+
+    @GetMapping("/profile/my-bids-and-watches")
+    public String viewMyBidsAndWatches(Model model, Authentication authentication) {
+        String currentUserName = authentication.getName();
+        AuctionUser currentUser = userRepository.findByEmail(currentUserName)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+        List<Auction> highestBidAuctions = auctionRepository.findByHighestBidder(currentUser);
+        Set<Auction> observedAuctions = currentUser.getObservedAuctions();
+
+        List<Auction> allAuctions = new ArrayList<>(observedAuctions);
+        allAuctions.addAll(highestBidAuctions.stream()
+                .filter(auction -> !observedAuctions.contains(auction))
+                .toList());
+
+        model.addAttribute("allAuctions", allAuctions);
+        model.addAttribute("currentUser", currentUser);
+
+        return "profile/my-bids-and-watches";
     }
 
     @GetMapping("/profile")

@@ -1,23 +1,23 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
-  <title>User Auctions</title>
+  <title>My Listings</title>
   <link th:href="@{/css/styles.css}" rel="stylesheet" />
-  <link th:href="@{/css/auction.css}" rel="stylesheet" /> <!-- Include auction.css -->
+  <link th:href="@{/css/auction.css}" rel="stylesheet" />
 </head>
 <body>
 <div class="container">
-  <h1>User Auctions</h1>
+  <h1>My Listings</h1>
 
   <h2>Ongoing Auctions</h2>
-  <div th:each="auction : ${ongoingAuctions}" class="auction-item">
+  <div th:each="auction : ${ongoingAuctions}" class="auction-item shadow-box">
     <div class="auction-detail"><strong>Title:</strong> <span th:text="${auction.title}"></span></div>
     <div class="auction-detail"><strong>Ends:</strong> <span th:text="${#temporals.format(auction.endTime, 'yyyy-MM-dd HH:mm')}"></span></div>
     <div class="auction-detail"><strong>Current Bid:</strong> <span th:text="${auction.highestBid}"></span></div>
   </div>
 
   <h2>Past Auctions</h2>
-  <div th:each="auction : ${pastAuctions}" class="auction-item">
+  <div th:each="auction : ${pastAuctions}" class="auction-item shadow-box">
     <div class="auction-detail"><strong>Title:</strong> <span th:text="${auction.title}"></span></div>
     <div class="auction-detail"><strong>Ends:</strong> <span th:text="${#temporals.format(auction.endTime, 'yyyy-MM-dd HH:mm')}"></span></div>
     <div class="auction-detail"><strong>Final Bid:</strong> <span th:text="${auction.highestBid}"></span></div>
