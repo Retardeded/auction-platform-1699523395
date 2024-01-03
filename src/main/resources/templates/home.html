@@ -3,13 +3,15 @@
 <head>
     <title>Home</title>
     <link th:href="@{/css/styles.css}" rel="stylesheet" />
-    <link th:href="@{/css/home.css}" rel="stylesheet" /> <!-- Link to the home page CSS -->
+    <link th:href="@{/css/home.css}" rel="stylesheet" />
 </head>
 <body>
 <div class="container">
     <h1>Welcome to the Home Page!</h1>
     <p>Logged in as: <span th:text="${username}"></span></p>
 
+    <button onclick="window.location.href='/auctions/create';">Create Auction</button>
+    <button onclick="window.location.href='/auctions/all';">View All Auctions</button>
     <button onclick="window.location.href='/profile';">View Profile</button>
 
     <form action="/logout" method="post">

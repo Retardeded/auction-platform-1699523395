@@ -11,6 +11,7 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import pl.use.auction.dto.UserRegistrationDto;
 import pl.use.auction.exception.InvalidTokenException;
@@ -19,7 +20,6 @@ import pl.use.auction.model.AuctionUser;
 import pl.use.auction.model.PasswordChangeResult;
 import pl.use.auction.repository.UserRepository;
 import pl.use.auction.service.UserService;
-import org.mockito.ArgumentCaptor;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -205,13 +205,22 @@ public class UserServiceTest {
         String newPassword = "newPassword";
         AuctionUser user = new AuctionUser();
         user.setEmail("user@example.com");
-        user.setPassword(passwordEncoder.encode(oldPassword));
+        PasswordEncoder encoder = new BCryptPasswordEncoder();
+        String encodedOldPassword = encoder.encode(oldPassword);
+        user.setPassword(encodedOldPassword);
 
-        when(passwordEncoder.matches(oldPassword, user.getPassword())).thenReturn(true);
+        when(passwordEncoder.matches(oldPassword, encodedOldPassword)).thenReturn(true);
+        doAnswer(invocation -> {
+            AuctionUser u = invocation.getArgument(0);
+            u.setPassword(encoder.encode(newPassword));
+            return null;
+        }).when(userRepository).save(any(AuctionUser.class));
 
         PasswordChangeResult result = userService.changeUserPassword(oldPassword, newPassword, newPassword, user);
 
-        verify(userRepository).save(any(AuctionUser.class));
+        assertTrue(encoder.matches(newPassword, user.getPassword()));
+        assertFalse(encoder.matches(oldPassword, user.getPassword()));
+        verify(userRepository).save(user);
         assertEquals(PasswordChangeResult.SUCCESS, result);
     }
 
@@ -222,13 +231,16 @@ public class UserServiceTest {
         String newPassword = "newPassword";
         AuctionUser user = new AuctionUser();
         user.setEmail("user@example.com");
-        user.setPassword(passwordEncoder.encode(oldPassword));
+        PasswordEncoder encoder = new BCryptPasswordEncoder();
+        user.setPassword(encoder.encode(oldPassword));
 
         when(passwordEncoder.matches(invalidOldPassword, user.getPassword())).thenReturn(false);
 
         PasswordChangeResult result = userService.changeUserPassword(invalidOldPassword, newPassword, newPassword, user);
 
         assertEquals(PasswordChangeResult.INVALID_OLD_PASSWORD, result);
+        assertFalse(encoder.matches(newPassword, user.getPassword()));
+        assertTrue(encoder.matches(oldPassword, user.getPassword()));
     }
 
     @Test
@@ -238,12 +250,15 @@ public class UserServiceTest {
         String confirmPassword = "confirmPassword";
         AuctionUser user = new AuctionUser();
         user.setEmail("user@example.com");
-        user.setPassword(passwordEncoder.encode(oldPassword));
+        PasswordEncoder encoder = new BCryptPasswordEncoder();
+        user.setPassword(encoder.encode(oldPassword));
 
         when(passwordEncoder.matches(oldPassword, user.getPassword())).thenReturn(true);
 
         PasswordChangeResult result = userService.changeUserPassword(oldPassword, newPassword, confirmPassword, user);
 
         assertEquals(PasswordChangeResult.PASSWORD_MISMATCH, result);
+        assertFalse(encoder.matches(newPassword, user.getPassword()));
+        assertTrue(encoder.matches(oldPassword, user.getPassword()));
     }
 }

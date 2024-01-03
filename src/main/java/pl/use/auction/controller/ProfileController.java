@@ -6,10 +6,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import pl.use.auction.model.Auction;
 import pl.use.auction.model.AuctionUser;
@@ -19,7 +16,10 @@ import pl.use.auction.repository.UserRepository;
 import pl.use.auction.service.UserService;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Controller
 public class ProfileController {
@@ -39,13 +39,63 @@ public class ProfileController {
         AuctionUser user = userRepository.findByEmail(currentUserName)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
-        List<Auction> ongoingAuctions = auctionRepository.findByUserAndEndTimeAfter(user, LocalDateTime.now());
-        List<Auction> pastAuctions = auctionRepository.findByUserAndEndTimeBefore(user, LocalDateTime.now());
+        List<Auction> allUserAuctions = user.getCreatedAuctions();
+        List<Auction> ongoingAuctions = allUserAuctions.stream()
+                .filter(auction -> auction.getEndTime().isAfter(LocalDateTime.now()))
+                .collect(Collectors.toList());
+        List<Auction> pastAuctions = allUserAuctions.stream()
+                .filter(auction -> auction.getEndTime().isBefore(LocalDateTime.now()))
+                .collect(Collectors.toList());
 
         model.addAttribute("ongoingAuctions", ongoingAuctions);
         model.addAttribute("pastAuctions", pastAuctions);
 
         return "profile/user-auctions";
+    }
+
+    @GetMapping("/profile/highest-bids")
+    public String viewUserHighestBids(Model model, Authentication authentication) {
+        String currentUserName = authentication.getName();
+        AuctionUser user = userRepository.findByEmail(currentUserName)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+        List<Auction> highestBidAuctions = auctionRepository.findByHighestBidder(user);
+        model.addAttribute("highestBidAuctions", highestBidAuctions);
+
+        return "profile/highest-bids";
+    }
+
+    @GetMapping("/profile/observed-auctions")
+    public String showObservedAuctions(Model model, Authentication authentication) {
+        String currentUserName = authentication.getName();
+        AuctionUser currentUser = userRepository.findByEmail(currentUserName)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+        Set<Auction> observedAuctions = currentUser.getObservedAuctions();
+        model.addAttribute("currentUser", currentUser); // Pass the current user to the model
+        model.addAttribute("observedAuctions", observedAuctions);
+
+        return "profile/observed-auctions";
+    }
+
+    @GetMapping("/profile/my-bids-and-watches")
+    public String viewMyBidsAndWatches(Model model, Authentication authentication) {
+        String currentUserName = authentication.getName();
+        AuctionUser currentUser = userRepository.findByEmail(currentUserName)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+        List<Auction> highestBidAuctions = auctionRepository.findByHighestBidder(currentUser);
+        Set<Auction> observedAuctions = currentUser.getObservedAuctions();
+
+        List<Auction> allAuctions = new ArrayList<>(observedAuctions);
+        allAuctions.addAll(highestBidAuctions.stream()
+                .filter(auction -> !observedAuctions.contains(auction))
+                .toList());
+
+        model.addAttribute("allAuctions", allAuctions);
+        model.addAttribute("currentUser", currentUser);
+
+        return "profile/my-bids-and-watches";
     }
 
     @GetMapping("/profile")

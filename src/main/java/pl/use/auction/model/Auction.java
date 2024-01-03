@@ -6,6 +6,7 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Getter
@@ -19,11 +20,17 @@ public class Auction {
     private String description;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    private AuctionUser user;
+    private AuctionUser auctionCreator;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    private AuctionUser highestBidder;
+
+    @ManyToMany(mappedBy = "observedAuctions")
+    private List<AuctionUser> observers;
 
     private LocalDateTime startTime;
     private LocalDateTime endTime;
     private BigDecimal startingPrice;
-    private BigDecimal currentBid;
+    private BigDecimal highestBid;
     private String status;
 }

@@ -19,11 +19,15 @@
     <a href="/profile/edit" class="btn">Edit Profile</a>
     <a href="/profile/change-password" class="btn">Change Password</a>
 
-    <div th:if="${message}">
+    <div th:if="${message}" class="success-message">
       <p th:text="${message}"></p>
     </div>
 
-    <button onclick="location.href='/profile/auctions'">View My Auctions</button>
+    <button onclick="window.location.href='/auctions/create';">Create Auction</button>
+
+    <button onclick="location.href='/profile/auctions'">View My Listings</button>
+
+    <button onclick="window.location.href='/profile/my-bids-and-watches';">View My Active Bids and Watches</button>
 
     <button onclick="location.href='/home'">Home</button>
   </div>

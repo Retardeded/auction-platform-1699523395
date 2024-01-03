@@ -15,48 +15,69 @@ import java.time.LocalDateTime;
 @Configuration
 public class DefaultUserConfig {
 
-    //class purely used for easier developing/testing stuff
     @Bean
-    CommandLineRunner createDefaultUserAndAuctions(UserRepository userRepository,
-                                                   AuctionRepository auctionRepository,
-                                                   PasswordEncoder passwordEncoder) {
+    CommandLineRunner createDefaultUsersAndAuctions(UserRepository userRepository,
+                                                    AuctionRepository auctionRepository,
+                                                    PasswordEncoder passwordEncoder) {
         return args -> {
-            AuctionUser defaultUser;
-            if (userRepository.findByEmail("default@gmail.com").isEmpty()) {
-                defaultUser = new AuctionUser();
-                defaultUser.setEmail("default@gmail.com");
-                defaultUser.setUsername("default");
-                defaultUser.setPassword(passwordEncoder.encode("default"));
-                defaultUser.setVerified(true);
-                userRepository.save(defaultUser);
-            } else {
-                defaultUser = userRepository.findByEmail("default@gmail.com").get();
+            AuctionUser defaultUser = createUserIfNotFound(userRepository, passwordEncoder, "default@gmail.com", "default", "default");
+
+            AuctionUser anotherUser = createUserIfNotFound(userRepository, passwordEncoder, "another@gmail.com", "another", "another");
+
+            AuctionUser another3User = createUserIfNotFound(userRepository, passwordEncoder, "basic@gmail.com", "basic", "basic");
+
+            if (auctionRepository.findByAuctionCreator(defaultUser).isEmpty()) {
+                createSampleAuctions(auctionRepository, defaultUser);
             }
-
-            if (auctionRepository.findByUser(defaultUser).isEmpty()) {
-                // Create some sample ongoing and past auctions
-                Auction ongoingAuction = new Auction();
-                ongoingAuction.setTitle("Ongoing Auction 1");
-                ongoingAuction.setDescription("Description of ongoing auction");
-                ongoingAuction.setStartTime(LocalDateTime.now().minusDays(1));
-                ongoingAuction.setEndTime(LocalDateTime.now().plusDays(1));
-                ongoingAuction.setStartingPrice(BigDecimal.valueOf(100));
-                ongoingAuction.setCurrentBid(BigDecimal.valueOf(150));
-                ongoingAuction.setStatus("ONGOING");
-                ongoingAuction.setUser(defaultUser);
-                auctionRepository.save(ongoingAuction);
-
-                Auction pastAuction = new Auction();
-                pastAuction.setTitle("Past Auction 1");
-                pastAuction.setDescription("Description of past auction");
-                pastAuction.setStartTime(LocalDateTime.now().minusDays(10));
-                pastAuction.setEndTime(LocalDateTime.now().minusDays(5));
-                pastAuction.setStartingPrice(BigDecimal.valueOf(50));
-                pastAuction.setCurrentBid(BigDecimal.valueOf(75));
-                pastAuction.setStatus("ENDED");
-                pastAuction.setUser(defaultUser);
-                auctionRepository.save(pastAuction);
+            if (auctionRepository.findByAuctionCreator(anotherUser).isEmpty()) {
+                createSampleAuctions(auctionRepository, anotherUser);
+            }
+            if (auctionRepository.findByAuctionCreator(another3User).isEmpty()) {
+                createSampleAuctions(auctionRepository, another3User);
             }
         };
+    }
+
+    private AuctionUser createUserIfNotFound(UserRepository userRepository, PasswordEncoder passwordEncoder, String email, String username, String password) {
+        return userRepository.findByEmail(email).orElseGet(() -> {
+            AuctionUser user = new AuctionUser();
+            user.setEmail(email);
+            user.setUsername(username);
+            user.setPassword(passwordEncoder.encode(password));
+            user.setVerified(true);
+            return userRepository.save(user);
+        });
+    }
+
+    private void createSampleAuctions(AuctionRepository auctionRepository, AuctionUser user) {
+        String userIdentifier = user.getUsername().toUpperCase();
+
+        // Array of sample auction titles, descriptions, and status (ongoing or expired)
+        String[][] auctionData = {
+                {"Vintage Camera", "A classic vintage camera in excellent condition.", "ONGOING"},
+                {"Antique Vase", "A beautiful antique vase, perfect for collectors.", "EXPIRED"},
+                {"Signed Book", "A book signed by its famous author.", "ONGOING"},
+                {"Handmade Jewelry", "Exquisite handmade jewelry with unique design.", "EXPIRED"},
+                {"Rare Vinyl Record", "A rare vinyl record for music enthusiasts.", "ONGOING"}
+        };
+
+        // Create multiple auctions with different characteristics
+        for (int i = 0; i < auctionData.length; i++) {
+            Auction auction = new Auction();
+            auction.setTitle(userIdentifier + " User's " + auctionData[i][0]);
+            auction.setDescription(auctionData[i][1]);
+            if ("ONGOING".equals(auctionData[i][2])) {
+                auction.setStartTime(LocalDateTime.now().minusDays(i));
+                auction.setEndTime(LocalDateTime.now().plusDays(i + 1));
+            } else { // EXPIRED
+                auction.setStartTime(LocalDateTime.now().minusDays(i + 5));
+                auction.setEndTime(LocalDateTime.now().minusDays(i + 1));
+            }
+            auction.setStartingPrice(BigDecimal.valueOf(50 + i * 10));
+            auction.setHighestBid(BigDecimal.valueOf(75 + i * 10));
+            auction.setStatus(auctionData[i][2]);
+            auction.setAuctionCreator(user);
+            auctionRepository.save(auction);
+        }
     }
 }

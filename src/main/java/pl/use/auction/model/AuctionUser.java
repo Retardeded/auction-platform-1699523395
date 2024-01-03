@@ -8,6 +8,8 @@ import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Set;
 
 @Getter
 @Setter
@@ -35,6 +37,20 @@ public class AuctionUser {
 
     private String resetToken;
     private LocalDateTime resetTokenExpiryTime;
+
+    @OneToMany(mappedBy = "auctionCreator")
+    private List<Auction> createdAuctions;
+
+    @OneToMany(mappedBy = "highestBidder")
+    private List<Auction> bidAuctions;
+
+    @ManyToMany
+    @JoinTable(
+            name = "observed_auctions",
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "auction_id")
+    )
+    private Set<Auction> observedAuctions;
 
     @Override
     public String toString() {

@@ -44,3 +44,18 @@ label {
     display: block;
     margin-bottom: 5px;
 }
+
+.error-message {
+    color: red;
+    font-weight: bold;
+}
+
+.success-message{
+    color: blue;
+    font-weight: bold;
+}
+
+.winning-message{
+    color: green;
+    font-weight: bold;
+}
