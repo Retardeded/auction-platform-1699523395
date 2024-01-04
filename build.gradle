@@ -43,8 +43,6 @@ tasks.named('test') {
 
 bootJar {
 	manifest {
-		attributes(
-				'Main-Class': 'pl.use.auction.AuctionApplication'
-		)
+		attributes 'Start-Class': 'pl.use.auction.AuctionApplication'
 	}
 }
