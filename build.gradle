@@ -40,3 +40,9 @@ dependencies {
 tasks.named('test') {
 	useJUnitPlatform()
 }
+
+bootJar {
+	manifest {
+		attributes 'Start-Class': 'pl.use.auction.AuctionApplication'
+	}
+}
