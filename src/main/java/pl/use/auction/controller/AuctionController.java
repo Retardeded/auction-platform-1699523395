@@ -10,7 +10,9 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import pl.use.auction.model.Auction;
 import pl.use.auction.model.AuctionUser;
+import pl.use.auction.model.Category;
 import pl.use.auction.repository.AuctionRepository;
+import pl.use.auction.repository.CategoryRepository;
 import pl.use.auction.repository.UserRepository;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import pl.use.auction.service.AuctionService;
@@ -28,6 +30,9 @@ public class AuctionController {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private CategoryRepository categoryRepository;
 
     @Autowired
     private AuctionService auctionService;
@@ -89,6 +94,27 @@ public class AuctionController {
         model.addAttribute("currentUser", currentUser);
         model.addAttribute("ongoingAuctions", ongoingAuctions);
         return "auctions/all-auctions";
+    }
+
+    @GetMapping("/categories/{id}")
+    public String viewCategory(@PathVariable Long id, Model model, Authentication authentication) {
+        Category category = categoryRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid category Id:" + id));
+
+        String currentUserName = authentication.getName();
+        AuctionUser currentUser = userRepository.findByEmail(currentUserName)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+        List<Auction> categoryAuctions = auctionRepository.findByCategoryAndEndTimeAfter(category, LocalDateTime.now())
+                .stream()
+                .filter(auction -> !auction.getAuctionCreator().equals(currentUser))
+                .collect(Collectors.toList());
+
+        model.addAttribute("currentUser", currentUser);
+        model.addAttribute("category", category); // Make sure to add this line
+        model.addAttribute("categoryAuctions", categoryAuctions);
+
+        return "auctions/category";
     }
 
     @GetMapping("/auctions/{id}")

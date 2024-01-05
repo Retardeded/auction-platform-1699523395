@@ -2,22 +2,45 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <title>Home</title>
-    <link th:href="@{/css/styles.css}" rel="stylesheet" />
     <link th:href="@{/css/home.css}" rel="stylesheet" />
+    <script th:src="@{/js/dropdown.js}"></script>
 </head>
 <body>
-<div class="container">
-    <h1>Welcome to the Home Page!</h1>
-    <p>Logged in as: <span th:text="${username}"></span></p>
+<nav class="navbar">
+    <div class="search-container">
+        <form action="/search" method="get">
+            <input type="text" placeholder="Search..." name="search">
+        </form>
+    </div>
+    <div class="navbar-right">
+        <button onclick="window.location.href='/auctions/create';" class="create-auction-button">Create Auction</button>
+        <div class="profile-container">
+            <button class="profile-button" onclick="toggleDropdown()">default@gmail.com</button>
+            <div id="myDropdown" class="dropdown-content">
+                <div class="dropdown-button" onclick="window.location.href='/profile';">
+                    My Profile
+                </div>
+                <div class="dropdown-button" onclick="document.getElementById('logout-form').submit();">
+                    Logout
+                </div>
+                <form id="logout-form" action="/logout" method="post" style="display: none;">
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                    <input type="submit" value="Logout" />
+                </form>
+            </div>
+        </div>
+    </div>
+</nav>
 
-    <button onclick="window.location.href='/auctions/create';">Create Auction</button>
-    <button onclick="window.location.href='/auctions/all';">View All Auctions</button>
-    <button onclick="window.location.href='/profile';">View Profile</button>
-
-    <form action="/logout" method="post">
-        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
-        <button type="submit">Logout</button>
-    </form>
+<div class="main-container">
+    <div id="categories">
+        <ul>
+            <li th:each="category : ${categories}">
+                <a th:href="@{|/categories/${category.id}|}" th:text="${category.name}">Category Name</a>
+            </li>
+        </ul>
+    </div>
 </div>
+
 </body>
 </html>

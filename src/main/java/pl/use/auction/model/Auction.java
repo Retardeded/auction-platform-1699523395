@@ -20,6 +20,9 @@ public class Auction {
     private String description;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    private Category category;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     private AuctionUser auctionCreator;
 
     @ManyToOne(fetch = FetchType.LAZY)

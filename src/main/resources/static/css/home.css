@@ -1,42 +1,107 @@
-body {
-    font-family: Arial, sans-serif;
-    margin: 0;
-    padding: 20px;
-    background-color: #f5f5f5;
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #333;
+    padding: 0 20px;
 }
 
-.container {
-    max-width: 800px;
-    margin: auto;
-    background: #fff;
-    padding: 20px;
-    border-radius: 5px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-    text-align: center;
+.search-container input[type="text"] {
+    padding: 10px 15px;
+    margin-top: 8px;
+    margin-bottom: 8px;
+    font-size: 17px;
+    border: none;
+    border-radius: 4px;
+    width: 100%;
 }
 
-h1 {
-    color: #333;
+.navbar-right {
+    display: flex;
+    align-items: center;
 }
 
-p {
-    margin-bottom: 20px;
-}
-
-button {
+.navbar .create-auction-button, .navbar .profile-button {
     background-color: #007bff;
     color: white;
-    padding: 10px 20px;
+    padding: 10px 15px;
     border: none;
     border-radius: 4px;
     cursor: pointer;
-    margin-right: 10px;
+    width: auto;
+    display: inline-block;
+    margin: 0 10px;
+    text-align: center;
 }
 
-button:hover {
-    background-color: #0056b3;
+.dropdown-content {
+    display: none;
+    position: absolute;
+    min-width: 160px;
+    background-color: white;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    z-index: 1;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    overflow: hidden;
 }
 
-form {
-    margin-top: 20px;
+.dropdown-button {
+    margin: 0;
+    padding: 10px 15px;
+    background-color: white;
+    color: #007bff;
+    text-align: center;
+    cursor: pointer;
+    border-bottom: 1px solid #ccc;
+}
+
+.dropdown-button:last-child {
+    border-bottom: none;
+}
+
+.dropdown-button:hover {
+    background-color: #e7f0fd;
+    color: #0056b3;
+}
+
+.show {
+    display: block;
+}
+
+
+#categories {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    background: #f8f9fa
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    width: 80%;
+    margin: auto;
+    margin-top: 30px;
+}
+
+#categories ul {
+    list-style-type: none;
+    padding: 0;
+    width: 100%;
+}
+
+#categories li a {
+    text-decoration: none;
+    color: #333;
+    padding: 15px;
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 500;
+    margin-bottom: 10px;
+    border-radius: 4px;
+    transition: background-color 0.3s ease;
+}
+
+#categories li a:hover {
+    background-color: #e9ecef;
+    text-decoration: none;
 }

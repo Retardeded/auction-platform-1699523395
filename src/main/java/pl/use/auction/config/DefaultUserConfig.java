@@ -5,7 +5,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import pl.use.auction.model.Auction;
 import pl.use.auction.model.AuctionUser;
+import pl.use.auction.model.Category;
 import pl.use.auction.repository.AuctionRepository;
+import pl.use.auction.repository.CategoryRepository;
 import pl.use.auction.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
@@ -16,8 +18,26 @@ import java.time.LocalDateTime;
 public class DefaultUserConfig {
 
     @Bean
+    CommandLineRunner createDefaultCategories(CategoryRepository categoryRepository) {
+        return args -> {
+            String[] categoryNames = {
+                    "Electronics", "Fashion", "Home & Garden", "Automotive",
+                    "Baby", "Health", "Beauty", "Culture & Entertainment",
+                    "Sports & Tourism", "Collectibles & Art"
+            };
+            for (String name : categoryNames) {
+                categoryRepository.findByName(name).orElseGet(() -> {
+                    Category category = new Category();
+                    category.setName(name);
+                    return categoryRepository.save(category);
+                });
+            }
+        };
+    }
+    @Bean
     CommandLineRunner createDefaultUsersAndAuctions(UserRepository userRepository,
                                                     AuctionRepository auctionRepository,
+                                                    CategoryRepository categoryRepository,
                                                     PasswordEncoder passwordEncoder) {
         return args -> {
             AuctionUser defaultUser = createUserIfNotFound(userRepository, passwordEncoder, "default@gmail.com", "default", "default");
@@ -27,13 +47,13 @@ public class DefaultUserConfig {
             AuctionUser another3User = createUserIfNotFound(userRepository, passwordEncoder, "basic@gmail.com", "basic", "basic");
 
             if (auctionRepository.findByAuctionCreator(defaultUser).isEmpty()) {
-                createSampleAuctions(auctionRepository, defaultUser);
+                createSampleAuctions(auctionRepository, defaultUser, categoryRepository);
             }
             if (auctionRepository.findByAuctionCreator(anotherUser).isEmpty()) {
-                createSampleAuctions(auctionRepository, anotherUser);
+                createSampleAuctions(auctionRepository, anotherUser, categoryRepository);
             }
             if (auctionRepository.findByAuctionCreator(another3User).isEmpty()) {
-                createSampleAuctions(auctionRepository, another3User);
+                createSampleAuctions(auctionRepository, another3User, categoryRepository);
             }
         };
     }
@@ -49,34 +69,35 @@ public class DefaultUserConfig {
         });
     }
 
-    private void createSampleAuctions(AuctionRepository auctionRepository, AuctionUser user) {
+    private void createSampleAuctions(AuctionRepository auctionRepository, AuctionUser user, CategoryRepository categoryRepository) throws Exception {
         String userIdentifier = user.getUsername().toUpperCase();
 
-        // Array of sample auction titles, descriptions, and status (ongoing or expired)
         String[][] auctionData = {
-                {"Vintage Camera", "A classic vintage camera in excellent condition.", "ONGOING"},
-                {"Antique Vase", "A beautiful antique vase, perfect for collectors.", "EXPIRED"},
-                {"Signed Book", "A book signed by its famous author.", "ONGOING"},
-                {"Handmade Jewelry", "Exquisite handmade jewelry with unique design.", "EXPIRED"},
-                {"Rare Vinyl Record", "A rare vinyl record for music enthusiasts.", "ONGOING"}
+                {"Vintage Camera", "A classic vintage camera in excellent condition.", "Electronics", "ONGOING"},
+                {"Designer Dress", "A stunning dress from a renowned fashion designer.", "Fashion", "ONGOING"},
+                {"Garden Shovel", "A durable shovel for gardening.", "Home & Garden", "ONGOING"},
+                {"Antique Vase", "A beautiful antique vase, perfect for collectors.", "Collectibles & Art", "EXPIRED"},
+                {"Signed Book", "A book signed by its famous author.", "Collectibles & Art", "ONGOING"},
+                {"Handmade Jewelry", "Exquisite handmade jewelry with unique design.", "Collectibles & Art", "EXPIRED"},
         };
 
-        // Create multiple auctions with different characteristics
-        for (int i = 0; i < auctionData.length; i++) {
+        for (String[] auctionInfo : auctionData) {
             Auction auction = new Auction();
-            auction.setTitle(userIdentifier + " User's " + auctionData[i][0]);
-            auction.setDescription(auctionData[i][1]);
-            if ("ONGOING".equals(auctionData[i][2])) {
-                auction.setStartTime(LocalDateTime.now().minusDays(i));
-                auction.setEndTime(LocalDateTime.now().plusDays(i + 1));
-            } else { // EXPIRED
-                auction.setStartTime(LocalDateTime.now().minusDays(i + 5));
-                auction.setEndTime(LocalDateTime.now().minusDays(i + 1));
-            }
-            auction.setStartingPrice(BigDecimal.valueOf(50 + i * 10));
-            auction.setHighestBid(BigDecimal.valueOf(75 + i * 10));
-            auction.setStatus(auctionData[i][2]);
+            auction.setTitle(userIdentifier + " User's " + auctionInfo[0]);
+            auction.setDescription(auctionInfo[1]);
+
+            Category itemCategory = categoryRepository.findByName(auctionInfo[2])
+                    .orElseThrow(() -> new Exception("Category not found: " + auctionInfo[2]));
+
+            auction.setCategory(itemCategory);
+
+            auction.setStartTime(LocalDateTime.now());
+            auction.setEndTime(LocalDateTime.now().plusDays(10));
+            auction.setStartingPrice(BigDecimal.valueOf(100));
+            auction.setHighestBid(BigDecimal.valueOf(100));
+            auction.setStatus(auctionInfo[3]);
             auction.setAuctionCreator(user);
+
             auctionRepository.save(auction);
         }
     }
