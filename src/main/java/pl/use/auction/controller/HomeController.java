@@ -25,8 +25,9 @@ public class HomeController {
             UserDetails userDetails = (UserDetails) authentication.getPrincipal();
             model.addAttribute("username", userDetails.getUsername());
         }
-        List<Category> categories = categoryRepository.findAll();
-        model.addAttribute("categories", categories);
+
+        List<Category> orderedCategories = categoryRepository.findCategoriesOrderedByAuctionCount();
+        model.addAttribute("orderedCategories", orderedCategories);
 
         return "home";
     }

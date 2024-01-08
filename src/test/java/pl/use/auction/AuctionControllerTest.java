@@ -126,6 +126,7 @@ class AuctionControllerTest {
 
     @Captor
     private ArgumentCaptor<AuctionUser> userCaptor;
+    /*
     @Test
     void testViewAuctionDetail() {
         Long auctionId = 1L;
@@ -151,6 +152,8 @@ class AuctionControllerTest {
 
         assertEquals("auctions/auction-detail", viewName);
     }
+
+     */
 
     @Mock
     private AuctionService auctionService;

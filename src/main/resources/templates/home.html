@@ -34,9 +34,10 @@
 
 <div class="main-container">
     <div id="categories">
+        <h2>Categories from most to least popular</h2>
         <ul>
-            <li th:each="category : ${categories}">
-                <a th:href="@{|/categories/${category.id}|}" th:text="${category.name}">Category Name</a>
+            <li th:each="category : ${orderedCategories}">
+                <a th:href="@{|/auctions/${category.name.toLowerCase().replaceAll(' ', '-')}|}" th:text="${category.name}">Category Name</a>
             </li>
         </ul>
     </div>

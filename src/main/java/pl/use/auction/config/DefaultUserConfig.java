@@ -14,6 +14,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+import static pl.use.auction.util.StringUtils.createSlugFromTitle;
+
 @Configuration
 public class DefaultUserConfig {
 
@@ -84,6 +86,7 @@ public class DefaultUserConfig {
         for (String[] auctionInfo : auctionData) {
             Auction auction = new Auction();
             auction.setTitle(userIdentifier + " User's " + auctionInfo[0]);
+            auction.setSlug(createSlugFromTitle(auction.getTitle()));
             auction.setDescription(auctionInfo[1]);
 
             Category itemCategory = categoryRepository.findByName(auctionInfo[2])

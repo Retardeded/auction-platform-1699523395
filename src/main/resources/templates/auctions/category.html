@@ -10,7 +10,7 @@
 <div class="container">
   <h1 th:text="${category.name} + ' Auctions'">Category Auctions</h1>
   <div th:each="auction : ${categoryAuctions}" class="auction-item">
-    <a th:href="@{/auctions/{id}(id=${auction.id})}" class="auction-detail-link">
+    <a th:href="@{|/auction/${auction.slug}|}" class="auction-detail-link">
       <div class="auction-detail"><strong>Title:</strong> <span th:text="${auction.title}"></span></div>
       <div class="auction-detail"><strong>Ends:</strong> <span th:text="${#temporals.format(auction.endTime, 'yyyy-MM-dd HH:mm')}"></span></div>
       <div class="auction-detail"><strong>Highest Bid:</strong> <span th:text="${auction.highestBid}"></span></div>

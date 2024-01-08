@@ -16,6 +16,7 @@ import pl.use.auction.repository.CategoryRepository;
 import pl.use.auction.repository.UserRepository;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import pl.use.auction.service.AuctionService;
+import pl.use.auction.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -96,10 +97,10 @@ public class AuctionController {
         return "auctions/all-auctions";
     }
 
-    @GetMapping("/categories/{id}")
-    public String viewCategory(@PathVariable Long id, Model model, Authentication authentication) {
-        Category category = categoryRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Invalid category Id:" + id));
+    @GetMapping("/auctions/{categoryName}")
+    public String viewCategory(@PathVariable String categoryName, Model model, Authentication authentication) {
+        Category category = categoryRepository.findByNameIgnoreCase(StringUtils.slugToCategoryName(categoryName))
+                .orElseThrow(() -> new IllegalArgumentException("Invalid category name:" + categoryName));
 
         String currentUserName = authentication.getName();
         AuctionUser currentUser = userRepository.findByEmail(currentUserName)
@@ -111,18 +112,18 @@ public class AuctionController {
                 .collect(Collectors.toList());
 
         model.addAttribute("currentUser", currentUser);
-        model.addAttribute("category", category); // Make sure to add this line
+        model.addAttribute("category", category);
         model.addAttribute("categoryAuctions", categoryAuctions);
 
         return "auctions/category";
     }
 
-    @GetMapping("/auctions/{id}")
-    public String viewAuctionDetail(@PathVariable("id") Long auctionId, Model model, Authentication authentication) {
+    @GetMapping("/auction/{slug}")
+    public String viewAuctionDetail(@PathVariable("slug") String auctionSlug, Model model, Authentication authentication) {
         AuctionUser user = userRepository.findByEmail(authentication.getName())
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
-        Auction auction = auctionRepository.findById(auctionId)
-                .orElseThrow(() -> new IllegalArgumentException("Invalid auction Id: " + auctionId));
+        Auction auction = auctionRepository.findBySlug(auctionSlug)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid auction slug: " + auctionSlug));
         model.addAttribute("auction", auction);
         model.addAttribute("currentUser", user);
         return "auctions/auction-detail";
