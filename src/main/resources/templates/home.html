@@ -43,5 +43,35 @@
     </div>
 </div>
 
+<div class="featured-auctions">
+    <h2>Cheapest Auctions</h2>
+    <div class="auction-items-container">
+        <div th:each="auction : ${cheapestAuctions}" class="auction-item">
+            <a th:href="@{|/auction/${auction.slug}|}" class="auction-detail-link">
+                <div class="auction-info">
+                    <h3 th:text="${auction.title}">Auction Title</h3>
+                    <p><span>Starting Price: </span><span th:text="${auction.startingPrice}">Starting Price</span></p>
+                    <p><span>Highest Bid: </span><span th:text="${auction.highestBid}">Highest Bid</span></p>
+                </div>
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="featured-auctions">
+    <h2>Most Expensive Auctions</h2>
+    <div class="auction-items-container">
+        <div th:each="auction : ${expensiveAuctions}" class="auction-item">
+            <a th:href="@{|/auction/${auction.slug}|}" class="auction-detail-link">
+                <div class="auction-info">
+                    <h3 th:text="${auction.title}">Auction Title</h3>
+                    <p><span>Starting Price: </span><span th:text="${auction.startingPrice}">Starting Price</span></p>
+                    <p><span>Highest Bid: </span><span th:text="${auction.highestBid}">Highest Bid</span></p>
+                </div>
+            </a>
+        </div>
+    </div>
+</div>
+
 </body>
 </html>

@@ -13,6 +13,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Random;
 
 import static pl.use.auction.util.StringUtils.createSlugFromTitle;
 
@@ -73,6 +74,7 @@ public class DefaultUserConfig {
 
     private void createSampleAuctions(AuctionRepository auctionRepository, AuctionUser user, CategoryRepository categoryRepository) throws Exception {
         String userIdentifier = user.getUsername().toUpperCase();
+        Random random = new Random();
 
         String[][] auctionData = {
                 {"Vintage Camera", "A classic vintage camera in excellent condition.", "Electronics", "ONGOING"},
@@ -96,8 +98,10 @@ public class DefaultUserConfig {
 
             auction.setStartTime(LocalDateTime.now());
             auction.setEndTime(LocalDateTime.now().plusDays(10));
-            auction.setStartingPrice(BigDecimal.valueOf(100));
-            auction.setHighestBid(BigDecimal.valueOf(100));
+            BigDecimal startingPrice = BigDecimal.valueOf(50 + random.nextInt(101)); // 101 ensures the range is 50 to 150 inclusive
+            auction.setStartingPrice(startingPrice);
+            BigDecimal highestBid = startingPrice.add(BigDecimal.valueOf(random.nextInt(50) + 1)); // +1 ensures it's at least 1 more
+            auction.setHighestBid(highestBid);
             auction.setStatus(auctionInfo[3]);
             auction.setAuctionCreator(user);
 

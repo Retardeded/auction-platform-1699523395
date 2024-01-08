@@ -6,7 +6,6 @@ import pl.use.auction.model.AuctionUser;
 import pl.use.auction.model.Category;
 
 import java.time.LocalDateTime;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
