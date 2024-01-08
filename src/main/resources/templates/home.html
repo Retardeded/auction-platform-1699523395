@@ -34,41 +34,46 @@
 
 <div class="main-container">
     <div id="categories">
-        <h2>Categories from most to least popular</h2>
+        <h2>Browse Categories</h2>
         <ul>
-            <li th:each="category : ${orderedCategories}">
-                <a th:href="@{|/auctions/${category.name.toLowerCase().replaceAll(' ', '-')}|}" th:text="${category.name}">Category Name</a>
+            <li th:each="category : ${parentCategories}">
+                <a th:href="@{|/auctions/${category.name.toLowerCase().replaceAll(' ', '-')}|}" th:text="${category.name}">Parent Category Name</a>
+                <ul class="subcategories" th:if="${!category.childCategories.isEmpty()}">
+                    <li th:each="subCategory : ${category.childCategories}">
+                        <a th:href="@{|/auctions/${subCategory.name.toLowerCase().replaceAll(' ', '-')}|}" th:text="${subCategory.name}">Subcategory Name</a>
+                    </li>
+                </ul>
             </li>
         </ul>
     </div>
-</div>
 
-<div class="featured-auctions">
-    <h2>Cheapest Auctions</h2>
-    <div class="auction-items-container">
-        <div th:each="auction : ${cheapestAuctions}" class="auction-item">
-            <a th:href="@{|/auction/${auction.slug}|}" class="auction-detail-link">
-                <div class="auction-info">
-                    <h3 th:text="${auction.title}">Auction Title</h3>
-                    <p><span>Starting Price: </span><span th:text="${auction.startingPrice}">Starting Price</span></p>
-                    <p><span>Highest Bid: </span><span th:text="${auction.highestBid}">Highest Bid</span></p>
-                </div>
-            </a>
+    <div class="featured-auctions">
+        <h2>Cheapest Auctions</h2>
+        <div class="auction-items-container">
+            <div th:each="auction : ${cheapestAuctions}" class="auction-item">
+                <a th:href="@{|/auction/${auction.slug}|}" class="auction-detail-link">
+                    <div class="auction-info">
+                        <h3 th:text="${auction.title}">Auction Title</h3>
+                        <p><span>Starting Price: </span><span th:text="${auction.startingPrice}">Starting Price</span></p>
+                        <p><span>Highest Bid: </span><span th:text="${auction.highestBid}">Highest Bid</span></p>
+                    </div>
+                </a>
+            </div>
         </div>
     </div>
-</div>
 
-<div class="featured-auctions">
-    <h2>Most Expensive Auctions</h2>
-    <div class="auction-items-container">
-        <div th:each="auction : ${expensiveAuctions}" class="auction-item">
-            <a th:href="@{|/auction/${auction.slug}|}" class="auction-detail-link">
-                <div class="auction-info">
-                    <h3 th:text="${auction.title}">Auction Title</h3>
-                    <p><span>Starting Price: </span><span th:text="${auction.startingPrice}">Starting Price</span></p>
-                    <p><span>Highest Bid: </span><span th:text="${auction.highestBid}">Highest Bid</span></p>
-                </div>
-            </a>
+    <div class="featured-auctions">
+        <h2>Most Expensive Auctions</h2>
+        <div class="auction-items-container">
+            <div th:each="auction : ${expensiveAuctions}" class="auction-item">
+                <a th:href="@{|/auction/${auction.slug}|}" class="auction-detail-link">
+                    <div class="auction-info">
+                        <h3 th:text="${auction.title}">Auction Title</h3>
+                        <p><span>Starting Price: </span><span th:text="${auction.startingPrice}">Starting Price</span></p>
+                        <p><span>Highest Bid: </span><span th:text="${auction.highestBid}">Highest Bid</span></p>
+                    </div>
+                </a>
+            </div>
         </div>
     </div>
 </div>

@@ -69,48 +69,83 @@
     display: block;
 }
 
+.main-container {
+     margin: 20px;
+     padding: 20px;
+}
 
 #categories {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+    float: left;
+    width: 30%;
     padding: 20px;
-    background: #f8f9fa
+    background: #f8f9fa;
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    width: 80%;
-    margin: auto;
-    margin-top: 30px;
+    margin: 30px 0;
 }
 
-#categories ul {
-    list-style-type: none;
+#categories > ul {
     padding: 0;
-    width: 100%;
+    margin: 0;
 }
 
-#categories li a {
-    text-decoration: none;
-    color: #333;
+#categories > ul > li {
+    position: relative;
     padding: 15px;
-    display: block;
+    margin-bottom: 10px;
+    background-color: #e9ecef;
+    list-style-type: none;
+}
+
+#categories > ul > li > a {
+    color: #333;
     font-size: 1.5rem;
     font-weight: 500;
-    margin-bottom: 10px;
-    border-radius: 4px;
-    transition: background-color 0.3s ease;
+    text-decoration: none;
 }
 
-#categories li a:hover {
-    background-color: #e9ecef;
+#categories .subcategories {
+    display: none;
+    position: absolute;
+    left: 100%;
+    top: 0;
+    background-color: #ffffff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    min-width: 200px;
+    z-index: 100;
+    padding: 0;
+}
+
+#categories > ul > li:hover .subcategories {
+    display: block;
+}
+
+#categories .subcategories li {
+    list-style-type: none;
+    margin-bottom: 0;
+}
+
+#categories .subcategories li a {
+    padding: 10px 15px;
+    display: block;
+    background-color: #f8f9fa;
+    color: #333;
     text-decoration: none;
+    font-size: 1.2rem;
+    border-bottom: 1px solid #e9ecef;
+}
+
+#categories .subcategories li a:hover {
+    background-color: #e9ecef;
+    color: #0056b3;
+}
+
+#categories .subcategories li:last-child a {
+    border-bottom: none;
 }
 
 .featured-auctions {
-    display: flex;
-    flex-direction: column;
-    margin: 20px;
-    padding: 20px;
+    display: inline-block;
 }
 
 .featured-auctions h2 {
@@ -133,11 +168,6 @@
     border-radius: 8px;
     overflow: hidden;
     background: #fff;
-}
-
-.auction-item img {
-    width: 100%;
-    height: auto;
 }
 
 .auction-info {

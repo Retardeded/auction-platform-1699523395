@@ -9,6 +9,15 @@
 </head>
 <body>
 <div class="container">
+
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item" th:if="${auction.category.parentCategory != null}"
+                th:text="${auction.category.parentCategory.name}">Parent Category</li>
+            <li class="breadcrumb-item active" th:text="${auction.category.name}">Category</li>
+        </ol>
+    </nav>
+
     <div class="detail-header">
         <div class="title-area">
             <h1 th:text="${auction.title}">Auction Title</h1>

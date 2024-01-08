@@ -13,6 +13,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.Random;
 
 import static pl.use.auction.util.StringUtils.createSlugFromTitle;
@@ -23,20 +24,41 @@ public class DefaultUserConfig {
     @Bean
     CommandLineRunner createDefaultCategories(CategoryRepository categoryRepository) {
         return args -> {
-            String[] categoryNames = {
-                    "Electronics", "Fashion", "Home & Garden", "Automotive",
-                    "Baby", "Health", "Beauty", "Culture & Entertainment",
-                    "Sports & Tourism", "Collectibles & Art"
-            };
-            for (String name : categoryNames) {
-                categoryRepository.findByName(name).orElseGet(() -> {
-                    Category category = new Category();
-                    category.setName(name);
-                    return categoryRepository.save(category);
-                });
-            }
+            Category electronics = createOrFindCategory("Electronics", null, categoryRepository);
+            Category fashion = createOrFindCategory("Fashion", null, categoryRepository);
+            Category homeGarden = createOrFindCategory("Home & Garden", null, categoryRepository);
+            Category collectiblesArt = createOrFindCategory("Collectibles & Art", null, categoryRepository);
+
+            // Subcategories for Electronics
+            createOrFindCategory("Cameras", electronics, categoryRepository);
+            createOrFindCategory("Smartphones", electronics, categoryRepository);
+            createOrFindCategory("Laptops", electronics, categoryRepository);
+            createOrFindCategory("Audio", electronics, categoryRepository);
+            // ... create other subcategories for Electronics ...
+
+            // Subcategories for Fashion
+            createOrFindCategory("Dresses", fashion, categoryRepository);
+            createOrFindCategory("Shoes", fashion, categoryRepository);
+            createOrFindCategory("Accessories", fashion, categoryRepository);
+            createOrFindCategory("Menswear", fashion, categoryRepository);
+
+            // Subcategories for Home & Garden
+            createOrFindCategory("Gardening Tools", homeGarden, categoryRepository);
+
+            // Subcategories for Collectibles & Art
+            createOrFindCategory("Antiques", collectiblesArt, categoryRepository);
+            createOrFindCategory("Books", collectiblesArt, categoryRepository);
         };
     }
+
+    private Category createOrFindCategory(String name, Category parent, CategoryRepository repository) {
+        return repository.findByNameAndParentCategory(name, parent)
+                .orElseGet(() -> {
+                    Category newCategory = new Category(name, parent);
+                    return repository.save(newCategory);
+                });
+    }
+
     @Bean
     CommandLineRunner createDefaultUsersAndAuctions(UserRepository userRepository,
                                                     AuctionRepository auctionRepository,
@@ -76,33 +98,40 @@ public class DefaultUserConfig {
         String userIdentifier = user.getUsername().toUpperCase();
         Random random = new Random();
 
-        String[][] auctionData = {
-                {"Vintage Camera", "A classic vintage camera in excellent condition.", "Electronics", "ONGOING"},
-                {"Designer Dress", "A stunning dress from a renowned fashion designer.", "Fashion", "ONGOING"},
-                {"Garden Shovel", "A durable shovel for gardening.", "Home & Garden", "ONGOING"},
-                {"Antique Vase", "A beautiful antique vase, perfect for collectors.", "Collectibles & Art", "EXPIRED"},
-                {"Signed Book", "A book signed by its famous author.", "Collectibles & Art", "ONGOING"},
-                {"Handmade Jewelry", "Exquisite handmade jewelry with unique design.", "Collectibles & Art", "EXPIRED"},
+        // Example data for auctions
+        Object[][] auctionData = {
+                {"Vintage Camera", "A classic vintage camera in excellent condition.", "Cameras", "Electronics", "ONGOING"},
+                {"Designer Dress", "A stunning dress from a renowned fashion designer.", "Dresses", "Fashion", "ONGOING"},
+                {"Garden Shovel", "A durable shovel for gardening.", "Gardening Tools", "Home & Garden", "ONGOING"},
+                {"Antique Vase", "A beautiful antique vase, perfect for collectors.", "Antiques", "Collectibles & Art", "EXPIRED"},
+                {"Signed Book", "A book signed by its famous author.", "Books", "Collectibles & Art", "ONGOING"},
+                {"Handmade Jewelry", "Exquisite handmade jewelry with unique design.", "Accessories", "Fashion", "EXPIRED"},
+                // ... more auction data ...
         };
 
-        for (String[] auctionInfo : auctionData) {
+        for (Object[] auctionInfo : auctionData) {
             Auction auction = new Auction();
             auction.setTitle(userIdentifier + " User's " + auctionInfo[0]);
             auction.setSlug(createSlugFromTitle(auction.getTitle()));
-            auction.setDescription(auctionInfo[1]);
+            auction.setDescription((String) auctionInfo[1]);
 
-            Category itemCategory = categoryRepository.findByName(auctionInfo[2])
-                    .orElseThrow(() -> new Exception("Category not found: " + auctionInfo[2]));
+            String subCategoryName = (String) auctionInfo[2];
+            String parentCategoryName = (String) auctionInfo[3];
+            Category parentCategory = categoryRepository.findByName(parentCategoryName)
+                    .orElseThrow(() -> new Exception("Parent category not found: " + parentCategoryName));
+
+            Category itemCategory = categoryRepository.findByNameAndParentCategory(subCategoryName, parentCategory)
+                    .orElseThrow(() -> new Exception("Subcategory not found: " + subCategoryName + " under " + parentCategoryName));
 
             auction.setCategory(itemCategory);
 
             auction.setStartTime(LocalDateTime.now());
             auction.setEndTime(LocalDateTime.now().plusDays(10));
-            BigDecimal startingPrice = BigDecimal.valueOf(50 + random.nextInt(101)); // 101 ensures the range is 50 to 150 inclusive
+            BigDecimal startingPrice = BigDecimal.valueOf(50 + random.nextInt(101));
             auction.setStartingPrice(startingPrice);
-            BigDecimal highestBid = startingPrice.add(BigDecimal.valueOf(random.nextInt(50) + 1)); // +1 ensures it's at least 1 more
+            BigDecimal highestBid = startingPrice.add(BigDecimal.valueOf(random.nextInt(50) + 1));
             auction.setHighestBid(highestBid);
-            auction.setStatus(auctionInfo[3]);
+            auction.setStatus((String) auctionInfo[3]);
             auction.setAuctionCreator(user);
 
             auctionRepository.save(auction);

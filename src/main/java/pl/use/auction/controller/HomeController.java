@@ -41,8 +41,8 @@ public class HomeController {
         AuctionUser currentUser = userRepository.findByEmail(userDetails.getUsername())
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
-        List<Category> orderedCategories = categoryRepository.findCategoriesOrderedByAuctionCount();
-        model.addAttribute("orderedCategories", orderedCategories);
+        List<Category> parentCategories = categoryRepository.findByParentCategoryIsNull();
+        model.addAttribute("parentCategories", parentCategories);
 
         List<Auction> cheapestAuctions = auctionRepository.findByEndTimeAfter(LocalDateTime.now())
                 .stream()
