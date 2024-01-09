@@ -9,6 +9,20 @@
 </head>
 <body>
 <div class="container">
+
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item" th:if="${auction.category.parentCategory != null}">
+                <a th:href="@{'/auctions/' + ${#strings.replace(auction.category.parentCategory.name, ' ', '-').toLowerCase()}}"
+                   th:text="${auction.category.parentCategory.name}">Parent Category</a>
+            </li>
+            <li class="breadcrumb-item active">
+                <a th:href="@{'/auctions/' + ${#strings.replace(auction.category.name, ' ', '-').toLowerCase()}}"
+                   th:text="${auction.category.name}">Category</a>
+            </li>
+        </ol>
+    </nav>
+
     <div class="detail-header">
         <div class="title-area">
             <h1 th:text="${auction.title}">Auction Title</h1>

@@ -27,3 +27,21 @@
     overflow: hidden;
     text-overflow: ellipsis;
 }
+
+.breadcrumb {
+    background: #f8f8f8;
+    border-radius: .25rem;
+    list-style: none;
+    padding: .75rem 1rem;
+    margin-bottom: 1rem;
+}
+
+.breadcrumb-item {
+    display: inline-block;
+}
+
+.breadcrumb-item + .breadcrumb-item::before {
+    content: ">";
+    padding: 0 .5rem;
+    color: #6c757d;
+}

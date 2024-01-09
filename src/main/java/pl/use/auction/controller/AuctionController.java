@@ -10,10 +10,13 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import pl.use.auction.model.Auction;
 import pl.use.auction.model.AuctionUser;
+import pl.use.auction.model.Category;
 import pl.use.auction.repository.AuctionRepository;
+import pl.use.auction.repository.CategoryRepository;
 import pl.use.auction.repository.UserRepository;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import pl.use.auction.service.AuctionService;
+import pl.use.auction.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -28,6 +31,9 @@ public class AuctionController {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private CategoryRepository categoryRepository;
 
     @Autowired
     private AuctionService auctionService;
@@ -75,28 +81,30 @@ public class AuctionController {
         return "redirect:/profile/auctions";
     }
 
-    @GetMapping("/auctions/all")
-    public String viewAllOngoingAuctions(Model model, Authentication authentication) {
+    @GetMapping("/auctions/{categoryName}")
+    public String viewCategory(@PathVariable String categoryName, Model model, Authentication authentication) {
+        Category parentCategory = categoryRepository.findByNameIgnoreCase(StringUtils.slugToCategoryName(categoryName))
+                .orElseThrow(() -> new IllegalArgumentException("Invalid category name:" + categoryName));
+
         String currentUserName = authentication.getName();
         AuctionUser currentUser = userRepository.findByEmail(currentUserName)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
-        List<Auction> ongoingAuctions = auctionRepository.findByEndTimeAfter(LocalDateTime.now())
-                .stream()
-                .filter(auction -> !auction.getAuctionCreator().equals(currentUser))
-                .collect(Collectors.toList());
+        List<Auction> aggregatedAuctions = auctionService.getAggregatedAuctionsForCategory(parentCategory, currentUser);
 
         model.addAttribute("currentUser", currentUser);
-        model.addAttribute("ongoingAuctions", ongoingAuctions);
-        return "auctions/all-auctions";
+        model.addAttribute("category", parentCategory);
+        model.addAttribute("categoryAuctions", aggregatedAuctions);
+
+        return "auctions/category";
     }
 
-    @GetMapping("/auctions/{id}")
-    public String viewAuctionDetail(@PathVariable("id") Long auctionId, Model model, Authentication authentication) {
+    @GetMapping("/auction/{slug}")
+    public String viewAuctionDetail(@PathVariable("slug") String auctionSlug, Model model, Authentication authentication) {
         AuctionUser user = userRepository.findByEmail(authentication.getName())
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
-        Auction auction = auctionRepository.findById(auctionId)
-                .orElseThrow(() -> new IllegalArgumentException("Invalid auction Id: " + auctionId));
+        Auction auction = auctionRepository.findBySlug(auctionSlug)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid auction slug: " + auctionSlug));
         model.addAttribute("auction", auction);
         model.addAttribute("currentUser", user);
         return "auctions/auction-detail";

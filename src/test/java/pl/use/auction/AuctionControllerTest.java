@@ -15,14 +15,19 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import pl.use.auction.controller.AuctionController;
 import pl.use.auction.model.Auction;
 import pl.use.auction.model.AuctionUser;
+import pl.use.auction.model.Category;
 import pl.use.auction.repository.AuctionRepository;
+import pl.use.auction.repository.CategoryRepository;
 import pl.use.auction.repository.UserRepository;
 import pl.use.auction.service.AuctionService;
+import pl.use.auction.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.mockito.Mockito.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -42,6 +47,9 @@ class AuctionControllerTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private CategoryRepository categoryRepository;
 
     @Mock
     private BindingResult bindingResult;
@@ -83,42 +91,31 @@ class AuctionControllerTest {
         assertEquals("redirect:/profile/auctions", viewName);
     }
 
-    @Captor
-    private ArgumentCaptor<List<Auction>> auctionListCaptor;
-
     @Test
-    void testViewAllOngoingAuctions() {
-
+    void testViewCategory() {
+        String categoryName = "electronics";
+        Category parentCategory = new Category(); // set necessary properties
         AuctionUser currentUser = new AuctionUser();
         currentUser.setEmail("user@example.com");
-        Auction auction1 = createAuctionWithCreator("user@example.com");
-        Auction auction2 = createAuctionWithCreator("other@example.com");
+        List<Auction> aggregatedAuctions = List.of(new Auction()); // create mock auctions
 
         when(authentication.getName()).thenReturn("user@example.com");
         when(userRepository.findByEmail("user@example.com")).thenReturn(Optional.of(currentUser));
-        when(auctionRepository.findByEndTimeAfter(any(LocalDateTime.class)))
-                .thenReturn(List.of(auction2));
+        when(categoryRepository.findByNameIgnoreCase(StringUtils.slugToCategoryName(categoryName)))
+                .thenReturn(Optional.of(parentCategory));
+        when(auctionService.getAggregatedAuctionsForCategory(parentCategory, currentUser))
+                .thenReturn(aggregatedAuctions);
 
-        String viewName = auctionController.viewAllOngoingAuctions(model, authentication);
+        String viewName = auctionController.viewCategory(categoryName, model, authentication);
 
+        verify(categoryRepository).findByNameIgnoreCase(StringUtils.slugToCategoryName(categoryName));
         verify(userRepository).findByEmail("user@example.com");
-        verify(auctionRepository).findByEndTimeAfter(any(LocalDateTime.class));
-        verify(model).addAttribute(eq("currentUser"), any(AuctionUser.class));
-        assertEquals("auctions/all-auctions", viewName);
+        verify(auctionService).getAggregatedAuctionsForCategory(parentCategory, currentUser);
 
-        verify(model).addAttribute(eq("ongoingAuctions"), auctionListCaptor.capture());
-        List<Auction> capturedAuctions = auctionListCaptor.getValue();
-
-        assertTrue(capturedAuctions.contains(auction2) && capturedAuctions.size() == 1);
-        assertEquals("auctions/all-auctions", viewName);
-    }
-
-    private Auction createAuctionWithCreator(String creatorEmail) {
-        Auction auction = new Auction();
-        AuctionUser creator = new AuctionUser();
-        creator.setEmail(creatorEmail);
-        auction.setAuctionCreator(creator);
-        return auction;
+        assertEquals("auctions/category", viewName);
+        verify(model).addAttribute(eq("currentUser"), eq(currentUser));
+        verify(model).addAttribute(eq("category"), eq(parentCategory));
+        verify(model).addAttribute(eq("categoryAuctions"), eq(aggregatedAuctions));
     }
 
     @Captor
@@ -128,26 +125,41 @@ class AuctionControllerTest {
     private ArgumentCaptor<AuctionUser> userCaptor;
     @Test
     void testViewAuctionDetail() {
-        Long auctionId = 1L;
+        String auctionSlug = "some-auction-slug";
         Auction auction = new Auction();
-        auction.setId(auctionId);
+        auction.setSlug(auctionSlug);
+        Category category = new Category();
+        category.setName("Category Name");
+        Category parentCategory = new Category();
+        parentCategory.setName("Parent Category Name");
+        category.setParentCategory(parentCategory);
+        auction.setCategory(category);
+
         AuctionUser user = new AuctionUser();
         user.setEmail("test@example.com");
 
         when(authentication.getName()).thenReturn("test@example.com");
         when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(user));
-        when(auctionRepository.findById(auctionId)).thenReturn(Optional.of(auction));
+        when(auctionRepository.findBySlug(auctionSlug)).thenReturn(Optional.of(auction));
 
-        String viewName = auctionController.viewAuctionDetail(auctionId, model, authentication);
+        String viewName = auctionController.viewAuctionDetail(auctionSlug, model, authentication);
 
         verify(userRepository).findByEmail("test@example.com");
-        verify(auctionRepository).findById(auctionId);
+        verify(auctionRepository).findBySlug(auctionSlug);
 
         verify(model).addAttribute(eq("auction"), auctionCaptor.capture());
         assertEquals(auction, auctionCaptor.getValue());
 
         verify(model).addAttribute(eq("currentUser"), userCaptor.capture());
         assertEquals(user, userCaptor.getValue());
+
+        ArgumentCaptor<Auction> auctionCaptor = ArgumentCaptor.forClass(Auction.class);
+        verify(model).addAttribute(eq("auction"), auctionCaptor.capture());
+        Auction capturedAuction = auctionCaptor.getValue();
+        assertNotNull(capturedAuction.getCategory());
+        assertEquals("Category Name", capturedAuction.getCategory().getName());
+        assertNotNull(capturedAuction.getCategory().getParentCategory());
+        assertEquals("Parent Category Name", capturedAuction.getCategory().getParentCategory().getName());
 
         assertEquals("auctions/auction-detail", viewName);
     }

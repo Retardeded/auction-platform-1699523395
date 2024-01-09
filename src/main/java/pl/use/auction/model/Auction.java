@@ -17,7 +17,12 @@ public class Auction {
     private Long id;
 
     private String title;
+
+    private String slug;
     private String description;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    private Category category;
 
     @ManyToOne(fetch = FetchType.LAZY)
     private AuctionUser auctionCreator;
