@@ -81,22 +81,6 @@ public class AuctionController {
         return "redirect:/profile/auctions";
     }
 
-    @GetMapping("/auctions/all")
-    public String viewAllOngoingAuctions(Model model, Authentication authentication) {
-        String currentUserName = authentication.getName();
-        AuctionUser currentUser = userRepository.findByEmail(currentUserName)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
-
-        List<Auction> ongoingAuctions = auctionRepository.findByEndTimeAfter(LocalDateTime.now())
-                .stream()
-                .filter(auction -> !auction.getAuctionCreator().equals(currentUser))
-                .collect(Collectors.toList());
-
-        model.addAttribute("currentUser", currentUser);
-        model.addAttribute("ongoingAuctions", ongoingAuctions);
-        return "auctions/all-auctions";
-    }
-
     @GetMapping("/auctions/{categoryName}")
     public String viewCategory(@PathVariable String categoryName, Model model, Authentication authentication) {
         Category parentCategory = categoryRepository.findByNameIgnoreCase(StringUtils.slugToCategoryName(categoryName))
@@ -106,16 +90,7 @@ public class AuctionController {
         AuctionUser currentUser = userRepository.findByEmail(currentUserName)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
-        List<Auction> aggregatedAuctions = auctionRepository.findByCategoryAndEndTimeAfter(parentCategory, LocalDateTime.now())
-                .stream()
-                .filter(auction -> !auction.getAuctionCreator().equals(currentUser)).collect(Collectors.toList());
-
-        for (Category childCategory : parentCategory.getChildCategories()) {
-            aggregatedAuctions.addAll(auctionRepository.findByCategoryAndEndTimeAfter(childCategory, LocalDateTime.now())
-                    .stream()
-                    .filter(auction -> !auction.getAuctionCreator().equals(currentUser))
-                    .toList());
-        }
+        List<Auction> aggregatedAuctions = auctionService.getAggregatedAuctionsForCategory(parentCategory, currentUser);
 
         model.addAttribute("currentUser", currentUser);
         model.addAttribute("category", parentCategory);
