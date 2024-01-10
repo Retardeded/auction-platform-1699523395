@@ -4,6 +4,7 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import pl.use.auction.model.Auction;
+import pl.use.auction.model.AuctionImage;
 import pl.use.auction.model.AuctionUser;
 import pl.use.auction.model.Category;
 import pl.use.auction.repository.AuctionRepository;
@@ -14,6 +15,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Random;
 
 import static pl.use.auction.util.StringUtils.createSlugFromTitle;
@@ -102,11 +104,10 @@ public class DefaultUserConfig {
         Object[][] auctionData = {
                 {"Vintage Camera", "A classic vintage camera in excellent condition.", "Cameras", "Electronics", "ONGOING"},
                 {"Designer Dress", "A stunning dress from a renowned fashion designer.", "Dresses", "Fashion", "ONGOING"},
-                {"Garden Shovel", "A durable shovel for gardening.", "Gardening Tools", "Home & Garden", "ONGOING"},
+                {"Garden Shovel", "A durable shovel for gardening.", "Gardening Tools", "Home & Garden", "ONGOING",},
                 {"Antique Vase", "A beautiful antique vase, perfect for collectors.", "Antiques", "Collectibles & Art", "EXPIRED"},
                 {"Signed Book", "A book signed by its famous author.", "Books", "Collectibles & Art", "ONGOING"},
                 {"Handmade Jewelry", "Exquisite handmade jewelry with unique design.", "Accessories", "Fashion", "EXPIRED"},
-                // ... more auction data ...
         };
 
         for (Object[] auctionInfo : auctionData) {
@@ -133,6 +134,13 @@ public class DefaultUserConfig {
             auction.setHighestBid(highestBid);
             auction.setStatus((String) auctionInfo[3]);
             auction.setAuctionCreator(user);
+
+            String imageName = ((String) auctionInfo[0]).replaceAll("\\s+", "_") + ".png";
+            String imagePath = "auctionImages/" + imageName;
+            AuctionImage auctionImage = new AuctionImage();
+            auctionImage.setImageUrl(imagePath);
+            auctionImage.setAuction(auction);
+            auction.setImages(List.of(auctionImage));
 
             auctionRepository.save(auction);
         }

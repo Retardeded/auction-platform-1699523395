@@ -33,6 +33,9 @@ public class Auction {
     @ManyToMany(mappedBy = "observedAuctions")
     private List<AuctionUser> observers;
 
+    @OneToMany(mappedBy = "auction", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<AuctionImage> images;
+
     private LocalDateTime startTime;
     private LocalDateTime endTime;
     private BigDecimal startingPrice;

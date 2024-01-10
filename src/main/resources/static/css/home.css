@@ -75,12 +75,12 @@
 }
 
 #categories {
+    border: 1px solid #e9ecef;
     float: left;
     width: 30%;
     padding: 20px;
     background: #f8f9fa;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
     margin: 30px 0;
 }
 
@@ -145,60 +145,85 @@
 }
 
 .featured-auctions {
-    display: inline-block;
+    height: 400px;
+    display: inline-flex;
+    overflow: hidden;
+    background: #fff;
+    margin-top: 10px;
+    margin-bottom: 10px;
+    margin-right: 40px;
 }
 
 .featured-auctions h2 {
-    text-align: left;
-    margin-bottom: 20px;
+    text-align: center;
+    font-size: 1.5em;
+    color: #333;
+}
+
+.featured-auctions-title {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 10px;
+    background-color: #f8f8f8;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: auto;
+}
+
+.featured-auctions-title h2 {
+    width: 100%;
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+.featured-auctions-logo {
+    border-radius:10px;
+    margin: 20px;
+    height: auto;
+    max-height: 70%;
+    width: auto;
+    max-width: 100%;
 }
 
 .auction-items-container {
+    border: 1px solid #e9ecef;
+    border-radius: 10px;
     display: flex;
     overflow-x: auto;
-    padding-bottom: 10px;
+    padding-right: 20px;
+    margin-left: 20px;
 }
 
 .auction-item {
-    flex: 0 0 auto;
-    width: 200px;
-    margin-right: 20px;
-    border: 1px solid #ccc;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    border-radius: 8px;
+    width: 180px;
+    margin: auto;
+    padding: 10px;
     overflow: hidden;
     background: #fff;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.auction-image {
+    border-radius: 10px;
+    margin: 10px auto;
+    width: calc(100% - 20px);
+    height: auto;
+    display: block;
 }
 
 .auction-info {
-    padding: 10px;
     text-align: center;
-}
-
-.auction-items-container::-webkit-scrollbar {
-    height: 8px;
-}
-
-.auction-items-container::-webkit-scrollbar-thumb {
-    background: #ccc;
-    border-radius: 4px;
-}
-
-.auction-items-container {
-    display: flex;
-    overflow-x: auto;
-}
-
-.auction-item {
-    margin-right: 10px;
 }
 
 .auction-detail-link {
     text-decoration: none;
     color: inherit;
-    cursor: pointer;
 }
 
-.auction-detail-link:hover {
+.auction-detail-link:hover .auction-item {
     background-color: #f8f8f8;
 }
