@@ -8,7 +8,7 @@
 <body>
 <div class="container">
   <h1>Create Auction</h1>
-  <form th:action="@{/auctions/create}" th:object="${auction}" method="post">
+  <form th:action="@{/auctions/create}" th:object="${auction}" method="post" enctype="multipart/form-data">
     <div class="form-group">
       <label for="title" class="form-label">Title:</label>
       <input type="text" id="title" name="title" class="form-control" required />
@@ -17,6 +17,25 @@
     <div class="form-group">
       <label for="description" class="form-label">Description:</label>
       <textarea id="description" name="description" class="form-control" required></textarea>
+    </div>
+
+    <div class="form-group">
+      <label for="category" class="form-label">Category:</label>
+      <select id="category" name="category" class="form-control" required>
+        <option value="">Select Category</option>
+        <option th:each="category : ${categories}"
+                th:value="${category.id}"
+                th:text="${category.name}">
+          Main Category
+        </option>
+        <optgroup th:each="category : ${categories}" th:label="${category.name}">
+          <option th:each="subCategory : ${category.childCategories}"
+                  th:value="${subCategory.id}"
+                  th:text="${subCategory.name}">
+            Sub Category
+          </option>
+        </optgroup>
+      </select>
     </div>
 
     <div class="form-group">
@@ -29,9 +48,14 @@
       <input type="datetime-local" id="endTime" name="endTime" class="form-control" required />
     </div>
 
+    <div class="form-group">
+      <label for="images" class="form-label">Images:</label>
+      <input type="file" id="images" name="images" class="form-control" multiple />
+    </div>
+
     <button type="submit" class="btn">Create Auction</button>
   </form>
-  <a href="/auctions/all" class="btn">Back to Auctions</a>
+  <button onclick="window.history.back()" class="btn button-detail">Back</button>
 </div>
 </body>
 </html>

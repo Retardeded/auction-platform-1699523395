@@ -4,7 +4,6 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import pl.use.auction.model.Auction;
-import pl.use.auction.model.AuctionImage;
 import pl.use.auction.model.AuctionUser;
 import pl.use.auction.model.Category;
 import pl.use.auction.repository.AuctionRepository;
@@ -14,7 +13,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
@@ -137,10 +135,7 @@ public class DefaultUserConfig {
 
             String imageName = ((String) auctionInfo[0]).replaceAll("\\s+", "_") + ".png";
             String imagePath = "auctionImages/" + imageName;
-            AuctionImage auctionImage = new AuctionImage();
-            auctionImage.setImageUrl(imagePath);
-            auctionImage.setAuction(auction);
-            auction.setImages(List.of(auctionImage));
+            auction.setImageUrls(List.of(imagePath));
 
             auctionRepository.save(auction);
         }

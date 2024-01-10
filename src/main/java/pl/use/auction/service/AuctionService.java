@@ -1,18 +1,31 @@
 package pl.use.auction.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 import pl.use.auction.model.Auction;
 import pl.use.auction.model.AuctionUser;
 import pl.use.auction.model.Category;
 import pl.use.auction.repository.AuctionRepository;
+import pl.use.auction.repository.CategoryRepository;
 import pl.use.auction.repository.UserRepository;
 
+import java.io.IOException;
 import java.math.BigDecimal;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import static pl.use.auction.util.StringUtils.createSlugFromTitle;
 
 @Service
 public class AuctionService {
@@ -22,6 +35,9 @@ public class AuctionService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private CategoryRepository categoryRepository;
 
     public boolean placeBid(Auction auction, AuctionUser bidder, BigDecimal bidAmount) {
         boolean bidPlaced = false;
@@ -76,5 +92,47 @@ public class AuctionService {
                 .sorted(Comparator.comparing(Auction::getHighestBid).reversed())
                 .limit(limit)
                 .collect(Collectors.toList());
+    }
+
+    public Auction createAndSaveAuction(Auction auction,
+                                        Long categoryId,
+                                        MultipartFile[] files,
+                                        String username) throws IOException {
+
+        Category category = categoryRepository.findById(categoryId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Category not found"));
+        AuctionUser user = userRepository.findByEmail(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+        auction.setCategory(category);
+        auction.setAuctionCreator(user);
+        auction.setStartTime(LocalDateTime.now());
+        auction.setEndTime(auction.getEndTime());
+        auction.setStartingPrice(auction.getStartingPrice());
+        auction.setHighestBid(auction.getStartingPrice());
+        auction.setStatus("ONGOING");
+        auction.setSlug(createSlugFromTitle(auction.getTitle()));
+        auction.setImageUrls(new ArrayList<>()); // Make sure the list is initialized
+
+        for (MultipartFile file : files) {
+            if (!file.isEmpty()) {
+                String imageUrl = saveImage(file);
+                auction.getImageUrls().add(imageUrl); // Add the image URL to the list
+            }
+        }
+
+        return auctionRepository.save(auction);
+    }
+
+    public String saveImage(MultipartFile file) throws IOException {
+        String uploadDir = "src/main/resources/static/auctionImages/";
+
+        Files.createDirectories(Paths.get(uploadDir));
+
+        Path filePath = Paths.get(uploadDir, file.getOriginalFilename());
+
+        Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+
+        return "auctionImages/" + file.getOriginalFilename();
     }
 }

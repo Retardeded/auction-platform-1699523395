@@ -7,6 +7,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import pl.use.auction.model.Auction;
 import pl.use.auction.model.AuctionUser;
@@ -16,12 +17,12 @@ import pl.use.auction.repository.CategoryRepository;
 import pl.use.auction.repository.UserRepository;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import pl.use.auction.service.AuctionService;
+import pl.use.auction.service.CategoryService;
 import pl.use.auction.util.StringUtils;
 
+import java.io.IOException;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Controller
 public class AuctionController {
@@ -37,6 +38,9 @@ public class AuctionController {
 
     @Autowired
     private AuctionService auctionService;
+
+    @Autowired
+    CategoryService categoryService;
 
     @PostMapping("/auctions/bid")
     public String placeBid(@RequestParam("auctionId") Long auctionId,
@@ -63,20 +67,27 @@ public class AuctionController {
     @GetMapping("/auctions/create")
     public String createAuctionForm(Model model) {
         model.addAttribute("auction", new Auction());
+        List<Category> categories = categoryService.findAllMainCategoriesWithSubcategories();
+        model.addAttribute("categories", categories);
         return "auctions/create-auction";
     }
 
     @PostMapping("/auctions/create")
-    public String createAuction(@ModelAttribute Auction auction, BindingResult bindingResult, Authentication authentication) {
+    public String createAuction(@ModelAttribute Auction auction,
+                                @RequestParam("images") MultipartFile[] files,
+                                @RequestParam("category") Long categoryId, // This is to capture the category ID from the form
+                                BindingResult bindingResult,
+                                Authentication authentication) {
         if (bindingResult.hasErrors()) {
             return "auctions/create-auction";
         }
 
-        AuctionUser user = userRepository.findByEmail(authentication.getName())
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
-        auction.setAuctionCreator(user);
-        auction.setStartTime(LocalDateTime.now());
-        auctionRepository.save(auction);
+        try {
+            Auction createdAuction = auctionService.createAndSaveAuction(auction, categoryId, files, authentication.getName());
+        } catch (IOException e) {
+            e.printStackTrace();
+            return "auctions/create-auction";
+        }
 
         return "redirect:/profile/auctions";
     }

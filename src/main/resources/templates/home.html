@@ -55,7 +55,7 @@
         <div class="auction-items-container">
             <div th:each="auction : ${cheapestAuctions}" class="auction-item">
                 <a th:href="@{|/auction/${auction.slug}|}" class="auction-detail-link">
-                    <img th:src="@{|/${auction.images[0].imageUrl}|}"
+                    <img th:src="@{|/${auction.imageUrls[0]}|}"
                          alt="Auction Image" class="auction-image"/>
                     <div class="auction-info">
                         <h3 th:text="${auction.title}">Auction Title</h3>
@@ -75,7 +75,7 @@
         <div class="auction-items-container">
             <div th:each="auction : ${expensiveAuctions}" class="auction-item">
                 <a th:href="@{|/auction/${auction.slug}|}" class="auction-detail-link">
-                    <img th:src="@{|/${auction.images[0].imageUrl}|}"
+                    <img th:src="@{|/${auction.imageUrls[0]}|}"
                          alt="Auction Image" class="auction-image"/>
                     <div class="auction-info">
                         <h3 th:text="${auction.title}">Auction Title</h3>
