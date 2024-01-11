@@ -1,29 +1,72 @@
+
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
   <title>My Listings</title>
-  <link th:href="@{/css/styles.css}" rel="stylesheet" />
-  <link th:href="@{/css/auction.css}" rel="stylesheet" />
+  <link th:href="@{/css/user-auctions.css}" rel="stylesheet" />
 </head>
 <body>
-<div class="container">
-  <h1>My Listings</h1>
-
-  <h2>Ongoing Auctions</h2>
-  <div th:each="auction : ${ongoingAuctions}" class="auction-item shadow-box">
-    <div class="auction-detail"><strong>Title:</strong> <span th:text="${auction.title}"></span></div>
-    <div class="auction-detail"><strong>Ends:</strong> <span th:text="${#temporals.format(auction.endTime, 'yyyy-MM-dd HH:mm')}"></span></div>
-    <div class="auction-detail"><strong>Current Bid:</strong> <span th:text="${auction.highestBid}"></span></div>
+<div class="layout-container">
+  <div class="sidebar">
+    <h2>Auction Sections</h2>
+    <a href="#" class="sidebar-link" id="ongoingLink">Ongoing Auctions</a>
+    <a href="#" class="sidebar-link" id="soldLink">Sold Auctions</a>
+    <a href="/profile" class="sidebar-link">Back to Profile</a>
   </div>
+  <div class="main-content">
+    <div id="ongoingAuctions" class="auction-list">
+      <div class="featured-auctions">
+        <div class="featured-auctions-title">
+          <img th:src="@{/auctionSectionImages/ongoing-auctions.png}" alt="OnGoing Logo" class="featured-auctions-logo"/>
+          <h2>Ongoing Auctions</h2>
+        </div>
+        <div th:if="${ongoingAuctions.isEmpty()}" class="no-auctions-message">
+          <div>No ongoing auctions available.</div>
+        </div>
+        <div class="auction-items-container" th:unless="${ongoingAuctions.isEmpty()}">
+          <div th:each="auction : ${ongoingAuctions}" class="auction-item">
+            <img th:src="@{|/${auction.imageUrls[0]}|}"
+                 alt="Auction Image" class="auction-image"/>
+            <div class="auction-info">
+              <h3 th:text="${auction.title}">Auction Title</h3>
+              <div>Category: <span th:text="${auction.category.name}"></span></div>
+              <div>Ends: <span th:text="${#temporals.format(auction.endTime, 'yyyy-MM-dd HH:mm')}"></span></div>
+              <div>Starting Price: <span th:text="${auction.startingPrice}"></span></div>
+              <div>Highest Bid: <span th:text="${auction.highestBid}"></span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
-  <h2>Past Auctions</h2>
-  <div th:each="auction : ${pastAuctions}" class="auction-item shadow-box">
-    <div class="auction-detail"><strong>Title:</strong> <span th:text="${auction.title}"></span></div>
-    <div class="auction-detail"><strong>Ends:</strong> <span th:text="${#temporals.format(auction.endTime, 'yyyy-MM-dd HH:mm')}"></span></div>
-    <div class="auction-detail"><strong>Final Bid:</strong> <span th:text="${auction.highestBid}"></span></div>
+    <div id="soldAuctions" class="auction-list" style="display: none;">
+      <div class="featured-auctions">
+        <div class="featured-auctions-title">
+          <div class="featured-auctions-title">
+            <img th:src="@{/auctionSectionImages/sold-auctions.png}" alt="Sold Logo" class="featured-auctions-logo"/>
+            <h2>Sold Auctions</h2>
+          </div>
+        </div>
+        <div th:if="${pastAuctions.isEmpty()}" class="no-auctions-message">
+          <div>No sold auctions to display.</div>
+        </div>
+        <div class="auction-items-container" th:unless="${pastAuctions.isEmpty()}">
+          <div th:each="auction : ${pastAuctions}" class="auction-item">
+            <img th:src="@{|/${auction.imageUrls[0]}|}"
+                 alt="Auction Image" class="auction-image"/>
+            <div class="auction-info">
+              <h3 th:text="${auction.title}">Auction Title</h3>
+              <div>Category: <span th:text="${auction.category.name}"></span></div>
+              <div>Ends: <span th:text="${#temporals.format(auction.endTime, 'yyyy-MM-dd HH:mm')}"></span></div>
+              <div>Starting Price: <span th:text="${auction.startingPrice}"></span></div>
+              <div>Highest Bid: <span th:text="${auction.highestBid}"></span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
-
-  <a href="/profile" class="btn">Back to Profile</a>
 </div>
+<script th:src="@{/js/profile.js}"></script>
 </body>
 </html>
