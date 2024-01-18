@@ -133,9 +133,11 @@ public class DefaultUserConfig {
             auction.setStatus((String) auctionInfo[3]);
             auction.setAuctionCreator(user);
 
-            String imageName = ((String) auctionInfo[0]).replaceAll("\\s+", "_") + ".png";
-            String imagePath = "auctionImages/" + imageName;
-            auction.setImageUrls(List.of(imagePath));
+            String baseImageName = ((String) auctionInfo[0]).replaceAll("\\s+", "_");
+            String originalImagePath = "auctionImages/" + baseImageName + ".png";
+            String mirroredImagePath = "auctionImages/" + baseImageName + "_mirrored.png";
+            String rotatedImagePath = "auctionImages/" + baseImageName + "_rotated.png";
+            auction.setImageUrls(List.of(originalImagePath, mirroredImagePath, rotatedImagePath));
 
             auctionRepository.save(auction);
         }
