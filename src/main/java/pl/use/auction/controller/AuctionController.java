@@ -42,26 +42,24 @@ public class AuctionController {
     @Autowired
     CategoryService categoryService;
 
-    @PostMapping("/auctions/bid")
-    public String placeBid(@RequestParam("auctionId") Long auctionId,
+    @PostMapping("/auction/{slug}/bid")
+    public String placeBid(@PathVariable("slug") String auctionSlug,
                            @RequestParam("bidAmount") BigDecimal bidAmount,
                            Authentication authentication,
-                           RedirectAttributes redirectAttributes,
-                           Model model) {
+                           RedirectAttributes redirectAttributes) {
 
-        Auction auction = auctionRepository.findById(auctionId)
-                .orElseThrow(() -> new IllegalArgumentException("Invalid auction Id:" + auctionId));
+        Auction auction = auctionRepository.findBySlug(auctionSlug)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid auction slug:" + auctionSlug));
         AuctionUser bidder = userRepository.findByEmail(authentication.getName())
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
         boolean bidPlaced = auctionService.placeBid(auction, bidder, bidAmount);
         if (bidPlaced) {
             redirectAttributes.addFlashAttribute("successMessage", "Bid placed successfully!");
-            return "redirect:/auctions/all";
         } else {
             redirectAttributes.addFlashAttribute("errorMessage", "Bid not high enough!");
-            return "redirect:/auctions/" + auctionId;
         }
+        return "redirect:/auction/" + auctionSlug;
     }
 
     @GetMapping("/auctions/create")

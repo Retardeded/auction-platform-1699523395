@@ -60,14 +60,17 @@
             <p>Starting Price: <span th:text="${auction.startingPrice}">Starting Price</span></p>
             <p>Current Highest Bid: <span th:text="${auction.highestBid}">Highest Bid</span></p>
 
-            <form th:action="@{/auctions/bid}" method="post">
-                <input type="hidden" name="auctionId" th:value="${auction.id}" />
+            <form th:action="@{'/auction/' + ${auction.slug} + '/bid'}" method="post">
                 <div class="bid-container">
                     <input type="number" id="bidAmount" class="form-control bid-input" name="bidAmount"
                            th:value="${auction.highestBid}" min="0" step="0.1" required />
                     <button type="submit" class="btn button-detail place-bid">Place Bid</button>
                 </div>
             </form>
+
+            <div th:if="${successMessage}" class="success-message">
+                <p th:text="${successMessage}"></p>
+            </div>
 
             <div th:if="${errorMessage}" class="error-message">
                 <p th:text="${errorMessage}"></p>
