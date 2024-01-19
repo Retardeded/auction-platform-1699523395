@@ -2,8 +2,9 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
   <title>Create Auction</title>
-  <link th:href="@{/css/styles.css}" rel="stylesheet" />
-  <link th:href="@{/css/auction.css}" rel="stylesheet" />
+  <link th:href="@{/css/auction-detail.css}" rel="stylesheet"/>
+  <link th:href="@{/css/auction-create.css}" rel="stylesheet"/>
+  <script th:src="@{/js/create-auction.js}"></script>
 </head>
 <body>
 <div class="container">
@@ -11,11 +12,13 @@
   <form th:action="@{/auctions/create}" th:object="${auction}" method="post" enctype="multipart/form-data">
     <div class="form-group">
       <label for="title" class="form-label">Title:</label>
+      <span class="form-helper">Be specific and include details such as brand, model, or color.</span>
       <input type="text" id="title" name="title" class="form-control" required />
     </div>
 
     <div class="form-group">
       <label for="description" class="form-label">Description:</label>
+      <span class="form-helper">Provide detailed information about the item to avoid questions from buyers.</span>
       <textarea id="description" name="description" class="form-control" required></textarea>
     </div>
 
@@ -50,12 +53,25 @@
 
     <div class="form-group">
       <label for="images" class="form-label">Images:</label>
+      <span class="form-helper">Add images up to 5MB in jpg, jpeg, or png formats.</span>
       <input type="file" id="images" name="images" class="form-control" multiple />
+    </div>
+
+    <button type="button" class="btn" id="previewButton" onclick="previewAuction()" disabled>Preview Auction</button>
+
+    <div id="previewModal" class="modal">
+
+      <!-- Modal content -->
+      <div class="modal-content">
+        <span class="close">&times;</span>
+        <div id="previewContent"></div> <!-- This is where you will inject the preview HTML -->
+      </div>
+
     </div>
 
     <button type="submit" class="btn">Create Auction</button>
   </form>
-  <button onclick="window.history.back()" class="btn button-detail">Back</button>
+  <button onclick="window.history.back()" class="btn button-back">Back</button>
 </div>
 </body>
 </html>
