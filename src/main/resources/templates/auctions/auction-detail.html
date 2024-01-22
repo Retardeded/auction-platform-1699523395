@@ -5,6 +5,7 @@
     <title>Auction Details</title>
     <link th:href="@{/css/auction-detail.css}" rel="stylesheet"/>
     <script th:src="@{/js/auction.js}"></script>
+    <script th:src="@{/js/auction-gallery.js}"></script>
 </head>
 <body>
 <div class="container">
@@ -78,25 +79,5 @@
         </div>
     </div>
 </div>
-<script>
-    let currentSlide = 0;
-    function showSlide(index) {
-        console.log('showSlide called with index:', index); // Log to make sure the function is called
-        let slides = document.getElementsByClassName("carousel-slide");
-        console.log('Number of slides found:', slides.length); // Check how many slides are found
-        if (index >= slides.length) currentSlide = 0;
-        if (index < 0) currentSlide = slides.length - 1;
-        for (let slide of slides) {
-            slide.style.display = "none";
-        }
-        slides[currentSlide].style.display = "block";
-    }
-    function moveSlide(step) {
-        showSlide(currentSlide += step);
-    }
-    window.onload = function() {
-        showSlide(currentSlide); // Initialize the carousel to show the first slide
-    }
-</script>
 </body>
 </html>
