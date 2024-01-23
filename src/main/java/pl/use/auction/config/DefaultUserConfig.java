@@ -108,6 +108,8 @@ public class DefaultUserConfig {
                 {"Handmade Jewelry", "Exquisite handmade jewelry with unique design.", "Accessories", "Fashion", "EXPIRED"},
         };
 
+        boolean isFirstAuction = true;
+
         for (Object[] auctionInfo : auctionData) {
             Auction auction = new Auction();
             auction.setTitle(userIdentifier + " User's " + auctionInfo[0]);
@@ -128,7 +130,13 @@ public class DefaultUserConfig {
             auction.setEndTime(LocalDateTime.now().plusDays(10));
             BigDecimal startingPrice = BigDecimal.valueOf(50 + random.nextInt(101));
             auction.setStartingPrice(startingPrice);
-            BigDecimal highestBid = startingPrice.add(BigDecimal.valueOf(random.nextInt(50) + 1));
+            BigDecimal highestBid;
+            if (isFirstAuction) {
+                highestBid = BigDecimal.ZERO;
+                isFirstAuction = false; // Only for the first auction
+            } else {
+                highestBid = startingPrice.add(BigDecimal.valueOf(random.nextInt(50) + 1));
+            }
             auction.setHighestBid(highestBid);
             auction.setStatus((String) auctionInfo[3]);
             auction.setAuctionCreator(user);

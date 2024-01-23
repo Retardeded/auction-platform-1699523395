@@ -2,8 +2,11 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
+  <meta name="_csrf" th:content="${_csrf.token}"/>
+  <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
   <title>My Listings</title>
   <link th:href="@{/css/user-auctions.css}" rel="stylesheet" />
+  <script th:src="@{/js/user-auctions.js}"></script>
 </head>
 <body>
 <div class="layout-container">
@@ -24,7 +27,7 @@
           <div>No ongoing auctions available.</div>
         </div>
         <div class="auction-items-container" th:unless="${ongoingAuctions.isEmpty()}">
-          <div th:each="auction : ${ongoingAuctions}" class="auction-item">
+          <div th:each="auction : ${ongoingAuctions}" class="auction-item" th:id="'auction-item-' + ${auction.id}" >
             <img th:src="@{|/${auction.imageUrls[0]}|}"
                  alt="Auction Image" class="auction-image"/>
             <div class="auction-info">
@@ -33,6 +36,13 @@
               <div>Ends: <span th:text="${#temporals.format(auction.endTime, 'yyyy-MM-dd HH:mm')}"></span></div>
               <div>Starting Price: <span th:text="${auction.startingPrice}"></span></div>
               <div>Highest Bid: <span th:text="${auction.highestBid}"></span></div>
+
+                <button th:if="${auction.highestBid == 0}"
+                        th:data-auction-id="${auction.id}"
+                        onclick="handleRemoveAuction(event, this.getAttribute('data-auction-id'))"
+                        class="btn btn-danger">
+                  Remove
+                </button>
             </div>
           </div>
         </div>

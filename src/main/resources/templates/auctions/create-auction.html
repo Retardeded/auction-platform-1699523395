@@ -55,7 +55,7 @@
     <div class="form-group">
       <label for="images" class="form-label">Images:</label>
       <span class="form-helper">Add images up to 5MB in jpg, jpeg, or png formats.</span>
-      <input type="file" id="images" name="images" class="form-control" multiple />
+      <input type="file" id="images" name="images" class="form-control" multiple required/>
     </div>
 
     <button type="button" class="btn" id="previewButton" onclick="previewAuction()" disabled>Preview Auction</button>
@@ -70,7 +70,7 @@
 
     </div>
 
-    <button type="submit" class="btn">Create Auction</button>
+    <button type="submit" class="btn" id="submitButton">Create Auction</button>
   </form>
   <button onclick="window.history.back()" class="btn button-back">Back</button>
 </div>

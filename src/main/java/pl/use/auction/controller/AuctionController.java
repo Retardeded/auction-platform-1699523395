@@ -1,6 +1,7 @@
 package pl.use.auction.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
@@ -8,6 +9,7 @@ import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import pl.use.auction.model.Auction;
 import pl.use.auction.model.AuctionUser;
@@ -90,6 +92,23 @@ public class AuctionController {
         return "redirect:/profile/auctions";
     }
 
+    @DeleteMapping("/auctions/delete/{auctionId}")
+    public ResponseEntity<?> deleteAuction(@PathVariable Long auctionId, Authentication authentication) {
+        Auction auction = auctionRepository.findById(auctionId).orElse(null);
+
+        if (auction == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Auction not found");
+        }
+
+        if (auction.getHighestBid().compareTo(BigDecimal.ZERO) == 0
+                && auction.getAuctionCreator().getEmail().equals(authentication.getName())) {
+            auctionRepository.delete(auction);
+            return ResponseEntity.ok("Auction deleted successfully.");
+        } else {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("You cannot delete an auction with bids or that you did not create.");
+        }
+    }
+
     @GetMapping("/auctions/{categoryName}")
     public String viewCategory(@PathVariable String categoryName, Model model, Authentication authentication) {
         Category parentCategory = categoryRepository.findByNameIgnoreCase(StringUtils.slugToCategoryName(categoryName))
@@ -119,7 +138,7 @@ public class AuctionController {
         return "auctions/auction-detail";
     }
 
-    @GetMapping("/add-to-watchlist/{auctionId}")
+    @PostMapping("/add-to-watchlist/{auctionId}")
     public ResponseEntity<?> addToWatchlist(@PathVariable Long auctionId, Authentication authentication, RedirectAttributes redirectAttributes) {
         AuctionUser currentUser = userRepository.findByEmail(authentication.getName())
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
@@ -130,7 +149,7 @@ public class AuctionController {
         return ResponseEntity.ok("Added to watchlist");
     }
 
-    @GetMapping("/remove-from-watchlist/{auctionId}")
+    @PostMapping("/remove-from-watchlist/{auctionId}")
     public ResponseEntity<?> removeFromWatchlist(@PathVariable Long auctionId, Authentication authentication, RedirectAttributes redirectAttributes) {
         AuctionUser currentUser = userRepository.findByEmail(authentication.getName())
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));

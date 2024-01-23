@@ -109,7 +109,7 @@ public class AuctionService {
         auction.setStartTime(LocalDateTime.now());
         auction.setEndTime(auction.getEndTime());
         auction.setStartingPrice(auction.getStartingPrice());
-        auction.setHighestBid(auction.getStartingPrice());
+        auction.setHighestBid(BigDecimal.valueOf(0));
         auction.setStatus("ONGOING");
         auction.setSlug(createSlugFromTitle(auction.getTitle()));
         auction.setImageUrls(new ArrayList<>()); // Make sure the list is initialized

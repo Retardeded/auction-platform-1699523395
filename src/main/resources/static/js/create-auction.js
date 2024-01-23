@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', function() {
   const requiredFields = document.querySelectorAll('.form-control[required]');
   const previewButton = document.getElementById('previewButton');
+  const submitButton = document.getElementById('submitButton'); // Get the submit button
 
   const checkFields = () => {
     let allFilled = true;
@@ -10,14 +11,16 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
     previewButton.disabled = !allFilled;
+    submitButton.disabled = !allFilled;
   };
 
   requiredFields.forEach(field => {
     field.addEventListener('change', checkFields);
     field.addEventListener('keyup', checkFields);
   });
-});
 
+  checkFields();
+});
 function previewAuction() {
   const title = document.getElementById('title').value;
   const description = document.getElementById('description').value;
