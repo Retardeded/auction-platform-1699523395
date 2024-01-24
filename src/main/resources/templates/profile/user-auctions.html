@@ -27,24 +27,27 @@
           <div>No ongoing auctions available.</div>
         </div>
         <div class="auction-items-container" th:unless="${ongoingAuctions.isEmpty()}">
-          <div th:each="auction : ${ongoingAuctions}" class="auction-item" th:id="'auction-item-' + ${auction.id}" >
-            <img th:src="@{|/${auction.imageUrls[0]}|}"
-                 alt="Auction Image" class="auction-image"/>
-            <div class="auction-info">
-              <h3 th:text="${auction.title}">Auction Title</h3>
-              <div>Category: <span th:text="${auction.category.name}"></span></div>
-              <div>Ends: <span th:text="${#temporals.format(auction.endTime, 'yyyy-MM-dd HH:mm')}"></span></div>
+          <a th:href="@{'/auction/' + ${auction.slug}}" th:each="auction : ${ongoingAuctions}" class="auction-item auction-item-link" th:id="'auction-item-' + ${auction.id}">
+
+              <img th:src="@{|/${auction.imageUrls[0]}|}" alt="Auction Image" class="auction-image"/>
+              <div class="auction-info">
+                <h3 th:text="${auction.title}">Auction Title</h3>
+                <div>Starts/Ends: <span th:text="${#temporals.format(auction.startTime, 'yyyy-MM-dd HH:mm')}"></span> - <span th:text="${#temporals.format(auction.endTime, 'yyyy-MM-dd HH:mm')}"></span></div>
+              </div>
+            <div class="button-group">
+              <button th:if="${auction.highestBid == 0}" class="btn btn-text" th:data-auction-id="${auction.id}" onclick="handleEditAuction(event, this.getAttribute('data-auction-id'))">
+                Edit
+              </button>
+              <button th:if="${auction.highestBid == 0}" class="btn btn-text btn-danger" th:data-auction-id="${auction.id}" onclick="handleRemoveAuction(event, this.getAttribute('data-auction-id'))">
+                Remove
+              </button>
+            </div>
+            <div class="price-details">
               <div>Starting Price: <span th:text="${auction.startingPrice}"></span></div>
               <div>Highest Bid: <span th:text="${auction.highestBid}"></span></div>
-
-                <button th:if="${auction.highestBid == 0}"
-                        th:data-auction-id="${auction.id}"
-                        onclick="handleRemoveAuction(event, this.getAttribute('data-auction-id'))"
-                        class="btn btn-danger">
-                  Remove
-                </button>
             </div>
-          </div>
+
+          </a>
         </div>
       </div>
     </div>

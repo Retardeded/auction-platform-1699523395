@@ -1,6 +1,10 @@
 function handleRemoveAuction(event, auctionId) {
   event.preventDefault();
 
+  if (!confirm('Are you sure you want to remove this auction?')) {
+    return;
+    }
+
   const csrfTokenMetaTag = document.querySelector('meta[name="_csrf"]');
   const csrfToken = csrfTokenMetaTag ? csrfTokenMetaTag.getAttribute('content') : null;
   const csrfHeaderMetaTag = document.querySelector('meta[name="_csrf_header"]');
