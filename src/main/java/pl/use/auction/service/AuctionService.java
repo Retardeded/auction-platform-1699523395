@@ -124,6 +124,32 @@ public class AuctionService {
         return auctionRepository.save(auction);
     }
 
+    public Auction updateAuction(String slug,
+                                 Auction auctionDetails,
+                                 MultipartFile[] newImages,
+                                 List<String> imagesToDelete) throws IOException {
+        Auction existingAuction = auctionRepository.findBySlug(slug)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Auction not found"));
+
+        existingAuction.setDescription(auctionDetails.getDescription());
+        existingAuction.setCategory(auctionDetails.getCategory());
+        existingAuction.setStartingPrice(auctionDetails.getStartingPrice());
+        existingAuction.setEndTime(auctionDetails.getEndTime());
+
+        for (MultipartFile file : newImages) {
+            if (!file.isEmpty()) {
+                String imageUrl = saveImage(file);
+                existingAuction.getImageUrls().add(imageUrl);
+            }
+        }
+
+        if (imagesToDelete != null) {
+            existingAuction.getImageUrls().removeAll(imagesToDelete);
+        }
+
+        return auctionRepository.save(existingAuction);
+    }
+
     public String saveImage(MultipartFile file) throws IOException {
         String uploadDir = "src/main/resources/static/auctionImages/";
 

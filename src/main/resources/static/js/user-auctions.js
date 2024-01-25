@@ -35,3 +35,9 @@ function handleRemoveAuction(event, auctionId) {
     alert('Could not remove the auction. Maybe there are now bids on it.');
   });
 }
+
+function handleEditAuction(event, auctionId) {
+  event.preventDefault();
+  const auctionSlug = event.currentTarget.getAttribute('data-auction-slug');
+  window.location.href = `/auction/${auctionSlug}/edit`;
+}

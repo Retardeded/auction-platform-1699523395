@@ -87,9 +87,8 @@ function previewAuction() {
           <!-- Exclude watch-button-area if not needed in preview -->
         </div>
         <p>${description}</p>
-        <p>Ends: <span>${formattedEndTime}</span></p>
         <p>Starting Price: <span>${startingPrice}</span></p>
-        <!-- Exclude bid form if not needed in preview -->
+        <p>Ends: <span>${formattedEndTime}</span></p>
       </div>
     </div>
   </div>

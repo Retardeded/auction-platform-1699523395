@@ -138,6 +138,35 @@ public class AuctionController {
         return "auctions/auction-detail";
     }
 
+    @GetMapping("/auction/{slug}/edit")
+    public String editAuction(@PathVariable("slug") String slug, Model model) {
+        Auction auction = auctionRepository.findBySlug(slug)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Auction not found"));
+        List<Category> categories = categoryService.findAllMainCategoriesWithSubcategories();
+        model.addAttribute("auction", auction);
+        model.addAttribute("categories", categories);
+        return "auctions/auction-edit";
+    }
+
+    @PostMapping("/auction/{slug}/edit")
+    public String updateAuction(@PathVariable("slug") String slug,
+                                @ModelAttribute Auction auctionDetails,
+                                @RequestParam("images") MultipartFile[] newImages,
+                                @RequestParam(value = "imagesToDelete", required = false) List<String> imagesToDelete,
+                                Authentication authentication,
+                                RedirectAttributes redirectAttributes) {
+
+        try {
+            Auction updatedAuction = auctionService.updateAuction(slug, auctionDetails, newImages, imagesToDelete);
+        } catch (IOException e) {
+            e.printStackTrace();
+            redirectAttributes.addFlashAttribute("error", "Error saving images.");
+            return "redirect:/auction/" + slug + "/edit";
+        }
+
+        return "redirect:/profile/auctions";
+    }
+
     @PostMapping("/add-to-watchlist/{auctionId}")
     public ResponseEntity<?> addToWatchlist(@PathVariable Long auctionId, Authentication authentication, RedirectAttributes redirectAttributes) {
         AuctionUser currentUser = userRepository.findByEmail(authentication.getName())

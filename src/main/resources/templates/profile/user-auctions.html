@@ -35,7 +35,11 @@
                 <div>Starts/Ends: <span th:text="${#temporals.format(auction.startTime, 'yyyy-MM-dd HH:mm')}"></span> - <span th:text="${#temporals.format(auction.endTime, 'yyyy-MM-dd HH:mm')}"></span></div>
               </div>
             <div class="button-group">
-              <button th:if="${auction.highestBid == 0}" class="btn btn-text" th:data-auction-id="${auction.id}" onclick="handleEditAuction(event, this.getAttribute('data-auction-id'))">
+              <button th:if="${auction.highestBid == 0}"
+                      class="btn btn-text"
+                      th:data-auction-id="${auction.id}"
+                      th:data-auction-slug="${auction.slug}"
+                      onclick="handleEditAuction(event, this.getAttribute('data-auction-id'))">
                 Edit
               </button>
               <button th:if="${auction.highestBid == 0}" class="btn btn-text btn-danger" th:data-auction-id="${auction.id}" onclick="handleRemoveAuction(event, this.getAttribute('data-auction-id'))">

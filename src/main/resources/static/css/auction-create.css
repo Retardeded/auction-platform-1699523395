@@ -16,7 +16,7 @@ body {
     border: 2px solid #ddd;
     padding: 15px;
     border-radius: 15px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .form-label {
@@ -65,11 +65,24 @@ button.btn, button.button-back {
     margin: 10px;
     border: none;
     border-radius: 25px;
+    transition: background-color 0.3s, color 0.3s, box-shadow 0.3s;
 }
 
 button.button-back {
     background-color: #6c757d;
     color: white;
+}
+
+button.btn:not(:disabled):hover {
+    background-color: #5a6268;
+    color: #d4d4d4;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+button.button-back:not(:disabled):hover {
+    background-color: #5a6268;
+    color: #d4d4d4;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
 }
 
 .modal {
