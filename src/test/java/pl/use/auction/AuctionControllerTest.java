@@ -7,10 +7,13 @@ import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import pl.use.auction.controller.AuctionController;
 import pl.use.auction.model.Auction;
@@ -20,14 +23,13 @@ import pl.use.auction.repository.AuctionRepository;
 import pl.use.auction.repository.CategoryRepository;
 import pl.use.auction.repository.UserRepository;
 import pl.use.auction.service.AuctionService;
+import pl.use.auction.service.CategoryService;
 import pl.use.auction.util.StringUtils;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 
 import static org.mockito.Mockito.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -52,6 +54,9 @@ class AuctionControllerTest {
     private CategoryRepository categoryRepository;
 
     @Mock
+    private CategoryService categoryService;
+
+    @Mock
     private BindingResult bindingResult;
 
     @Mock
@@ -59,9 +64,15 @@ class AuctionControllerTest {
 
     @Test
     void testCreateAuctionForm() {
+        List<Category> categories = new ArrayList<>();
+        // add categories to the list as needed for your test
+
+        when(categoryService.findAllMainCategoriesWithSubcategories()).thenReturn(categories);
+
         String viewName = auctionController.createAuctionForm(model);
 
         verify(model).addAttribute(eq("auction"), any(Auction.class));
+        verify(model).addAttribute("categories", categories);
         assertEquals("auctions/create-auction", viewName);
     }
 
@@ -69,26 +80,76 @@ class AuctionControllerTest {
     void testCreateAuction_WithErrors() {
         when(bindingResult.hasErrors()).thenReturn(true);
 
-        String viewName = auctionController.createAuction(new Auction(), bindingResult, authentication);
+        String viewName = auctionController.createAuction(new Auction(), new MultipartFile[]{}, 1L, bindingResult, authentication);
 
         assertEquals("auctions/create-auction", viewName);
     }
 
     @Test
-    void testCreateAuction_Successful() {
+    void testCreateAuction_Successful() throws IOException {
         Auction auction = new Auction();
         AuctionUser user = new AuctionUser();
         user.setEmail("test@example.com");
+        Long categoryId = 1L;
+        MultipartFile[] files = new MultipartFile[]{};
 
         when(bindingResult.hasErrors()).thenReturn(false);
         when(authentication.getName()).thenReturn("test@example.com");
-        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(user));
+        when(auctionService.createAndSaveAuction(auction, categoryId, files, "test@example.com")).thenReturn(auction);
 
-        String viewName = auctionController.createAuction(auction, bindingResult, authentication);
+        String viewName = auctionController.createAuction(auction, files, categoryId, bindingResult, authentication);
 
-        verify(userRepository).findByEmail("test@example.com");
-        verify(auctionRepository).save(auction);
+        verify(auctionService).createAndSaveAuction(auction, categoryId, files, "test@example.com");
         assertEquals("redirect:/profile/auctions", viewName);
+    }
+
+    @Test
+    void deleteAuction_NotFound() {
+        Long auctionId = 1L;
+        when(auctionRepository.findById(auctionId)).thenReturn(Optional.empty());
+
+        ResponseEntity<?> response = auctionController.deleteAuction(auctionId, authentication);
+
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        assertEquals("Auction not found", response.getBody());
+    }
+
+    @Test
+    void deleteAuction_Successful() {
+        Long auctionId = 1L;
+        Auction auction = new Auction();
+        auction.setId(auctionId);
+        auction.setHighestBid(BigDecimal.ZERO);
+        AuctionUser user = new AuctionUser();
+        user.setEmail("user@example.com");
+        auction.setAuctionCreator(user);
+
+        when(auctionRepository.findById(auctionId)).thenReturn(Optional.of(auction));
+        when(authentication.getName()).thenReturn("user@example.com");
+
+        ResponseEntity<?> response = auctionController.deleteAuction(auctionId, authentication);
+
+        verify(auctionRepository).delete(auction);
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals("Auction deleted successfully.", response.getBody());
+    }
+
+    @Test
+    void deleteAuction_Forbidden() {
+        Long auctionId = 1L;
+        Auction auction = new Auction();
+        auction.setId(auctionId);
+        auction.setHighestBid(new BigDecimal("100.00"));
+        AuctionUser user = new AuctionUser();
+        user.setEmail("user@example.com");
+        auction.setAuctionCreator(user);
+
+        when(auctionRepository.findById(auctionId)).thenReturn(Optional.of(auction));
+
+        ResponseEntity<?> response = auctionController.deleteAuction(auctionId, authentication);
+
+        assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
+        assertEquals("You cannot delete an auction with bids or that you did not create.", response.getBody());
     }
 
     @Test
@@ -164,6 +225,64 @@ class AuctionControllerTest {
         assertEquals("auctions/auction-detail", viewName);
     }
 
+    @Test
+    void editAuction_ReturnsCorrectViewAndModel() {
+        String slug = "some-slug";
+        Auction auction = new Auction();
+        auction.setSlug(slug);
+        List<Category> categories = new ArrayList<>();
+
+        when(auctionRepository.findBySlug(slug)).thenReturn(Optional.of(auction));
+        when(categoryService.findAllMainCategoriesWithSubcategories()).thenReturn(categories);
+
+        String viewName = auctionController.editAuction(slug, model);
+
+        verify(model).addAttribute("auction", auction);
+        verify(model).addAttribute("categories", categories);
+        assertEquals("auctions/auction-edit", viewName);
+    }
+
+    @Test
+    void editAuction_ThrowsResponseStatusException_WhenAuctionNotFound() {
+        String slug = "non-existent-slug";
+        when(auctionRepository.findBySlug(slug)).thenReturn(Optional.empty());
+
+        assertThrows(ResponseStatusException.class, () -> {
+            auctionController.editAuction(slug, model);
+        });
+    }
+
+    @Test
+    void updateAuction_Successful() throws IOException {
+        String slug = "some-slug";
+        Auction auctionDetails = new Auction();
+        MultipartFile[] newImages = {}; // Mock MultipartFile array
+        List<String> imagesToDelete = new ArrayList<>();
+
+        when(auctionService.updateAuction(slug, auctionDetails, newImages, imagesToDelete)).thenReturn(new Auction());
+
+        String viewName = auctionController.updateAuction(slug, auctionDetails, newImages, imagesToDelete, authentication, redirectAttributes);
+
+        verify(auctionService).updateAuction(slug, auctionDetails, newImages, imagesToDelete);
+        assertEquals("redirect:/profile/auctions", viewName);
+    }
+
+    @Test
+    void updateAuction_FailsOnIOException() throws IOException {
+        String slug = "some-slug";
+        Auction auctionDetails = new Auction();
+        MultipartFile[] newImages = {};
+        List<String> imagesToDelete = new ArrayList<>();
+
+        doThrow(IOException.class).when(auctionService).updateAuction(slug, auctionDetails, newImages, imagesToDelete);
+
+        String viewName = auctionController.updateAuction(slug, auctionDetails, newImages, imagesToDelete, authentication, redirectAttributes);
+
+        verify(auctionService).updateAuction(slug, auctionDetails, newImages, imagesToDelete);
+        verify(redirectAttributes).addFlashAttribute("error", "Error saving images.");
+        assertEquals("redirect:/auction/" + slug + "/edit", viewName);
+    }
+
     @Mock
     private AuctionService auctionService;
 
@@ -215,45 +334,45 @@ class AuctionControllerTest {
 
     @Test
     void testPlaceBid_Successful() {
-        Long auctionId = 1L;
+        String auctionSlug = "some-auction-slug";
         BigDecimal bidAmount = new BigDecimal("100.00");
         AuctionUser bidder = new AuctionUser();
         bidder.setEmail("bidder@example.com");
         Auction auction = new Auction();
-        auction.setId(auctionId);
+        auction.setSlug(auctionSlug);
 
         when(authentication.getName()).thenReturn("bidder@example.com");
         when(userRepository.findByEmail("bidder@example.com")).thenReturn(Optional.of(bidder));
-        when(auctionRepository.findById(auctionId)).thenReturn(Optional.of(auction));
+        when(auctionRepository.findBySlug(auctionSlug)).thenReturn(Optional.of(auction));
         when(auctionService.placeBid(auction, bidder, bidAmount)).thenReturn(true);
 
-        String viewName = auctionController.placeBid(auctionId, bidAmount, authentication, redirectAttributes, null);
+        String viewName = auctionController.placeBid(auctionSlug, bidAmount, authentication, redirectAttributes);
 
-        verify(auctionRepository).findById(auctionId);
+        verify(auctionRepository).findBySlug(auctionSlug);
         verify(userRepository).findByEmail("bidder@example.com");
         verify(auctionService).placeBid(auction, bidder, bidAmount);
         verify(redirectAttributes).addFlashAttribute("successMessage", "Bid placed successfully!");
 
-        assertEquals("redirect:/auctions/all", viewName);
+        assertEquals("redirect:/auction/" + auctionSlug, viewName);
     }
 
     @Test
     void testPlaceBid_Unsuccessful() {
-        Long auctionId = 2L;
+        String auctionSlug = "another-auction-slug";
         BigDecimal bidAmount = new BigDecimal("100.00");
         AuctionUser bidder = new AuctionUser();
         bidder.setEmail("bidder@example.com");
         Auction auction = new Auction();
-        auction.setId(auctionId);
+        auction.setSlug(auctionSlug);
 
         when(authentication.getName()).thenReturn("bidder@example.com");
         when(userRepository.findByEmail("bidder@example.com")).thenReturn(Optional.of(bidder));
-        when(auctionRepository.findById(auctionId)).thenReturn(Optional.of(auction));
+        when(auctionRepository.findBySlug(auctionSlug)).thenReturn(Optional.of(auction));
         when(auctionService.placeBid(auction, bidder, bidAmount)).thenReturn(false);
 
-        String viewName = auctionController.placeBid(auctionId, bidAmount, authentication, redirectAttributes, null);
+        String viewName = auctionController.placeBid(auctionSlug, bidAmount, authentication, redirectAttributes);
 
         verify(redirectAttributes).addFlashAttribute("errorMessage", "Bid not high enough!");
-        assertEquals("redirect:/auctions/" + auctionId, viewName);
+        assertEquals("redirect:/auction/" + auctionSlug, viewName);
     }
 }

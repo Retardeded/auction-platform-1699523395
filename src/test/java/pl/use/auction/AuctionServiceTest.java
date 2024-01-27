@@ -5,19 +5,20 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.web.multipart.MultipartFile;
 import pl.use.auction.model.Auction;
 import pl.use.auction.model.AuctionUser;
 import pl.use.auction.model.Category;
 import pl.use.auction.repository.AuctionRepository;
+import pl.use.auction.repository.CategoryRepository;
 import pl.use.auction.repository.UserRepository;
 import pl.use.auction.service.AuctionService;
+import pl.use.auction.service.FileSystemStorageService;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 import static org.mockito.Mockito.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -31,6 +32,12 @@ class AuctionServiceTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private CategoryRepository categoryRepository;
+
+    @Mock
+    private FileSystemStorageService fileSystemStorageService;
 
     @InjectMocks
     private AuctionService auctionService;
@@ -194,4 +201,92 @@ class AuctionServiceTest {
         assertEquals(new BigDecimal("75.00"), result.get(1).getHighestBid());
     }
 
+    @Test
+    void testCreateAndSaveAuction() throws IOException {
+        Auction auction = new Auction();
+        auction.setTitle("Vintage Camera");
+        auction.setDescription("A classic camera in good condition.");
+        auction.setStartingPrice(new BigDecimal("50.00"));
+        auction.setEndTime(LocalDateTime.now().plusDays(7));
+
+        Long categoryId = 1L;
+        Category category = new Category();
+        category.setId(categoryId);
+
+        AuctionUser user = new AuctionUser();
+        user.setEmail("user@example.com");
+
+        MultipartFile[] files = {mock(MultipartFile.class)};
+        when(files[0].isEmpty()).thenReturn(false);
+        String uploadDir = "src/main/resources/static/auctionImages/";
+        String expectedFilePath = "auctionImages/image.jpg";
+
+        when(files[0].isEmpty()).thenReturn(false);
+        when(fileSystemStorageService.save(any(MultipartFile.class), eq(uploadDir))).thenReturn(expectedFilePath);
+        when(categoryRepository.findById(categoryId)).thenReturn(Optional.of(category));
+        when(userRepository.findByEmail("user@example.com")).thenReturn(Optional.of(user));
+        when(auctionRepository.save(any(Auction.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Auction savedAuction = auctionService.createAndSaveAuction(auction, categoryId, files, "user@example.com");
+
+        assertNotNull(savedAuction);
+        assertTrue(savedAuction.getImageUrls().contains(expectedFilePath));
+        assertEquals(category, savedAuction.getCategory());
+        assertEquals(user, savedAuction.getAuctionCreator());
+        assertFalse(savedAuction.getImageUrls().isEmpty());
+        assertEquals("Vintage Camera", savedAuction.getTitle());
+        assertEquals("A classic camera in good condition.", savedAuction.getDescription());
+        assertTrue(savedAuction.getStartTime().isBefore(savedAuction.getEndTime()));
+        assertEquals(new BigDecimal("50.00"), savedAuction.getStartingPrice());
+        assertEquals(BigDecimal.ZERO, savedAuction.getHighestBid());
+        assertEquals("ONGOING", savedAuction.getStatus());
+        assertNotNull(savedAuction.getSlug());
+
+        String expectedImagePath = "auctionImages/image.jpg";
+        assertTrue(savedAuction.getImageUrls().contains(expectedImagePath));
+
+        verify(auctionRepository).save(savedAuction);
+        verify(fileSystemStorageService).save(any(MultipartFile.class), eq(uploadDir));
+    }
+
+    @Test
+    void testUpdateAuction() throws IOException {
+        String slug = "vintage-camera";
+        Auction existingAuction = new Auction();
+        existingAuction.setSlug(slug);
+        existingAuction.setImageUrls(new ArrayList<>(List.of("existingImage.jpg")));
+
+        Auction auctionDetails = new Auction();
+        auctionDetails.setDescription("Updated description");
+        auctionDetails.setStartingPrice(new BigDecimal("75.00"));
+        auctionDetails.setEndTime(LocalDateTime.now().plusDays(10));
+
+        Category category = new Category();
+        category.setId(2L);
+        auctionDetails.setCategory(category);
+
+        MultipartFile newImage = mock(MultipartFile.class);
+        when(newImage.isEmpty()).thenReturn(false);
+
+        MultipartFile[] newImages = {newImage};
+        List<String> imagesToDelete = List.of("existingImage.jpg");
+
+        when(auctionRepository.findBySlug(slug)).thenReturn(Optional.of(existingAuction));
+        when(fileSystemStorageService.save(newImage, "src/main/resources/static/auctionImages/")).thenReturn("auctionImages/newImage.jpg");
+        when(auctionRepository.save(existingAuction)).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Auction updatedAuction = auctionService.updateAuction(slug, auctionDetails, newImages, imagesToDelete);
+
+        assertNotNull(updatedAuction);
+        assertEquals("Updated description", updatedAuction.getDescription());
+        assertEquals(new BigDecimal("75.00"), updatedAuction.getStartingPrice());
+        assertTrue(updatedAuction.getEndTime().isAfter(LocalDateTime.now()));
+        assertTrue(updatedAuction.getImageUrls().contains("auctionImages/newImage.jpg"));
+        assertFalse(updatedAuction.getImageUrls().contains("existingImage.jpg"));
+        assertEquals(category, updatedAuction.getCategory());
+
+        verify(auctionRepository).findBySlug(slug);
+        verify(fileSystemStorageService).save(newImage, "src/main/resources/static/auctionImages/");
+        verify(auctionRepository).save(updatedAuction);
+    }
 }

@@ -39,6 +39,9 @@ public class AuctionService {
     @Autowired
     private CategoryRepository categoryRepository;
 
+    @Autowired
+    private FileSystemStorageService fileSystemStorageService;
+
     public boolean placeBid(Auction auction, AuctionUser bidder, BigDecimal bidAmount) {
         boolean bidPlaced = false;
         if (bidAmount.compareTo(auction.getHighestBid()) > 0) {
@@ -151,14 +154,6 @@ public class AuctionService {
     }
 
     public String saveImage(MultipartFile file) throws IOException {
-        String uploadDir = "src/main/resources/static/auctionImages/";
-
-        Files.createDirectories(Paths.get(uploadDir));
-
-        Path filePath = Paths.get(uploadDir, file.getOriginalFilename());
-
-        Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
-
-        return "auctionImages/" + file.getOriginalFilename();
+        return fileSystemStorageService.save(file, "src/main/resources/static/auctionImages/");
     }
 }

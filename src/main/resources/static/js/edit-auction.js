@@ -1,28 +1,26 @@
 let imagesMarkedForDeletion = [];
 
-document.addEventListener('DOMContentLoaded', function() {
+const checkFields = () => {
   const requiredFields = document.querySelectorAll('.form-control[required]');
   const previewButton = document.getElementById('previewButton');
   const submitButton = document.getElementById('submitButton');
   const imageContainers = document.querySelectorAll('.image-container');
 
-  const checkFields = () => {
-    let allFilled = Array.from(requiredFields).every(field => field.value);
+  let allFilled = Array.from(requiredFields).every(field => field.value);
+  const imageCount = Array.from(imageContainers).filter(container => {
+    return container.style.display !== 'none';
+  }).length;
+  const newImageCount = document.getElementById('images').files.length;
 
-    const imageCount = Array.from(imageContainers).filter(container => {
-      return container.style.display !== 'none';
-    }).length;
+  previewButton.disabled = !(allFilled && (imageCount > 0 || newImageCount > 0));
+  submitButton.disabled = !(allFilled && (imageCount > 0 || newImageCount > 0));
+};
 
-    const newImageCount = document.getElementById('images').files.length;
-
-    previewButton.disabled = !(allFilled && (imageCount > 0 || newImageCount > 0));
-    submitButton.disabled = !(allFilled && (imageCount > 0 || newImageCount > 0));
-  };
-
-  requiredFields.forEach(field => {
-    field.addEventListener('change', checkFields);
-    field.addEventListener('keyup', checkFields);
-  });
+document.addEventListener('DOMContentLoaded', function() {
+  const requiredFields = document.querySelectorAll('.form-control[required]');
+  const previewButton = document.getElementById('previewButton');
+  const submitButton = document.getElementById('submitButton');
+  const imageContainers = document.querySelectorAll('.image-container');
 
   checkFields();
 
