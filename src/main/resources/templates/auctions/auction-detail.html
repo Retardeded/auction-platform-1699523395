@@ -1,15 +1,17 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
     <meta charset="UTF-8">
     <title>Auction Details</title>
-    <link th:href="@{/css/styles.css}" rel="stylesheet"/>
     <link th:href="@{/css/auction-detail.css}" rel="stylesheet"/>
     <script th:src="@{/js/auction.js}"></script>
+    <script th:src="@{/js/auction-gallery.js}"></script>
+    <script th:src="@{/js/user-auctions.js}"></script>
 </head>
 <body>
 <div class="container">
-
     <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
             <li class="breadcrumb-item" th:if="${auction.category.parentCategory != null}">
@@ -23,43 +25,80 @@
         </ol>
     </nav>
 
-    <div class="detail-header">
-        <div class="title-area">
-            <h1 th:text="${auction.title}">Auction Title</h1>
+    <div class="auction-container">
+
+        <div class="custom-carousel-container">
+            <div class="custom-carousel">
+                <div class="carousel-slides">
+                    <div th:each="imageUrl, iterStat : ${auction.imageUrls}" class="carousel-slide" th:classappend="${iterStat.first} ? 'active'">
+                        <img th:src="@{|/${imageUrl}|}" alt="Auction Image">
+                    </div>
+                </div>
+                <button class="carousel-prev" onclick="moveSlide(-1)">&#10094;</button>
+                <button class="carousel-next" onclick="moveSlide(1)">&#10095;</button>
+            </div>
         </div>
-        <div class="watch-button-area">
-            <button th:if="${#lists.contains(currentUser.observedAuctions, auction)}"
-                    class="watch-toggle watch-button-detail"
-                    th:onclick="'handleWatchClick(event, ' + ${auction.id} + ', true)'"
-                    th:text="Watched">
-            </button>
-            <button th:unless="${#lists.contains(currentUser.observedAuctions, auction)}"
-                    class="watch-toggle watch-button-detail"
-                    th:onclick="'handleWatchClick(event, ' + ${auction.id} + ', false)'"
-                    th:text="Watch">
-            </button>
+
+        <div class="auction-info">
+
+            <div class="detail-header">
+                <div class="title-area">
+                    <h1 th:text="${auction.title}">Auction Title</h1>
+                </div>
+                <div class="watch-button-area">
+                    <button th:if="${#lists.contains(currentUser.observedAuctions, auction)}"
+                            class="watch-toggle watch-button-detail"
+                            th:onclick="'handleWatchClick(event, ' + ${auction.id} + ', true)'"
+                            th:text="Watched">
+                    </button>
+                    <button th:unless="${#lists.contains(currentUser.observedAuctions, auction)}"
+                            class="watch-toggle watch-button-detail"
+                            th:onclick="'handleWatchClick(event, ' + ${auction.id} + ', false)'"
+                            th:text="Watch">
+                    </button>
+                </div>
+            </div>
+            <p th:text="${auction.description}">Auction Description</p>
+            <p>Ends: <span th:text="${#temporals.format(auction.endTime, 'yyyy-MM-dd HH:mm')}">End Time</span></p>
+            <p>Starting Price: <span th:text="${auction.startingPrice}">Starting Price</span></p>
+            <p>Current Highest Bid: <span th:text="${auction.highestBid}">Highest Bid</span></p>
+
+            <div th:if="${currentUser.id == auction.auctionCreator.id and auction.highestBid == 0}" class="button-group">
+                <a th:href="@{'/auction/' + ${auction.slug} + '/edit'}"
+                   class="btn btn-text"
+                   th:data-auction-id="${auction.id}"
+                   th:data-auction-slug="${auction.slug}"
+                   onclick="handleEditAuction(event, this.getAttribute('data-auction-id'))">
+                    Edit
+                </a>
+                <button type="button"
+                        class="btn btn-text btn-danger"
+                        th:data-auction-id="${auction.id}"
+                        onclick="handleRemoveAuction(event, this.getAttribute('data-auction-id'))">
+                    Remove
+                </button>
+            </div>
+
+            <div th:if="${currentUser.id != auction.auctionCreator.id}">
+                <form th:action="@{'/auction/' + ${auction.slug} + '/bid'}" method="post">
+                    <div class="bid-container">
+                        <input type="number" id="bidAmount" class="form-control bid-input" name="bidAmount"
+                               th:value="${auction.highestBid}" min="0" step="0.1" required />
+                        <button type="submit" class="btn button-detail place-bid">Place Bid</button>
+                    </div>
+                </form>
+            </div>
+
+            <div th:if="${successMessage}" class="success-message">
+                <p th:text="${successMessage}"></p>
+            </div>
+
+            <div th:if="${errorMessage}" class="error-message">
+                <p th:text="${errorMessage}"></p>
+            </div>
+
         </div>
     </div>
-    <p th:text="${auction.description}">Auction Description</p>
-    <p>Ends: <span th:text="${#temporals.format(auction.endTime, 'yyyy-MM-dd HH:mm')}">End Time</span></p>
-    <p>Starting Price: <span th:text="${auction.startingPrice}">Starting Price</span></p>
-    <p>Current Highest Bid: <span th:text="${auction.highestBid}">Highest Bid</span></p>
-
-    <form th:action="@{/auctions/bid}" method="post">
-        <input type="hidden" name="auctionId" th:value="${auction.id}" />
-        <div class="form-group">
-            <label for="bidAmount" class="form-label">Bid Amount:</label>
-            <input type="number" id="bidAmount" class="form-control" name="bidAmount"
-                   th:value="${auction.highestBid}" min="0" step="0.1" required />
-        </div>
-        <button type="submit" class="btn button-detail">Place Bid</button>
-    </form>
-
-    <div th:if="${errorMessage}" class="error-message">
-        <p th:text="${errorMessage}"></p>
-    </div>
-
-    <button onclick="window.history.back()" class="btn button-detail">Back</button>
 </div>
 </body>
 </html>

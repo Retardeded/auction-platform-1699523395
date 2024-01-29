@@ -6,6 +6,7 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -32,6 +33,11 @@ public class Auction {
 
     @ManyToMany(mappedBy = "observedAuctions")
     private List<AuctionUser> observers;
+
+    @ElementCollection
+    @CollectionTable(name = "auction_images", joinColumns = @JoinColumn(name = "auction_id"))
+    @Column(name = "image_url")
+    private List<String> imageUrls = new ArrayList<>();
 
     private LocalDateTime startTime;
     private LocalDateTime endTime;

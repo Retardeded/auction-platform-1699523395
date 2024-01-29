@@ -3,6 +3,7 @@
 <head>
     <title>Home</title>
     <link th:href="@{/css/home.css}" rel="stylesheet" />
+    <link th:href="@{/css/featured-auction.css}" rel="stylesheet" />
     <script th:src="@{/js/dropdown.js}"></script>
 </head>
 <body>
@@ -48,10 +49,15 @@
     </div>
 
     <div class="featured-auctions">
-        <h2>Cheapest Auctions</h2>
+        <div class="featured-auctions-title">
+            <h2>Cheapest Auctions</h2>
+            <img src="auctionSectionImages/cheap.png" alt="Cheap Logo" class="featured-auctions-logo"/>
+        </div>
         <div class="auction-items-container">
             <div th:each="auction : ${cheapestAuctions}" class="auction-item">
                 <a th:href="@{|/auction/${auction.slug}|}" class="auction-detail-link">
+                    <img th:src="@{|/${auction.imageUrls[0]}|}"
+                         alt="Auction Image" class="auction-image"/>
                     <div class="auction-info">
                         <h3 th:text="${auction.title}">Auction Title</h3>
                         <p><span>Starting Price: </span><span th:text="${auction.startingPrice}">Starting Price</span></p>
@@ -63,10 +69,15 @@
     </div>
 
     <div class="featured-auctions">
-        <h2>Most Expensive Auctions</h2>
+        <div class="featured-auctions-title">
+            <h2>Most Expensive Auctions</h2>
+            <img src="auctionSectionImages/expensive.png" alt="Expensive Logo" class="featured-auctions-logo"/>
+        </div>
         <div class="auction-items-container">
             <div th:each="auction : ${expensiveAuctions}" class="auction-item">
                 <a th:href="@{|/auction/${auction.slug}|}" class="auction-detail-link">
+                    <img th:src="@{|/${auction.imageUrls[0]}|}"
+                         alt="Auction Image" class="auction-image"/>
                     <div class="auction-info">
                         <h3 th:text="${auction.title}">Auction Title</h3>
                         <p><span>Starting Price: </span><span th:text="${auction.startingPrice}">Starting Price</span></p>

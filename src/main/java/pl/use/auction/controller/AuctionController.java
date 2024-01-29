@@ -1,13 +1,17 @@
 package pl.use.auction.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.web.servlet.view.RedirectView;
 import pl.use.auction.model.Auction;
 import pl.use.auction.model.AuctionUser;
 import pl.use.auction.model.Category;
@@ -16,12 +20,12 @@ import pl.use.auction.repository.CategoryRepository;
 import pl.use.auction.repository.UserRepository;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import pl.use.auction.service.AuctionService;
+import pl.use.auction.service.CategoryService;
 import pl.use.auction.util.StringUtils;
 
+import java.io.IOException;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Controller
 public class AuctionController {
@@ -38,47 +42,72 @@ public class AuctionController {
     @Autowired
     private AuctionService auctionService;
 
-    @PostMapping("/auctions/bid")
-    public String placeBid(@RequestParam("auctionId") Long auctionId,
+    @Autowired
+    CategoryService categoryService;
+
+    @PostMapping("/auction/{slug}/bid")
+    public String placeBid(@PathVariable("slug") String auctionSlug,
                            @RequestParam("bidAmount") BigDecimal bidAmount,
                            Authentication authentication,
-                           RedirectAttributes redirectAttributes,
-                           Model model) {
+                           RedirectAttributes redirectAttributes) {
 
-        Auction auction = auctionRepository.findById(auctionId)
-                .orElseThrow(() -> new IllegalArgumentException("Invalid auction Id:" + auctionId));
+        Auction auction = auctionRepository.findBySlug(auctionSlug)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid auction slug:" + auctionSlug));
         AuctionUser bidder = userRepository.findByEmail(authentication.getName())
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
         boolean bidPlaced = auctionService.placeBid(auction, bidder, bidAmount);
         if (bidPlaced) {
             redirectAttributes.addFlashAttribute("successMessage", "Bid placed successfully!");
-            return "redirect:/auctions/all";
         } else {
             redirectAttributes.addFlashAttribute("errorMessage", "Bid not high enough!");
-            return "redirect:/auctions/" + auctionId;
         }
+        return "redirect:/auction/" + auctionSlug;
     }
 
     @GetMapping("/auctions/create")
     public String createAuctionForm(Model model) {
         model.addAttribute("auction", new Auction());
+        List<Category> categories = categoryService.findAllMainCategoriesWithSubcategories();
+        model.addAttribute("categories", categories);
         return "auctions/create-auction";
     }
 
     @PostMapping("/auctions/create")
-    public String createAuction(@ModelAttribute Auction auction, BindingResult bindingResult, Authentication authentication) {
+    public String createAuction(@ModelAttribute Auction auction,
+                                @RequestParam("images") MultipartFile[] files,
+                                @RequestParam("category") Long categoryId, // This is to capture the category ID from the form
+                                BindingResult bindingResult,
+                                Authentication authentication) {
         if (bindingResult.hasErrors()) {
             return "auctions/create-auction";
         }
 
-        AuctionUser user = userRepository.findByEmail(authentication.getName())
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
-        auction.setAuctionCreator(user);
-        auction.setStartTime(LocalDateTime.now());
-        auctionRepository.save(auction);
+        try {
+            Auction createdAuction = auctionService.createAndSaveAuction(auction, categoryId, files, authentication.getName());
+        } catch (IOException e) {
+            e.printStackTrace();
+            return "auctions/create-auction";
+        }
 
         return "redirect:/profile/auctions";
+    }
+
+    @DeleteMapping("/auctions/delete/{auctionId}")
+    public ResponseEntity<?> deleteAuction(@PathVariable Long auctionId, Authentication authentication) {
+        Auction auction = auctionRepository.findById(auctionId).orElse(null);
+
+        if (auction == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Auction not found");
+        }
+
+        if (auction.getHighestBid().compareTo(BigDecimal.ZERO) == 0
+                && auction.getAuctionCreator().getEmail().equals(authentication.getName())) {
+            auctionRepository.delete(auction);
+            return ResponseEntity.ok("Auction deleted successfully.");
+        } else {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("You cannot delete an auction with bids or that you did not create.");
+        }
     }
 
     @GetMapping("/auctions/{categoryName}")
@@ -110,7 +139,61 @@ public class AuctionController {
         return "auctions/auction-detail";
     }
 
-    @GetMapping("/add-to-watchlist/{auctionId}")
+    @GetMapping("/auction/{slug}/edit")
+    public String editAuction(@PathVariable("slug") String slug, Model model, Authentication authentication) {
+        Auction auction = auctionRepository.findBySlug(slug)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Auction not found"));
+        AuctionUser currentUser = userRepository.findByEmail(authentication.getName())
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+        if (!currentUser.getId().equals(auction.getAuctionCreator().getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
+        }
+
+        if (auction.getHighestBid().compareTo(BigDecimal.ZERO) > 0) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Editing is not allowed once bidding has started");
+        }
+
+        List<Category> categories = categoryService.findAllMainCategoriesWithSubcategories();
+        model.addAttribute("auction", auction);
+        model.addAttribute("categories", categories);
+        return "auctions/auction-edit";
+    }
+
+    @PostMapping("/auction/{slug}/edit")
+    public String updateAuction(@PathVariable("slug") String slug,
+                                @ModelAttribute Auction auctionDetails,
+                                @RequestParam("images") MultipartFile[] newImages,
+                                @RequestParam(value = "imagesToDelete", required = false) List<String> imagesToDelete,
+                                Authentication authentication,
+                                RedirectAttributes redirectAttributes) {
+
+        Auction auction = auctionRepository.findBySlug(slug)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Auction not found"));
+        AuctionUser currentUser = userRepository.findByEmail(authentication.getName())
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+        if (!currentUser.getId().equals(auction.getAuctionCreator().getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
+        }
+
+        if (auction.getHighestBid().compareTo(BigDecimal.ZERO) > 0) {
+            redirectAttributes.addFlashAttribute("error", "Cannot edit auction as bidding has already started.");
+            return "redirect:/auction/" + slug + "/edit";
+        }
+
+        try {
+            Auction updatedAuction = auctionService.updateAuction(slug, auctionDetails, newImages, imagesToDelete);
+        } catch (IOException e) {
+            e.printStackTrace();
+            redirectAttributes.addFlashAttribute("error", "Error saving images.");
+            return "redirect:/auction/" + slug + "/edit";
+        }
+
+        return "redirect:/profile/auctions";
+    }
+
+    @PostMapping("/add-to-watchlist/{auctionId}")
     public ResponseEntity<?> addToWatchlist(@PathVariable Long auctionId, Authentication authentication, RedirectAttributes redirectAttributes) {
         AuctionUser currentUser = userRepository.findByEmail(authentication.getName())
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
@@ -121,7 +204,7 @@ public class AuctionController {
         return ResponseEntity.ok("Added to watchlist");
     }
 
-    @GetMapping("/remove-from-watchlist/{auctionId}")
+    @PostMapping("/remove-from-watchlist/{auctionId}")
     public ResponseEntity<?> removeFromWatchlist(@PathVariable Long auctionId, Authentication authentication, RedirectAttributes redirectAttributes) {
         AuctionUser currentUser = userRepository.findByEmail(authentication.getName())
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));

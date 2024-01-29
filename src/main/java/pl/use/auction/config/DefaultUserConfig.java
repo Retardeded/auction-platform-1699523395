@@ -13,7 +13,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.Arrays;
+import java.util.List;
 import java.util.Random;
 
 import static pl.use.auction.util.StringUtils.createSlugFromTitle;
@@ -102,12 +102,13 @@ public class DefaultUserConfig {
         Object[][] auctionData = {
                 {"Vintage Camera", "A classic vintage camera in excellent condition.", "Cameras", "Electronics", "ONGOING"},
                 {"Designer Dress", "A stunning dress from a renowned fashion designer.", "Dresses", "Fashion", "ONGOING"},
-                {"Garden Shovel", "A durable shovel for gardening.", "Gardening Tools", "Home & Garden", "ONGOING"},
+                {"Garden Shovel", "A durable shovel for gardening.", "Gardening Tools", "Home & Garden", "ONGOING",},
                 {"Antique Vase", "A beautiful antique vase, perfect for collectors.", "Antiques", "Collectibles & Art", "EXPIRED"},
                 {"Signed Book", "A book signed by its famous author.", "Books", "Collectibles & Art", "ONGOING"},
                 {"Handmade Jewelry", "Exquisite handmade jewelry with unique design.", "Accessories", "Fashion", "EXPIRED"},
-                // ... more auction data ...
         };
+
+        boolean isFirstAuction = true;
 
         for (Object[] auctionInfo : auctionData) {
             Auction auction = new Auction();
@@ -129,10 +130,22 @@ public class DefaultUserConfig {
             auction.setEndTime(LocalDateTime.now().plusDays(10));
             BigDecimal startingPrice = BigDecimal.valueOf(50 + random.nextInt(101));
             auction.setStartingPrice(startingPrice);
-            BigDecimal highestBid = startingPrice.add(BigDecimal.valueOf(random.nextInt(50) + 1));
+            BigDecimal highestBid;
+            if (isFirstAuction) {
+                highestBid = BigDecimal.ZERO;
+                isFirstAuction = false; // Only for the first auction
+            } else {
+                highestBid = startingPrice.add(BigDecimal.valueOf(random.nextInt(50) + 1));
+            }
             auction.setHighestBid(highestBid);
             auction.setStatus((String) auctionInfo[3]);
             auction.setAuctionCreator(user);
+
+            String baseImageName = ((String) auctionInfo[0]).replaceAll("\\s+", "_");
+            String originalImagePath = "auctionImages/" + baseImageName + ".png";
+            String mirroredImagePath = "auctionImages/" + baseImageName + "_mirrored.png";
+            String rotatedImagePath = "auctionImages/" + baseImageName + "_rotated.png";
+            auction.setImageUrls(List.of(originalImagePath, mirroredImagePath, rotatedImagePath));
 
             auctionRepository.save(auction);
         }
