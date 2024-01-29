@@ -15,6 +15,7 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap;
 import pl.use.auction.controller.AuctionController;
 import pl.use.auction.model.Auction;
 import pl.use.auction.model.AuctionUser;
@@ -226,16 +227,23 @@ class AuctionControllerTest {
     }
 
     @Test
-    void editAuction_ReturnsCorrectViewAndModel() {
+    void editAuction_ReturnsCorrectViewAndModel_WhenCurrentUserIsCreatorAndNoBids() {
         String slug = "some-slug";
         Auction auction = new Auction();
         auction.setSlug(slug);
+        auction.setHighestBid(BigDecimal.ZERO);
+        AuctionUser creator = new AuctionUser();
+        creator.setId(1L);
+        auction.setAuctionCreator(creator);
         List<Category> categories = new ArrayList<>();
 
+        Authentication authentication = mock(Authentication.class);
+        when(authentication.getName()).thenReturn("creator@example.com");
+        when(userRepository.findByEmail("creator@example.com")).thenReturn(Optional.of(creator));
         when(auctionRepository.findBySlug(slug)).thenReturn(Optional.of(auction));
         when(categoryService.findAllMainCategoriesWithSubcategories()).thenReturn(categories);
 
-        String viewName = auctionController.editAuction(slug, model);
+        String viewName = auctionController.editAuction(slug, model, authentication);
 
         verify(model).addAttribute("auction", auction);
         verify(model).addAttribute("categories", categories);
@@ -245,21 +253,77 @@ class AuctionControllerTest {
     @Test
     void editAuction_ThrowsResponseStatusException_WhenAuctionNotFound() {
         String slug = "non-existent-slug";
+        Authentication authentication = mock(Authentication.class);
+
         when(auctionRepository.findBySlug(slug)).thenReturn(Optional.empty());
 
         assertThrows(ResponseStatusException.class, () -> {
-            auctionController.editAuction(slug, model);
+            auctionController.editAuction(slug, model, authentication);
         });
     }
 
     @Test
-    void updateAuction_Successful() throws IOException {
+    void editAuction_ThrowsResponseStatusException_WhenCurrentUserIsNotCreator() {
         String slug = "some-slug";
+        Auction auction = new Auction();
+        auction.setSlug(slug);
+        auction.setHighestBid(BigDecimal.ZERO);
+        AuctionUser creator = new AuctionUser();
+        creator.setId(1L);
+        AuctionUser currentUser = new AuctionUser();
+        currentUser.setId(2L);
+        auction.setAuctionCreator(creator);
+
+        Authentication authentication = mock(Authentication.class);
+        when(authentication.getName()).thenReturn("notcreator@example.com");
+        when(userRepository.findByEmail("notcreator@example.com")).thenReturn(Optional.of(currentUser));
+        when(auctionRepository.findBySlug(slug)).thenReturn(Optional.of(auction));
+
+        assertThrows(ResponseStatusException.class, () -> {
+            auctionController.editAuction(slug, model, authentication);
+        });
+    }
+
+    @Test
+    void editAuction_ThrowsResponseStatusException_WhenAuctionHasBids() {
+        String slug = "some-slug";
+        Auction auction = new Auction();
+        auction.setSlug(slug);
+        auction.setHighestBid(new BigDecimal("100.00"));
+        AuctionUser creator = new AuctionUser();
+        creator.setId(1L);
+        auction.setAuctionCreator(creator);
+
+        Authentication authentication = mock(Authentication.class);
+        when(authentication.getName()).thenReturn("creator@example.com");
+        when(userRepository.findByEmail("creator@example.com")).thenReturn(Optional.of(creator));
+        when(auctionRepository.findBySlug(slug)).thenReturn(Optional.of(auction));
+
+        assertThrows(ResponseStatusException.class, () -> {
+            auctionController.editAuction(slug, model, authentication);
+        });
+    }
+    @Test
+    void updateAuction_Successful_WhenUserIsCreatorAndNoBids() throws IOException {
+        String slug = "some-slug";
+        Auction auction = new Auction();
+        auction.setId(1L);
+        auction.setHighestBid(BigDecimal.ZERO);
+        AuctionUser creator = new AuctionUser();
+        creator.setId(1L);
+        auction.setAuctionCreator(creator);
+
         Auction auctionDetails = new Auction();
-        MultipartFile[] newImages = {}; // Mock MultipartFile array
+        MultipartFile[] newImages = {};
         List<String> imagesToDelete = new ArrayList<>();
 
-        when(auctionService.updateAuction(slug, auctionDetails, newImages, imagesToDelete)).thenReturn(new Auction());
+        Authentication authentication = mock(Authentication.class);
+        when(authentication.getName()).thenReturn("creator@example.com");
+        when(userRepository.findByEmail("creator@example.com")).thenReturn(Optional.of(creator));
+        when(auctionRepository.findBySlug(slug)).thenReturn(Optional.of(auction));
+        when(auctionService.updateAuction(slug, auctionDetails, newImages, imagesToDelete)).thenReturn(auction);
+
+        RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
 
         String viewName = auctionController.updateAuction(slug, auctionDetails, newImages, imagesToDelete, authentication, redirectAttributes);
 
@@ -268,19 +332,56 @@ class AuctionControllerTest {
     }
 
     @Test
-    void updateAuction_FailsOnIOException() throws IOException {
+    void updateAuction_ThrowsResponseStatusException_WhenUserIsNotCreator() {
         String slug = "some-slug";
+        Auction auction = new Auction();
+        auction.setId(1L);
+        auction.setHighestBid(BigDecimal.ZERO);
+        AuctionUser creator = new AuctionUser();
+        creator.setId(1L);
+        AuctionUser nonCreator = new AuctionUser();
+        nonCreator.setId(2L);
+        auction.setAuctionCreator(creator);
+
+        Auction auctionDetails = new Auction();
+        MultipartFile[] newImages = {}; // Mock MultipartFile array
+        List<String> imagesToDelete = new ArrayList<>();
+
+        Authentication authentication = mock(Authentication.class);
+        when(authentication.getName()).thenReturn("noncreator@example.com");
+        when(userRepository.findByEmail("noncreator@example.com")).thenReturn(Optional.of(nonCreator));
+        when(auctionRepository.findBySlug(slug)).thenReturn(Optional.of(auction));
+
+        assertThrows(ResponseStatusException.class, () -> {
+            auctionController.updateAuction(slug, auctionDetails, newImages, imagesToDelete, authentication, new RedirectAttributesModelMap());
+        });
+    }
+
+    @Test
+    void updateAuction_RedirectsWithError_WhenAuctionHasBids() {
+        String slug = "some-slug";
+        Auction auction = new Auction();
+        auction.setId(1L);
+        auction.setHighestBid(new BigDecimal("100.00"));
+        AuctionUser creator = new AuctionUser();
+        creator.setId(1L);
+        auction.setAuctionCreator(creator);
+
         Auction auctionDetails = new Auction();
         MultipartFile[] newImages = {};
         List<String> imagesToDelete = new ArrayList<>();
 
-        doThrow(IOException.class).when(auctionService).updateAuction(slug, auctionDetails, newImages, imagesToDelete);
+        Authentication authentication = mock(Authentication.class);
+        when(authentication.getName()).thenReturn("creator@example.com");
+        when(userRepository.findByEmail("creator@example.com")).thenReturn(Optional.of(creator));
+        when(auctionRepository.findBySlug(slug)).thenReturn(Optional.of(auction));
+
+        RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
 
         String viewName = auctionController.updateAuction(slug, auctionDetails, newImages, imagesToDelete, authentication, redirectAttributes);
 
-        verify(auctionService).updateAuction(slug, auctionDetails, newImages, imagesToDelete);
-        verify(redirectAttributes).addFlashAttribute("error", "Error saving images.");
         assertEquals("redirect:/auction/" + slug + "/edit", viewName);
+        assertEquals("Cannot edit auction as bidding has already started.", redirectAttributes.getFlashAttributes().get("error"));
     }
 
     @Mock

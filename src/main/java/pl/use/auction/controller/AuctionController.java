@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.web.servlet.view.RedirectView;
 import pl.use.auction.model.Auction;
 import pl.use.auction.model.AuctionUser;
 import pl.use.auction.model.Category;
@@ -139,9 +140,20 @@ public class AuctionController {
     }
 
     @GetMapping("/auction/{slug}/edit")
-    public String editAuction(@PathVariable("slug") String slug, Model model) {
+    public String editAuction(@PathVariable("slug") String slug, Model model, Authentication authentication) {
         Auction auction = auctionRepository.findBySlug(slug)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Auction not found"));
+        AuctionUser currentUser = userRepository.findByEmail(authentication.getName())
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+        if (!currentUser.getId().equals(auction.getAuctionCreator().getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
+        }
+
+        if (auction.getHighestBid().compareTo(BigDecimal.ZERO) > 0) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Editing is not allowed once bidding has started");
+        }
+
         List<Category> categories = categoryService.findAllMainCategoriesWithSubcategories();
         model.addAttribute("auction", auction);
         model.addAttribute("categories", categories);
@@ -155,6 +167,20 @@ public class AuctionController {
                                 @RequestParam(value = "imagesToDelete", required = false) List<String> imagesToDelete,
                                 Authentication authentication,
                                 RedirectAttributes redirectAttributes) {
+
+        Auction auction = auctionRepository.findBySlug(slug)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Auction not found"));
+        AuctionUser currentUser = userRepository.findByEmail(authentication.getName())
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+        if (!currentUser.getId().equals(auction.getAuctionCreator().getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
+        }
+
+        if (auction.getHighestBid().compareTo(BigDecimal.ZERO) > 0) {
+            redirectAttributes.addFlashAttribute("error", "Cannot edit auction as bidding has already started.");
+            return "redirect:/auction/" + slug + "/edit";
+        }
 
         try {
             Auction updatedAuction = auctionService.updateAuction(slug, auctionDetails, newImages, imagesToDelete);

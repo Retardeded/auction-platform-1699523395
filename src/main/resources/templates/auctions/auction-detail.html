@@ -8,6 +8,7 @@
     <link th:href="@{/css/auction-detail.css}" rel="stylesheet"/>
     <script th:src="@{/js/auction.js}"></script>
     <script th:src="@{/js/auction-gallery.js}"></script>
+    <script th:src="@{/js/user-auctions.js}"></script>
 </head>
 <body>
 <div class="container">
@@ -62,13 +63,31 @@
             <p>Starting Price: <span th:text="${auction.startingPrice}">Starting Price</span></p>
             <p>Current Highest Bid: <span th:text="${auction.highestBid}">Highest Bid</span></p>
 
-            <form th:action="@{'/auction/' + ${auction.slug} + '/bid'}" method="post">
-                <div class="bid-container">
-                    <input type="number" id="bidAmount" class="form-control bid-input" name="bidAmount"
-                           th:value="${auction.highestBid}" min="0" step="0.1" required />
-                    <button type="submit" class="btn button-detail place-bid">Place Bid</button>
-                </div>
-            </form>
+            <div th:if="${currentUser.id == auction.auctionCreator.id and auction.highestBid == 0}" class="button-group">
+                <a th:href="@{'/auction/' + ${auction.slug} + '/edit'}"
+                   class="btn btn-text"
+                   th:data-auction-id="${auction.id}"
+                   th:data-auction-slug="${auction.slug}"
+                   onclick="handleEditAuction(event, this.getAttribute('data-auction-id'))">
+                    Edit
+                </a>
+                <button type="button"
+                        class="btn btn-text btn-danger"
+                        th:data-auction-id="${auction.id}"
+                        onclick="handleRemoveAuction(event, this.getAttribute('data-auction-id'))">
+                    Remove
+                </button>
+            </div>
+
+            <div th:if="${currentUser.id != auction.auctionCreator.id}">
+                <form th:action="@{'/auction/' + ${auction.slug} + '/bid'}" method="post">
+                    <div class="bid-container">
+                        <input type="number" id="bidAmount" class="form-control bid-input" name="bidAmount"
+                               th:value="${auction.highestBid}" min="0" step="0.1" required />
+                        <button type="submit" class="btn button-detail place-bid">Place Bid</button>
+                    </div>
+                </form>
+            </div>
 
             <div th:if="${successMessage}" class="success-message">
                 <p th:text="${successMessage}"></p>

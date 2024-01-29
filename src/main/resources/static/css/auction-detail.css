@@ -76,6 +76,29 @@
     box-sizing: border-box;
 }
 
+.btn-text {
+  background-color: transparent;
+  color: #17a2b8;
+  border: none;
+  font-size: 1.2em;
+  padding: 0.375rem 0.75rem;
+  margin: 0 10px;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.btn-text:hover {
+  color: #138496;
+}
+
+.btn-danger {
+    color: #dc3545;
+}
+
+.btn-danger:hover {
+  color: #c82333;
+}
+
 .detail-header {
     display: flex;
     align-items: center;
