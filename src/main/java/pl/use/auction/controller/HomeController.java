@@ -6,6 +6,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import pl.use.auction.model.Auction;
 import pl.use.auction.model.AuctionUser;
 import pl.use.auction.model.Category;
@@ -14,6 +15,7 @@ import pl.use.auction.repository.UserRepository;
 import pl.use.auction.service.AuctionService;
 
 import java.util.List;
+import java.util.Optional;
 
 @Controller
 public class HomeController {
@@ -49,5 +51,28 @@ public class HomeController {
         model.addAttribute("expensiveAuctions", expensiveAuctions);
 
         return "home";
+    }
+
+    @GetMapping("/search")
+    public String search(
+            @RequestParam("search") String query,
+            @RequestParam("location") String location,
+            Model model,
+            Authentication authentication) {
+
+        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+        String username = userDetails.getUsername();
+        model.addAttribute("username", username);
+
+        AuctionUser currentUser = userRepository.findByEmail(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+        List<Category> parentCategories = categoryRepository.findByParentCategoryIsNull();
+        model.addAttribute("parentCategories", parentCategories);
+
+        List<Auction> searchResults = auctionService.searchAuctions(query, location);
+        model.addAttribute("searchResults", searchResults);
+
+        return "auctions/search-results";
     }
 }

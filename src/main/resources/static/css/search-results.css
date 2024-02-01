@@ -1,0 +1,56 @@
+.main-container {
+    display: flex;
+    flex-wrap: wrap;
+    margin: 20px;
+    padding: 20px;
+    justify-content: space-between;
+}
+
+.search-results {
+    flex: 3 1 60%;
+    max-width: 60%;
+    min-width: 300px;
+    margin: 30px 0;
+}
+
+.auction-list {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+
+.auction-item {
+    width: 100%;
+    background: #f9f9f9;
+    border: 1px solid #ddd;
+    margin-bottom: 10px;
+    padding: 10px;
+    display: flex;
+    align-items: center;
+}
+
+.auction-item .auction-detail-link {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    color: inherit;
+}
+
+.auction-item .auction-image {
+    width: 150px;
+    height: auto;
+    margin-right: 20px;
+}
+
+.auction-info h3 {
+    font-size: 1.5em;
+    margin: 0 0 10px 0;
+}
+
+.auction-info p {
+    margin: 5px 0;
+}
+
+.auction-info span {
+    font-weight: bold;
+}

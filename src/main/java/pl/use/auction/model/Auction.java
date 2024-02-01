@@ -22,6 +22,8 @@ public class Auction {
     private String slug;
     private String description;
 
+    private String location;
+
     @ManyToOne(fetch = FetchType.LAZY)
     private Category category;
 

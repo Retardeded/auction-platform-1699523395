@@ -65,11 +65,13 @@ public class DefaultUserConfig {
                                                     CategoryRepository categoryRepository,
                                                     PasswordEncoder passwordEncoder) {
         return args -> {
-            AuctionUser defaultUser = createUserIfNotFound(userRepository, passwordEncoder, "default@gmail.com", "default", "default");
+            AuctionUser defaultUser = createUserIfNotFound(userRepository, passwordEncoder, "default@gmail.com", "default", "default", "Krakow");
 
-            AuctionUser anotherUser = createUserIfNotFound(userRepository, passwordEncoder, "another@gmail.com", "another", "another");
+            AuctionUser anotherUser = createUserIfNotFound(userRepository, passwordEncoder, "another@gmail.com", "another", "another", "Warsaw");
 
-            AuctionUser another3User = createUserIfNotFound(userRepository, passwordEncoder, "basic@gmail.com", "basic", "basic");
+            AuctionUser basicUser = createUserIfNotFound(userRepository, passwordEncoder, "basic@gmail.com", "basic", "basic", "Krakow");
+
+            AuctionUser testUser = createUserIfNotFound(userRepository, passwordEncoder, "test@gmail.com", "test", "test", "Warsaw");
 
             if (auctionRepository.findByAuctionCreator(defaultUser).isEmpty()) {
                 createSampleAuctions(auctionRepository, defaultUser, categoryRepository);
@@ -77,19 +79,23 @@ public class DefaultUserConfig {
             if (auctionRepository.findByAuctionCreator(anotherUser).isEmpty()) {
                 createSampleAuctions(auctionRepository, anotherUser, categoryRepository);
             }
-            if (auctionRepository.findByAuctionCreator(another3User).isEmpty()) {
-                createSampleAuctions(auctionRepository, another3User, categoryRepository);
+            if (auctionRepository.findByAuctionCreator(basicUser).isEmpty()) {
+                createSampleAuctions(auctionRepository, basicUser, categoryRepository);
+            }
+            if (auctionRepository.findByAuctionCreator(testUser).isEmpty()) {
+                createSampleAuctions(auctionRepository, testUser, categoryRepository);
             }
         };
     }
 
-    private AuctionUser createUserIfNotFound(UserRepository userRepository, PasswordEncoder passwordEncoder, String email, String username, String password) {
+    private AuctionUser createUserIfNotFound(UserRepository userRepository, PasswordEncoder passwordEncoder, String email, String username, String password, String location) {
         return userRepository.findByEmail(email).orElseGet(() -> {
             AuctionUser user = new AuctionUser();
             user.setEmail(email);
             user.setUsername(username);
             user.setPassword(passwordEncoder.encode(password));
             user.setVerified(true);
+            user.setLocation(location);
             return userRepository.save(user);
         });
     }
@@ -140,6 +146,7 @@ public class DefaultUserConfig {
             auction.setHighestBid(highestBid);
             auction.setStatus((String) auctionInfo[3]);
             auction.setAuctionCreator(user);
+            auction.setLocation(user.getLocation());
 
             String baseImageName = ((String) auctionInfo[0]).replaceAll("\\s+", "_");
             String originalImagePath = "auctionImages/" + baseImageName + ".png";

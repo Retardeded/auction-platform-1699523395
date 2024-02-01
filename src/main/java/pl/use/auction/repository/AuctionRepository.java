@@ -24,4 +24,6 @@ public interface AuctionRepository extends JpaRepository<Auction, Long> {
     Optional<Auction> findBySlug(String slug);
 
     List<Auction> findByCategoryAndEndTimeAfter(Category category, LocalDateTime endTime);
+
+    List<Auction> findByTitleContainingIgnoreCaseAndLocationContainingIgnoreCase(String title, String location);
 }

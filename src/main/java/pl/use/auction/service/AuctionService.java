@@ -15,14 +15,11 @@ import pl.use.auction.repository.UserRepository;
 
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static pl.use.auction.util.StringUtils.createSlugFromTitle;
@@ -155,5 +152,9 @@ public class AuctionService {
 
     public String saveImage(MultipartFile file) throws IOException {
         return fileSystemStorageService.save(file, "src/main/resources/static/auctionImages/");
+    }
+
+    public List<Auction> searchAuctions(String query, String location) {
+        return auctionRepository.findByTitleContainingIgnoreCaseAndLocationContainingIgnoreCase(query, location);
     }
 }
