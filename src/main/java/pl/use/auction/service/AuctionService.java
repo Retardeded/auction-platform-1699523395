@@ -21,6 +21,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static pl.use.auction.util.StringUtils.createSlugFromTitle;
 
@@ -154,7 +155,22 @@ public class AuctionService {
         return fileSystemStorageService.save(file, "src/main/resources/static/auctionImages/");
     }
 
-    public List<Auction> searchAuctions(String query, String location) {
+    public List<Auction> searchAuctions(String query, String location, String categoryName) {
+        Category category = null;
+
+        if (categoryName != null && !categoryName.trim().isEmpty()) {
+            Optional<Category> optionalCategory = categoryRepository.findByName(categoryName);
+            if (optionalCategory.isPresent()) {
+                category = optionalCategory.get();
+                List<Long> categoryIds = Stream.concat(
+                        Stream.of(category.getId()),
+                        category.getChildCategories().stream().map(Category::getId)
+                ).collect(Collectors.toList());
+
+                return auctionRepository.findByTitleContainingIgnoreCaseAndLocationContainingIgnoreCaseAndCategoryIdIn(query, location, categoryIds);
+            }
+        }
+
         return auctionRepository.findByTitleContainingIgnoreCaseAndLocationContainingIgnoreCase(query, location);
     }
 }

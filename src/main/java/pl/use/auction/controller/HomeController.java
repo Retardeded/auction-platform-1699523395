@@ -57,6 +57,7 @@ public class HomeController {
     public String search(
             @RequestParam("search") String query,
             @RequestParam("location") String location,
+            @RequestParam("category") String category, // Make this parameter optional
             Model model,
             Authentication authentication) {
 
@@ -70,7 +71,8 @@ public class HomeController {
         List<Category> parentCategories = categoryRepository.findByParentCategoryIsNull();
         model.addAttribute("parentCategories", parentCategories);
 
-        List<Auction> searchResults = auctionService.searchAuctions(query, location);
+        // Pass the category name string directly to the service method
+        List<Auction> searchResults = auctionService.searchAuctions(query, location, category);
         model.addAttribute("searchResults", searchResults);
 
         return "auctions/search-results";

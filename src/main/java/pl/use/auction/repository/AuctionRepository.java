@@ -26,4 +26,6 @@ public interface AuctionRepository extends JpaRepository<Auction, Long> {
     List<Auction> findByCategoryAndEndTimeAfter(Category category, LocalDateTime endTime);
 
     List<Auction> findByTitleContainingIgnoreCaseAndLocationContainingIgnoreCase(String title, String location);
+
+    List<Auction> findByTitleContainingIgnoreCaseAndLocationContainingIgnoreCaseAndCategoryIdIn(String title, String location, List<Long> categoryIds);
 }

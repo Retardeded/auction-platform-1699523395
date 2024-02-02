@@ -110,24 +110,6 @@ public class AuctionController {
         }
     }
 
-    @GetMapping("/auctions/{categoryName}")
-    public String viewCategory(@PathVariable String categoryName, Model model, Authentication authentication) {
-        Category parentCategory = categoryRepository.findByNameIgnoreCase(StringUtils.slugToCategoryName(categoryName))
-                .orElseThrow(() -> new IllegalArgumentException("Invalid category name:" + categoryName));
-
-        String currentUserName = authentication.getName();
-        AuctionUser currentUser = userRepository.findByEmail(currentUserName)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
-
-        List<Auction> aggregatedAuctions = auctionService.getAggregatedAuctionsForCategory(parentCategory, currentUser);
-
-        model.addAttribute("currentUser", currentUser);
-        model.addAttribute("category", parentCategory);
-        model.addAttribute("categoryAuctions", aggregatedAuctions);
-
-        return "auctions/category";
-    }
-
     @GetMapping("/auction/{slug}")
     public String viewAuctionDetail(@PathVariable("slug") String auctionSlug, Model model, Authentication authentication) {
         AuctionUser user = userRepository.findByEmail(authentication.getName())

@@ -5,6 +5,7 @@
     <link th:href="@{/css/home.css}" rel="stylesheet" />
     <link th:href="@{/css/featured-auction.css}" rel="stylesheet" />
     <script th:src="@{/js/dropdown.js}"></script>
+    <script th:src="@{/js/auction-search.js}"></script>
 </head>
 <body>
 <nav class="navbar">
@@ -12,6 +13,7 @@
         <form action="/search" method="get" class="search-form">
             <input type="text" placeholder="What you search for..." name="search" th:value="${param.search}" class="search-input" />
             <input type="text" placeholder="Location..." name="location" th:value="${param.location}" class="location-input" />
+            <input type="hidden" name="category" th:value="${param.category}" class="category-input" />
             <button type="submit" class="search-button">Search</button>
         </form>
     </div>
@@ -40,10 +42,12 @@
         <h2>Browse Categories</h2>
         <ul>
             <li th:each="category : ${parentCategories}">
-                <a th:href="@{|/auctions/${category.name.toLowerCase().replaceAll(' ', '-')}|}" th:text="${category.name}">Parent Category Name</a>
+                <a href="#" th:data-category-name="${category.name}" class="category-link">
+                    <span th:text="${category.name}">Parent Category Name</span>
+                </a>
                 <ul class="subcategories" th:if="${!category.childCategories.isEmpty()}">
                     <li th:each="subCategory : ${category.childCategories}">
-                        <a th:href="@{|/auctions/${subCategory.name.toLowerCase().replaceAll(' ', '-')}|}" th:text="${subCategory.name}">Subcategory Name</a>
+                        <a href="#" th:data-category-name="${subCategory.name}" class="category-link" th:text="${subCategory.name}">Subcategory Name</a>
                     </li>
                 </ul>
             </li>
