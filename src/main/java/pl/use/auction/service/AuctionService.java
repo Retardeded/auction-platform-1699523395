@@ -155,7 +155,8 @@ public class AuctionService {
         return fileSystemStorageService.save(file, "src/main/resources/static/auctionImages/");
     }
 
-    public List<Auction> searchAuctions(String query, String location, String categoryName) {
+    public List<Auction> searchAuctions(String query, String location, String categoryName, String sort) {
+        List<Auction> auctions = new ArrayList<>();
         Category category = null;
 
         if (categoryName != null && !categoryName.trim().isEmpty()) {
@@ -167,10 +168,27 @@ public class AuctionService {
                         category.getChildCategories().stream().map(Category::getId)
                 ).collect(Collectors.toList());
 
-                return auctionRepository.findByTitleContainingIgnoreCaseAndLocationContainingIgnoreCaseAndCategoryIdIn(query, location, categoryIds);
+                auctions = auctionRepository.findByTitleContainingIgnoreCaseAndLocationContainingIgnoreCaseAndCategoryIdIn(query, location, categoryIds);
             }
+        } else {
+            auctions = auctionRepository.findByTitleContainingIgnoreCaseAndLocationContainingIgnoreCase(query, location);
         }
 
-        return auctionRepository.findByTitleContainingIgnoreCaseAndLocationContainingIgnoreCase(query, location);
+        switch (sort) {
+            case "date":
+                return auctions.stream()
+                        .sorted(Comparator.comparing(Auction::getStartTime).reversed())
+                        .collect(Collectors.toList());
+            case "currentBid":
+                return auctions.stream()
+                        .sorted(Comparator.comparing(Auction::getHighestBid))
+                        .collect(Collectors.toList());
+            case "endingSoon":
+                return auctions.stream()
+                        .sorted(Comparator.comparing(Auction::getEndTime))
+                        .collect(Collectors.toList());
+            default:
+                return auctions;
+        }
     }
 }

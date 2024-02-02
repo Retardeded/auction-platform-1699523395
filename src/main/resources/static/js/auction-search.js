@@ -10,3 +10,12 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
+
+function submitSearchWithSort() {
+    var searchForm = document.querySelector('.search-form');
+    var sortOrder = document.querySelector('#sortOrder').value;
+
+    var searchParams = new URLSearchParams(window.location.search);
+    searchParams.set('sort', sortOrder);
+    window.location.search = searchParams.toString();
+}

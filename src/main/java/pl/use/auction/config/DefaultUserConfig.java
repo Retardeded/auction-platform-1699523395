@@ -15,6 +15,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static pl.use.auction.util.StringUtils.createSlugFromTitle;
 
@@ -115,6 +116,7 @@ public class DefaultUserConfig {
         };
 
         boolean isFirstAuction = true;
+        LocalDateTime now = LocalDateTime.now();
 
         for (Object[] auctionInfo : auctionData) {
             Auction auction = new Auction();
@@ -132,8 +134,15 @@ public class DefaultUserConfig {
 
             auction.setCategory(itemCategory);
 
-            auction.setStartTime(LocalDateTime.now());
-            auction.setEndTime(LocalDateTime.now().plusDays(10));
+            long randomStartDays = ThreadLocalRandom.current().nextLong(-3, 4);
+            LocalDateTime randomStartTime = now.plusDays(randomStartDays);
+
+            long randomEndDays = ThreadLocalRandom.current().nextLong(5, 11);
+            LocalDateTime randomEndTime = now.plusDays(randomEndDays);
+
+            auction.setStartTime(randomStartTime);
+            auction.setEndTime(randomEndTime);
+
             BigDecimal startingPrice = BigDecimal.valueOf(50 + random.nextInt(101));
             auction.setStartingPrice(startingPrice);
             BigDecimal highestBid;
