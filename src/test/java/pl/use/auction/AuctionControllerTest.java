@@ -153,33 +153,6 @@ class AuctionControllerTest {
         assertEquals("You cannot delete an auction with bids or that you did not create.", response.getBody());
     }
 
-    @Test
-    void testViewCategory() {
-        String categoryName = "electronics";
-        Category parentCategory = new Category(); // set necessary properties
-        AuctionUser currentUser = new AuctionUser();
-        currentUser.setEmail("user@example.com");
-        List<Auction> aggregatedAuctions = List.of(new Auction()); // create mock auctions
-
-        when(authentication.getName()).thenReturn("user@example.com");
-        when(userRepository.findByEmail("user@example.com")).thenReturn(Optional.of(currentUser));
-        when(categoryRepository.findByNameIgnoreCase(StringUtils.slugToCategoryName(categoryName)))
-                .thenReturn(Optional.of(parentCategory));
-        when(auctionService.getAggregatedAuctionsForCategory(parentCategory, currentUser))
-                .thenReturn(aggregatedAuctions);
-
-        String viewName = auctionController.viewCategory(categoryName, model, authentication);
-
-        verify(categoryRepository).findByNameIgnoreCase(StringUtils.slugToCategoryName(categoryName));
-        verify(userRepository).findByEmail("user@example.com");
-        verify(auctionService).getAggregatedAuctionsForCategory(parentCategory, currentUser);
-
-        assertEquals("auctions/category", viewName);
-        verify(model).addAttribute(eq("currentUser"), eq(currentUser));
-        verify(model).addAttribute(eq("category"), eq(parentCategory));
-        verify(model).addAttribute(eq("categoryAuctions"), eq(aggregatedAuctions));
-    }
-
     @Captor
     private ArgumentCaptor<Auction> auctionCaptor;
 

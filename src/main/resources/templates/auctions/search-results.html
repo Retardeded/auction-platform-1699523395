@@ -78,6 +78,9 @@
                         <p><span>Start Date: </span><span th:text="${#temporals.format(auction.startTime, 'dd/MM/yyyy HH:mm')}">Start Date</span></p>
                         <p><span>End Date: </span><span th:text="${#temporals.format(auction.endTime, 'dd/MM/yyyy HH:mm')}">End Date</span></p>
                     </div>
+                    <img th:if="${auction.featuredType != T(pl.use.auction.model.FeaturedType).NONE}"
+                         th:src="@{'/auctionSectionImages/' + ${auction.featuredType.imagePath}}"
+                         alt="Featured Auction Label" class="featured-auction-label"/>
                 </a>
             </div>
         </div>

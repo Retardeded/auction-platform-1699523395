@@ -9,6 +9,7 @@ import org.springframework.web.server.ResponseStatusException;
 import pl.use.auction.model.Auction;
 import pl.use.auction.model.AuctionUser;
 import pl.use.auction.model.Category;
+import pl.use.auction.model.FeaturedType;
 import pl.use.auction.repository.AuctionRepository;
 import pl.use.auction.repository.CategoryRepository;
 import pl.use.auction.repository.UserRepository;
@@ -63,36 +64,26 @@ public class AuctionService {
         userRepository.save(user);
     }
 
-    public List<Auction> getAggregatedAuctionsForCategory(Category category, AuctionUser currentUser) {
-        List<Auction> aggregatedAuctions = auctionRepository.findByCategoryAndEndTimeAfter(category, LocalDateTime.now())
-                .stream()
-                .filter(auction -> !auction.getAuctionCreator().equals(currentUser))
-                .collect(Collectors.toList());
-
-        for (Category childCategory : category.getChildCategories()) {
-            aggregatedAuctions.addAll(auctionRepository.findByCategoryAndEndTimeAfter(childCategory, LocalDateTime.now())
-                    .stream()
-                    .filter(auction -> !auction.getAuctionCreator().equals(currentUser))
-                    .toList());
-        }
-
-        return aggregatedAuctions;
-    }
-
-    public List<Auction> findCheapestAuctions(AuctionUser currentUser, int limit) {
-        return auctionRepository.findByEndTimeAfter(LocalDateTime.now()).stream()
-                .filter(auction -> !auction.getAuctionCreator().equals(currentUser))
+    public List<Auction> findCheapestAuctions(int limit) {
+        List<Auction> auctions = auctionRepository.findByEndTimeAfter(LocalDateTime.now()).stream()
                 .sorted(Comparator.comparing(Auction::getHighestBid))
                 .limit(limit)
                 .collect(Collectors.toList());
+
+        auctions.forEach(auction -> auction.setFeaturedType(FeaturedType.CHEAP));
+        auctionRepository.saveAll(auctions);
+        return auctions;
     }
 
-    public List<Auction> findExpensiveAuctions(AuctionUser currentUser, int limit) {
-        return auctionRepository.findByEndTimeAfter(LocalDateTime.now()).stream()
-                .filter(auction -> !auction.getAuctionCreator().equals(currentUser))
+    public List<Auction> findExpensiveAuctions(int limit) {
+        List<Auction> auctions = auctionRepository.findByEndTimeAfter(LocalDateTime.now()).stream()
                 .sorted(Comparator.comparing(Auction::getHighestBid).reversed())
                 .limit(limit)
                 .collect(Collectors.toList());
+
+        auctions.forEach(auction -> auction.setFeaturedType(FeaturedType.EXPENSIVE));
+        auctionRepository.saveAll(auctions);
+        return auctions;
     }
 
     public Auction createAndSaveAuction(Auction auction,
@@ -174,21 +165,17 @@ public class AuctionService {
             auctions = auctionRepository.findByTitleContainingIgnoreCaseAndLocationContainingIgnoreCase(query, location);
         }
 
-        switch (sort) {
-            case "date":
-                return auctions.stream()
-                        .sorted(Comparator.comparing(Auction::getStartTime).reversed())
-                        .collect(Collectors.toList());
-            case "currentBid":
-                return auctions.stream()
-                        .sorted(Comparator.comparing(Auction::getHighestBid))
-                        .collect(Collectors.toList());
-            case "endingSoon":
-                return auctions.stream()
-                        .sorted(Comparator.comparing(Auction::getEndTime))
-                        .collect(Collectors.toList());
-            default:
-                return auctions;
-        }
+        return switch (sort) {
+            case "date" -> auctions.stream()
+                    .sorted(Comparator.comparing(Auction::getStartTime).reversed())
+                    .collect(Collectors.toList());
+            case "currentBid" -> auctions.stream()
+                    .sorted(Comparator.comparing(Auction::getHighestBid))
+                    .collect(Collectors.toList());
+            case "endingSoon" -> auctions.stream()
+                    .sorted(Comparator.comparing(Auction::getEndTime))
+                    .collect(Collectors.toList());
+            default -> auctions;
+        };
     }
 }

@@ -46,4 +46,7 @@ public class Auction {
     private BigDecimal startingPrice;
     private BigDecimal highestBid;
     private String status;
+
+    @Enumerated(EnumType.STRING)
+    private FeaturedType featuredType = FeaturedType.NONE;
 }

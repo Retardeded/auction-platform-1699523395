@@ -109,36 +109,6 @@ class AuctionServiceTest {
     }
 
     @Test
-    void testGetAggregatedAuctionsForCategory() {
-        AuctionUser auctionCreator = new AuctionUser();
-        auctionCreator.setEmail("creator@example.com");
-        Category category = new Category();
-        Category childCategory = new Category();
-        category.setChildCategories(Set.of(childCategory));
-
-        AuctionUser currentUser = new AuctionUser();
-        Auction auctionInCategory = new Auction();
-        auctionInCategory.setAuctionCreator(auctionCreator);
-        auctionInCategory.setCategory(category);
-
-        Auction auctionInChildCategory = new Auction();
-        auctionInChildCategory.setAuctionCreator(auctionCreator);
-        auctionInChildCategory.setCategory(childCategory);
-
-
-        when(auctionRepository.findByCategoryAndEndTimeAfter(eq(category), any(LocalDateTime.class)))
-                .thenReturn(List.of(auctionInCategory));
-        when(auctionRepository.findByCategoryAndEndTimeAfter(eq(childCategory), any(LocalDateTime.class)))
-                .thenReturn(List.of(auctionInChildCategory));
-
-        List<Auction> result = auctionService.getAggregatedAuctionsForCategory(category, currentUser);
-
-        assertTrue(result.contains(auctionInCategory) && result.contains(auctionInChildCategory));
-    }
-
-
-
-    @Test
     void testFindCheapestAuctions() {
         AuctionUser auctionCreator1 = new AuctionUser();
         AuctionUser auctionCreator2 = new AuctionUser();
@@ -162,7 +132,7 @@ class AuctionServiceTest {
 
         AuctionUser currentUser = new AuctionUser();
 
-        List<Auction> result = auctionService.findCheapestAuctions(currentUser, 2);
+        List<Auction> result = auctionService.findCheapestAuctions(2);
 
         assertEquals(2, result.size());
         assertEquals(new BigDecimal("50.00"), result.get(0).getHighestBid());
@@ -194,7 +164,7 @@ class AuctionServiceTest {
 
         AuctionUser currentUser = new AuctionUser();
 
-        List<Auction> result = auctionService.findExpensiveAuctions(currentUser, 2);
+        List<Auction> result = auctionService.findExpensiveAuctions(2);
 
         assertEquals(2, result.size());
         assertEquals(new BigDecimal("100.00"), result.get(0).getHighestBid());

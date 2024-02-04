@@ -44,10 +44,10 @@ public class HomeController {
         List<Category> parentCategories = categoryRepository.findByParentCategoryIsNull();
         model.addAttribute("parentCategories", parentCategories);
 
-        List<Auction> cheapestAuctions = auctionService.findCheapestAuctions(currentUser, 6);
+        List<Auction> cheapestAuctions = auctionService.findCheapestAuctions(6);
         model.addAttribute("cheapestAuctions", cheapestAuctions);
 
-        List<Auction> expensiveAuctions = auctionService.findExpensiveAuctions(currentUser, 6);
+        List<Auction> expensiveAuctions = auctionService.findExpensiveAuctions(6);
         model.addAttribute("expensiveAuctions", expensiveAuctions);
 
         return "home";

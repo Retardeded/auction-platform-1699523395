@@ -52,8 +52,6 @@ class HomeControllerTest {
         Auction cheapAuction = createTestAuctionWithCreator(auctionCreator);
         Auction expensiveAuction = createTestAuctionWithCreator(auctionCreator);
 
-        AuctionUser currentUser = new AuctionUser();
-        currentUser.setEmail("currentUser@example.com");
 
         List<Auction> cheapestAuctions = List.of(cheapAuction);
         List<Auction> expensiveAuctions = List.of(expensiveAuction);
@@ -61,12 +59,11 @@ class HomeControllerTest {
         List<Category> parentCategories = List.of(new Category());
         when(categoryRepository.findByParentCategoryIsNull()).thenReturn(parentCategories);
 
-        when(auctionService.findCheapestAuctions(any(AuctionUser.class), eq(6))).thenReturn(cheapestAuctions);
-        when(auctionService.findExpensiveAuctions(any(AuctionUser.class), eq(6))).thenReturn(expensiveAuctions);
+        when(auctionService.findCheapestAuctions(eq(6))).thenReturn(cheapestAuctions);
+        when(auctionService.findExpensiveAuctions(eq(6))).thenReturn(expensiveAuctions);
 
         when(authentication.getPrincipal()).thenReturn(userDetails);
         when(userDetails.getUsername()).thenReturn("test@example.com");
-        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(currentUser));
         when(categoryRepository.findByParentCategoryIsNull()).thenReturn(parentCategories);
 
         String viewName = homeController.home(model, authentication);
@@ -74,8 +71,8 @@ class HomeControllerTest {
         verify(userDetails).getUsername();
         verify(userRepository).findByEmail("test@example.com");
         verify(categoryRepository).findByParentCategoryIsNull();
-        verify(auctionService).findCheapestAuctions(currentUser, 6);
-        verify(auctionService).findExpensiveAuctions(currentUser, 6);
+        verify(auctionService).findCheapestAuctions(6);
+        verify(auctionService).findExpensiveAuctions(6);
 
         assertEquals("home", viewName);
         verify(model).addAttribute(eq("username"), anyString());
