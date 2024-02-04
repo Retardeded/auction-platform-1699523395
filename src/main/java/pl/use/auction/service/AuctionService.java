@@ -149,6 +149,7 @@ public class AuctionService {
     public List<Auction> searchAuctions(String query, String location, String categoryName, String sort) {
         List<Auction> auctions = new ArrayList<>();
         Category category = null;
+        LocalDateTime now = LocalDateTime.now();
 
         if (categoryName != null && !categoryName.trim().isEmpty()) {
             Optional<Category> optionalCategory = categoryRepository.findByName(categoryName);
@@ -159,10 +160,12 @@ public class AuctionService {
                         category.getChildCategories().stream().map(Category::getId)
                 ).collect(Collectors.toList());
 
-                auctions = auctionRepository.findByTitleContainingIgnoreCaseAndLocationContainingIgnoreCaseAndCategoryIdIn(query, location, categoryIds);
+                auctions = auctionRepository.findByTitleContainingIgnoreCaseAndLocationContainingIgnoreCaseAndCategoryIdInAndEndTimeAfter
+                        (query, location, categoryIds, now);
             }
         } else {
-            auctions = auctionRepository.findByTitleContainingIgnoreCaseAndLocationContainingIgnoreCase(query, location);
+            auctions = auctionRepository.findByTitleContainingIgnoreCaseAndLocationContainingIgnoreCaseAndEndTimeAfter
+                    (query, location, now);
         }
 
         return switch (sort) {

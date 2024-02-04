@@ -137,7 +137,7 @@ public class DefaultUserConfig {
             long randomStartDays = ThreadLocalRandom.current().nextLong(-3, 4);
             LocalDateTime randomStartTime = now.plusDays(randomStartDays);
 
-            long randomEndDays = ThreadLocalRandom.current().nextLong(5, 11);
+            long randomEndDays = ThreadLocalRandom.current().nextLong(-2, 6);
             LocalDateTime randomEndTime = now.plusDays(randomEndDays);
 
             auction.setStartTime(randomStartTime);

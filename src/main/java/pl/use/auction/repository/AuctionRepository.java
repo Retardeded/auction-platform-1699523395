@@ -10,8 +10,6 @@ import java.util.List;
 import java.util.Optional;
 
 public interface AuctionRepository extends JpaRepository<Auction, Long> {
-    List<Auction> findByAuctionCreatorAndEndTimeAfter(AuctionUser user, LocalDateTime now);
-    List<Auction> findByAuctionCreatorAndEndTimeBefore(AuctionUser user, LocalDateTime now);
 
     List<Auction> findByAuctionCreator(AuctionUser user);
 
@@ -25,7 +23,16 @@ public interface AuctionRepository extends JpaRepository<Auction, Long> {
 
     List<Auction> findByCategoryAndEndTimeAfter(Category category, LocalDateTime endTime);
 
-    List<Auction> findByTitleContainingIgnoreCaseAndLocationContainingIgnoreCase(String title, String location);
+    List<Auction> findByTitleContainingIgnoreCaseAndLocationContainingIgnoreCaseAndEndTimeAfter(
+            String title,
+            String location,
+            LocalDateTime endTime
+    );
 
-    List<Auction> findByTitleContainingIgnoreCaseAndLocationContainingIgnoreCaseAndCategoryIdIn(String title, String location, List<Long> categoryIds);
+    List<Auction> findByTitleContainingIgnoreCaseAndLocationContainingIgnoreCaseAndCategoryIdInAndEndTimeAfter(
+            String title,
+            String location,
+            List<Long> categoryIds,
+            LocalDateTime endTime
+    );
 }

@@ -11,7 +11,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
-import org.springframework.web.servlet.view.RedirectView;
 import pl.use.auction.model.Auction;
 import pl.use.auction.model.AuctionUser;
 import pl.use.auction.model.Category;
@@ -21,10 +20,10 @@ import pl.use.auction.repository.UserRepository;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import pl.use.auction.service.AuctionService;
 import pl.use.auction.service.CategoryService;
-import pl.use.auction.util.StringUtils;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Controller
@@ -76,7 +75,7 @@ public class AuctionController {
     @PostMapping("/auctions/create")
     public String createAuction(@ModelAttribute Auction auction,
                                 @RequestParam("images") MultipartFile[] files,
-                                @RequestParam("category") Long categoryId, // This is to capture the category ID from the form
+                                @RequestParam("category") Long categoryId,
                                 BindingResult bindingResult,
                                 Authentication authentication) {
         if (bindingResult.hasErrors()) {
@@ -116,6 +115,10 @@ public class AuctionController {
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
         Auction auction = auctionRepository.findBySlug(auctionSlug)
                 .orElseThrow(() -> new IllegalArgumentException("Invalid auction slug: " + auctionSlug));
+        if (auction.getEndTime().isBefore(LocalDateTime.now())) {
+            model.addAttribute("errorMessage", "This auction has ended.");
+            return "auctions/auction-expired";
+        }
         model.addAttribute("auction", auction);
         model.addAttribute("currentUser", user);
         return "auctions/auction-detail";
