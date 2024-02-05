@@ -26,7 +26,7 @@
   <div class="navbar-right">
     <button onclick="window.location.href='/auctions/create';" class="create-auction-button">Create Auction</button>
     <div class="profile-container">
-      <button class="profile-button" onclick="toggleDropdown()">default@gmail.com</button>
+      <button class="profile-button" onclick="toggleDropdown()" th:text="${currentUser.email}">User Email</button>
       <div id="myDropdown" class="dropdown-content">
         <div class="dropdown-button" onclick="window.location.href='/profile';">
           My Profile

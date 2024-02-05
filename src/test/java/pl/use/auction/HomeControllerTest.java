@@ -77,6 +77,40 @@ class HomeControllerTest {
         verify(model).addAttribute(eq("expensiveAuctions"), anyList());
     }
 
+    @Test
+    void testSearch() {
+        String username = "user@example.com";
+        String searchQuery = "example";
+        String location = "location1";
+        String category = "category1";
+        String sort = "date";
+
+        AuctionUser auctionUser = new AuctionUser();
+        auctionUser.setEmail(username);
+
+        List<Category> parentCategories = List.of(new Category());
+        List<Auction> searchResults = List.of(new Auction());
+
+        when(authentication.getPrincipal()).thenReturn(userDetails);
+        when(userDetails.getUsername()).thenReturn(username);
+        when(userRepository.findByEmail(username)).thenReturn(Optional.of(auctionUser));
+        when(categoryRepository.findByParentCategoryIsNull()).thenReturn(parentCategories);
+        when(auctionService.searchAuctions(searchQuery, location, category, sort)).thenReturn(searchResults);
+
+        String viewName = homeController.search(searchQuery, location, category, sort, model, authentication);
+
+        verify(userRepository).findByEmail(username);
+        verify(categoryRepository).findByParentCategoryIsNull();
+        verify(auctionService).searchAuctions(searchQuery, location, category, sort);
+
+        assertEquals("auctions/search-results", viewName);
+        verify(model).addAttribute("username", username);
+        verify(model).addAttribute("currentUser", auctionUser);
+        verify(model).addAttribute("parentCategories", parentCategories);
+        verify(model).addAttribute("searchResults", searchResults);
+        verify(model).addAttribute("currentSortOrder", sort);
+    }
+
     private Auction createTestAuctionWithCreator(AuctionUser creator) {
         Auction auction = new Auction();
         auction.setAuctionCreator(creator);
