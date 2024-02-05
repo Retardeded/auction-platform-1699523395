@@ -163,6 +163,7 @@ class AuctionControllerTest {
         String auctionSlug = "some-auction-slug";
         Auction auction = new Auction();
         auction.setSlug(auctionSlug);
+        auction.setEndTime(LocalDateTime.now().plusDays(1));
         Category category = new Category();
         category.setName("Category Name");
         Category parentCategory = new Category();

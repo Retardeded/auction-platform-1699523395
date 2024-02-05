@@ -53,9 +53,4 @@ class FileControllerTest {
 
         assertEquals(404, response.getStatusCode().value());
     }
-
-    @AfterEach
-    void tearDown() throws Exception {
-        Files.deleteIfExists(testFilePath);
-    }
 }

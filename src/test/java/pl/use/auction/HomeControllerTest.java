@@ -48,23 +48,19 @@ class HomeControllerTest {
 
     @Test
     void testHome() {
-        AuctionUser auctionCreator = new AuctionUser();
-        Auction cheapAuction = createTestAuctionWithCreator(auctionCreator);
-        Auction expensiveAuction = createTestAuctionWithCreator(auctionCreator);
-
-
-        List<Auction> cheapestAuctions = List.of(cheapAuction);
-        List<Auction> expensiveAuctions = List.of(expensiveAuction);
-
+        String username = "test@example.com";
+        AuctionUser auctionUser = new AuctionUser();
+        auctionUser.setEmail(username);
         List<Category> parentCategories = List.of(new Category());
-        when(categoryRepository.findByParentCategoryIsNull()).thenReturn(parentCategories);
-
-        when(auctionService.findCheapestAuctions(eq(6))).thenReturn(cheapestAuctions);
-        when(auctionService.findExpensiveAuctions(eq(6))).thenReturn(expensiveAuctions);
+        List<Auction> cheapestAuctions = List.of(new Auction());
+        List<Auction> expensiveAuctions = List.of(new Auction());
 
         when(authentication.getPrincipal()).thenReturn(userDetails);
-        when(userDetails.getUsername()).thenReturn("test@example.com");
+        when(userDetails.getUsername()).thenReturn(username);
+        when(userRepository.findByEmail(username)).thenReturn(Optional.of(auctionUser));
         when(categoryRepository.findByParentCategoryIsNull()).thenReturn(parentCategories);
+        when(auctionService.findCheapestAuctions(6)).thenReturn(cheapestAuctions);
+        when(auctionService.findExpensiveAuctions(6)).thenReturn(expensiveAuctions);
 
         String viewName = homeController.home(model, authentication);
 

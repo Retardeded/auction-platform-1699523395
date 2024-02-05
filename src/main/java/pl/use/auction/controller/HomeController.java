@@ -41,6 +41,9 @@ public class HomeController {
         AuctionUser currentUser = userRepository.findByEmail(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
+
+        model.addAttribute("currentUser", currentUser);
+
         List<Category> parentCategories = categoryRepository.findByParentCategoryIsNull();
         model.addAttribute("parentCategories", parentCategories);
 
@@ -68,6 +71,7 @@ public class HomeController {
 
         AuctionUser currentUser = userRepository.findByEmail(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        model.addAttribute("currentUser", currentUser);
 
         List<Category> parentCategories = categoryRepository.findByParentCategoryIsNull();
         model.addAttribute("parentCategories", parentCategories);

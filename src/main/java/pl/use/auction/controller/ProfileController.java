@@ -2,7 +2,6 @@ package pl.use.auction.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -36,10 +35,11 @@ public class ProfileController {
     @GetMapping("/profile/auctions")
     public String viewUserAuctions(Model model, Authentication authentication) {
         String currentUserName = authentication.getName();
-        AuctionUser user = userRepository.findByEmail(currentUserName)
+        AuctionUser currentUser = userRepository.findByEmail(currentUserName)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        model.addAttribute("currentUser", currentUser);
 
-        List<Auction> allUserAuctions = user.getCreatedAuctions();
+        List<Auction> allUserAuctions = currentUser.getCreatedAuctions();
         List<Auction> ongoingAuctions = allUserAuctions.stream()
                 .filter(auction -> auction.getEndTime().isAfter(LocalDateTime.now()))
                 .collect(Collectors.toList());
@@ -102,8 +102,9 @@ public class ProfileController {
     public String viewProfile(Model model, Authentication authentication) {
         String currentUserName = authentication.getName();
 
-        AuctionUser user = userRepository.findByEmail(currentUserName).orElse(null);
-        model.addAttribute("user", user);
+        AuctionUser currentUser = userRepository.findByEmail(currentUserName)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        model.addAttribute("currentUser", currentUser);
         return "profile/profile";
     }
 
