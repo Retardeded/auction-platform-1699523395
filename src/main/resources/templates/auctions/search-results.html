@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
-    <title>Home</title>
+    <title>Search Results</title>
     <link th:href="@{/css/search-bar.css}" rel="stylesheet" />
     <link th:href="@{/css/categories.css}" rel="stylesheet" />
-    <link th:href="@{/css/featured-auction.css}" rel="stylesheet" />
+    <link th:href="@{/css/search-results.css}" rel="stylesheet" />
     <script th:src="@{/js/dropdown.js}"></script>
     <script th:src="@{/js/auction-search.js}"></script>
 </head>
@@ -55,33 +55,20 @@
         </ul>
     </div>
 
-    <div class="featured-auctions">
-        <div class="featured-auctions-title">
-            <h2>Cheapest Auctions</h2>
-            <img src="auctionSectionImages/cheap.png" alt="Cheap Logo" class="featured-auctions-logo"/>
-        </div>
-        <div class="auction-items-container">
-            <div th:each="auction : ${cheapestAuctions}" class="auction-item">
-                <a th:href="@{|/auction/${auction.slug}|}" class="auction-detail-link">
-                    <img th:src="@{|/${auction.imageUrls[0]}|}"
-                         alt="Auction Image" class="auction-image"/>
-                    <div class="auction-info">
-                        <h3 th:text="${auction.title}">Auction Title</h3>
-                        <p><span>Starting Price: </span><span th:text="${auction.startingPrice}">Starting Price</span></p>
-                        <p><span>Highest Bid: </span><span th:text="${auction.highestBid}">Highest Bid</span></p>
-                    </div>
-                </a>
+    <div class="search-results">
+        <div class="search-results-title">
+            <h2>Search Results</h2>
+            <div class="sort-dropdown-container">
+                <label for="sortOrder">Sort by:</label>
+                <select id="sortOrder" name="sort" class="sort-dropdown" onchange="submitSearchWithSort()">
+                    <option th:selected="${currentSortOrder == 'date'}" value="date">Date</option>
+                    <option th:selected="${currentSortOrder == 'currentBid'}" value="currentBid">Current Bid</option>
+                    <option th:selected="${currentSortOrder == 'endingSoon'}" value="endingSoon">Ending Soon</option>
+                </select>
             </div>
         </div>
-    </div>
-
-    <div class="featured-auctions">
-        <div class="featured-auctions-title">
-            <h2>Most Expensive Auctions</h2>
-            <img src="auctionSectionImages/expensive.png" alt="Expensive Logo" class="featured-auctions-logo"/>
-        </div>
         <div class="auction-items-container">
-            <div th:each="auction : ${expensiveAuctions}" class="auction-item">
+            <div th:each="auction : ${searchResults}" class="auction-item">
                 <a th:href="@{|/auction/${auction.slug}|}" class="auction-detail-link">
                     <img th:src="@{|/${auction.imageUrls[0]}|}"
                          alt="Auction Image" class="auction-image"/>
@@ -89,7 +76,12 @@
                         <h3 th:text="${auction.title}">Auction Title</h3>
                         <p><span>Starting Price: </span><span th:text="${auction.startingPrice}">Starting Price</span></p>
                         <p><span>Highest Bid: </span><span th:text="${auction.highestBid}">Highest Bid</span></p>
+                        <p><span>Start Date: </span><span th:text="${#temporals.format(auction.startTime, 'dd/MM/yyyy HH:mm')}">Start Date</span></p>
+                        <p><span>End Date: </span><span th:text="${#temporals.format(auction.endTime, 'dd/MM/yyyy HH:mm')}">End Date</span></p>
                     </div>
+                    <img th:if="${auction.featuredType != T(pl.use.auction.model.FeaturedType).NONE}"
+                         th:src="@{'/auctionSectionImages/' + ${auction.featuredType.imagePath}}"
+                         alt="Featured Auction Label" class="featured-auction-label"/>
                 </a>
             </div>
         </div>

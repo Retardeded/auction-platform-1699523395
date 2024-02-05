@@ -15,11 +15,11 @@
     <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
             <li class="breadcrumb-item" th:if="${auction.category.parentCategory != null}">
-                <a th:href="@{'/auctions/' + ${#strings.replace(auction.category.parentCategory.name, ' ', '-').toLowerCase()}}"
+                <a th:href="@{/search(search='', location='', category=${auction.category.parentCategory.name})}"
                    th:text="${auction.category.parentCategory.name}">Parent Category</a>
             </li>
             <li class="breadcrumb-item active">
-                <a th:href="@{'/auctions/' + ${#strings.replace(auction.category.name, ' ', '-').toLowerCase()}}"
+                <a th:href="@{/search(search='', location='', category=${auction.category.name})}"
                    th:text="${auction.category.name}">Category</a>
             </li>
         </ol>

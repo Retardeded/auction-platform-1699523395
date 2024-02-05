@@ -5,10 +5,44 @@
   <meta name="_csrf" th:content="${_csrf.token}"/>
   <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
   <title>My Listings</title>
+  <link th:href="@{/css/search-bar.css}" rel="stylesheet" />
+  <link th:href="@{/css/sidebar.css}" rel="stylesheet" />
   <link th:href="@{/css/user-auctions.css}" rel="stylesheet" />
+  <script th:src="@{/js/dropdown.js}"></script>
+  <script th:src="@{/js/auction-search.js}"></script>
   <script th:src="@{/js/user-auctions.js}"></script>
 </head>
 <body>
+
+<nav class="navbar">
+  <div class="search-container">
+    <form action="/search" method="get" class="search-form">
+      <input type="text" placeholder="What you search for..." name="search" th:value="${param.search}" class="search-input" />
+      <input type="text" placeholder="Location..." name="location" th:value="${param.location}" class="location-input" />
+      <input type="hidden" name="category" th:value="${param.category}" class="category-input" />
+      <button type="submit" class="search-button">Search</button>
+    </form>
+  </div>
+  <div class="navbar-right">
+    <button onclick="window.location.href='/auctions/create';" class="create-auction-button">Create Auction</button>
+    <div class="profile-container">
+      <button class="profile-button" onclick="toggleDropdown()" th:text="${currentUser.email}">User Email</button>
+      <div id="myDropdown" class="dropdown-content">
+        <div class="dropdown-button" onclick="window.location.href='/profile';">
+          My Profile
+        </div>
+        <div class="dropdown-button" onclick="document.getElementById('logout-form').submit();">
+          Logout
+        </div>
+        <form id="logout-form" action="/logout" method="post" style="display: none;">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+          <input type="submit" value="Logout" />
+        </form>
+      </div>
+    </div>
+  </div>
+</nav>
+
 <div class="layout-container">
   <div class="sidebar">
     <h2>Auction Sections</h2>
@@ -84,6 +118,6 @@
     </div>
   </div>
 </div>
-<script th:src="@{/js/profile.js}"></script>
 </body>
+<script th:src="@{/js/show-user-auctions.js}"></script>
 </html>

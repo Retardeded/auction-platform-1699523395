@@ -10,6 +10,7 @@ import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.ui.ExtendedModelMap;
 import org.springframework.ui.Model;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.thymeleaf.spring6.SpringTemplateEngine;
@@ -49,15 +50,14 @@ public class ProfileControllerTest {
     @Mock
     private AuctionRepository auctionRepository;
 
+    @Mock
+    private Authentication authentication;
+
     @InjectMocks
     private ProfileController profileController;
 
     @Mock
     private Model model;
-
-    @Mock
-    private Authentication authentication;
-
     @BeforeEach
     public void setup() {
         ClassLoaderTemplateResolver templateResolver = new ClassLoaderTemplateResolver();
@@ -77,24 +77,20 @@ public class ProfileControllerTest {
     }
 
     @Test
-    public void viewProfile_ShouldReturnProfileView() throws Exception {
+    void viewProfile_ShouldReturnProfileView() {
+        Model model = new ExtendedModelMap();
+
         String email = "user@example.com";
-        AuctionUser mockUser = new AuctionUser();
-        mockUser.setEmail(email);
-        when(userRepository.findByEmail(email)).thenReturn(Optional.of(mockUser));
+        AuctionUser user = new AuctionUser();
+        user.setEmail(email);
+        when(authentication.getName()).thenReturn(email);
+        when(userRepository.findByEmail(email)).thenReturn(Optional.of(user));
 
-        Authentication auth = Mockito.mock(Authentication.class);
-        when(auth.getName()).thenReturn(email);
+        String viewName = profileController.viewProfile(model, authentication);
 
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
-        SecurityContextHolder.setContext(securityContext);
-
-        mockMvc.perform(get("/profile").principal(auth))
-                .andExpect(status().isOk())
-                .andExpect(view().name("profile/profile"))
-                .andExpect(model().attributeExists("user"));
-
-        SecurityContextHolder.clearContext();
+        verify(userRepository).findByEmail(email);
+        assertEquals("profile/profile", viewName);
+        assertEquals(user, model.getAttribute("currentUser"), "The model should contain the currentUser attribute");
     }
 
     @Test

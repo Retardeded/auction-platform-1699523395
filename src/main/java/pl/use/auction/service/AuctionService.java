@@ -9,21 +9,20 @@ import org.springframework.web.server.ResponseStatusException;
 import pl.use.auction.model.Auction;
 import pl.use.auction.model.AuctionUser;
 import pl.use.auction.model.Category;
+import pl.use.auction.model.FeaturedType;
 import pl.use.auction.repository.AuctionRepository;
 import pl.use.auction.repository.CategoryRepository;
 import pl.use.auction.repository.UserRepository;
 
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static pl.use.auction.util.StringUtils.createSlugFromTitle;
 
@@ -65,36 +64,26 @@ public class AuctionService {
         userRepository.save(user);
     }
 
-    public List<Auction> getAggregatedAuctionsForCategory(Category category, AuctionUser currentUser) {
-        List<Auction> aggregatedAuctions = auctionRepository.findByCategoryAndEndTimeAfter(category, LocalDateTime.now())
-                .stream()
-                .filter(auction -> !auction.getAuctionCreator().equals(currentUser))
-                .collect(Collectors.toList());
-
-        for (Category childCategory : category.getChildCategories()) {
-            aggregatedAuctions.addAll(auctionRepository.findByCategoryAndEndTimeAfter(childCategory, LocalDateTime.now())
-                    .stream()
-                    .filter(auction -> !auction.getAuctionCreator().equals(currentUser))
-                    .toList());
-        }
-
-        return aggregatedAuctions;
-    }
-
-    public List<Auction> findCheapestAuctions(AuctionUser currentUser, int limit) {
-        return auctionRepository.findByEndTimeAfter(LocalDateTime.now()).stream()
-                .filter(auction -> !auction.getAuctionCreator().equals(currentUser))
+    public List<Auction> findCheapestAuctions(int limit) {
+        List<Auction> auctions = auctionRepository.findByEndTimeAfter(LocalDateTime.now()).stream()
                 .sorted(Comparator.comparing(Auction::getHighestBid))
                 .limit(limit)
                 .collect(Collectors.toList());
+
+        auctions.forEach(auction -> auction.setFeaturedType(FeaturedType.CHEAP));
+        auctionRepository.saveAll(auctions);
+        return auctions;
     }
 
-    public List<Auction> findExpensiveAuctions(AuctionUser currentUser, int limit) {
-        return auctionRepository.findByEndTimeAfter(LocalDateTime.now()).stream()
-                .filter(auction -> !auction.getAuctionCreator().equals(currentUser))
+    public List<Auction> findExpensiveAuctions(int limit) {
+        List<Auction> auctions = auctionRepository.findByEndTimeAfter(LocalDateTime.now()).stream()
                 .sorted(Comparator.comparing(Auction::getHighestBid).reversed())
                 .limit(limit)
                 .collect(Collectors.toList());
+
+        auctions.forEach(auction -> auction.setFeaturedType(FeaturedType.EXPENSIVE));
+        auctionRepository.saveAll(auctions);
+        return auctions;
     }
 
     public Auction createAndSaveAuction(Auction auction,
@@ -155,5 +144,41 @@ public class AuctionService {
 
     public String saveImage(MultipartFile file) throws IOException {
         return fileSystemStorageService.save(file, "src/main/resources/static/auctionImages/");
+    }
+
+    public List<Auction> searchAuctions(String query, String location, String categoryName, String sort) {
+        List<Auction> auctions = new ArrayList<>();
+        Category category = null;
+        LocalDateTime now = LocalDateTime.now();
+
+        if (categoryName != null && !categoryName.trim().isEmpty()) {
+            Optional<Category> optionalCategory = categoryRepository.findByName(categoryName);
+            if (optionalCategory.isPresent()) {
+                category = optionalCategory.get();
+                List<Long> categoryIds = Stream.concat(
+                        Stream.of(category.getId()),
+                        category.getChildCategories().stream().map(Category::getId)
+                ).collect(Collectors.toList());
+
+                auctions = auctionRepository.findByTitleContainingIgnoreCaseAndLocationContainingIgnoreCaseAndCategoryIdInAndEndTimeAfter
+                        (query, location, categoryIds, now);
+            }
+        } else {
+            auctions = auctionRepository.findByTitleContainingIgnoreCaseAndLocationContainingIgnoreCaseAndEndTimeAfter
+                    (query, location, now);
+        }
+
+        return switch (sort) {
+            case "date" -> auctions.stream()
+                    .sorted(Comparator.comparing(Auction::getStartTime).reversed())
+                    .collect(Collectors.toList());
+            case "currentBid" -> auctions.stream()
+                    .sorted(Comparator.comparing(Auction::getHighestBid))
+                    .collect(Collectors.toList());
+            case "endingSoon" -> auctions.stream()
+                    .sorted(Comparator.comparing(Auction::getEndTime))
+                    .collect(Collectors.toList());
+            default -> auctions;
+        };
     }
 }

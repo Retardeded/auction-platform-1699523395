@@ -22,6 +22,8 @@ public class Auction {
     private String slug;
     private String description;
 
+    private String location;
+
     @ManyToOne(fetch = FetchType.LAZY)
     private Category category;
 
@@ -44,4 +46,7 @@ public class Auction {
     private BigDecimal startingPrice;
     private BigDecimal highestBid;
     private String status;
+
+    @Enumerated(EnumType.STRING)
+    private FeaturedType featuredType = FeaturedType.NONE;
 }

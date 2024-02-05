@@ -1,0 +1,44 @@
+.layout-container {
+  padding: 20px;
+  display: flex;
+  font-family: 'Arial', sans-serif;
+}
+
+.sidebar {
+  border-right: 1px solid #e9ecef;
+  padding: 0px 20px;
+  box-sizing: border-box;
+  background-color: #f8f9fa;
+}
+
+.sidebar h2 {
+  margin-bottom: 20px;
+  font-size: 24px;
+  color: #333;
+  border-bottom: 1px solid #ddd;
+}
+
+.sidebar-link {
+  display: block;
+  margin-bottom: 20px;
+  color: #343a40;
+  text-decoration: none;
+  font-size: 18px;
+  padding: 5px;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.sidebar-link:last-child {
+  border-bottom: none;
+}
+
+.sidebar-link.active {
+  background-color: #ddd;
+  border-radius: 5px;
+}
+
+.main-content {
+  flex-grow: 1;
+  padding: 0px 20px;
+  box-sizing: border-box;
+}

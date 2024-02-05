@@ -1,0 +1,104 @@
+.navbar {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    background-color: #333;
+    padding: 0 20px;
+}
+
+.search-container {
+    flex-grow: 1;
+    flex-basis: 30%;
+    max-width: 30%;
+    margin: 0 20px;
+}
+
+.search-form {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.search-input, .location-input {
+    padding: 10px 15px;
+    margin: 8px 5px;
+    font-size: 17px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    flex-grow: 1;
+}
+
+.location-input {
+    margin-left: 5px;
+}
+
+.search-button {
+    padding: 10px 20px;
+    margin: 8px 0;
+    font-size: 17px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.navbar-right {
+    display: flex;
+    align-items: center;
+}
+
+.navbar .create-auction-button, .navbar .profile-button {
+    background-color: #007bff;
+    color: white;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    width: auto;
+    display: inline-block;
+    margin: 0 10px;
+    text-align: center;
+}
+
+.dropdown-content {
+    display: none;
+    position: absolute;
+    min-width: 160px;
+    background-color: white;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    z-index: 1;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.dropdown-button {
+    margin: 0;
+    padding: 10px 15px;
+    background-color: white;
+    color: #007bff;
+    text-align: center;
+    cursor: pointer;
+    border-bottom: 1px solid #ccc;
+}
+
+.dropdown-button:last-child {
+    border-bottom: none;
+}
+
+.dropdown-button:hover {
+    background-color: #e7f0fd;
+    color: #0056b3;
+}
+
+.show {
+    display: block;
+}
+
+.main-container {
+    display: flex;
+    flex-wrap: wrap;
+    margin: 10px;
+    justify-content: space-evenly;
+}
