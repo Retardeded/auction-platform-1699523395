@@ -1,27 +1,12 @@
-function showOngoingAuctions() {
-  document.getElementById('ongoingAuctions').style.display = 'block';
-  document.getElementById('soldAuctions').style.display = 'none';
-}
+document.addEventListener('DOMContentLoaded', function() {
+  var sidebarLinks = document.querySelectorAll('.sidebar-link');
 
-function showSoldAuctions() {
-  document.getElementById('ongoingAuctions').style.display = 'none';
-  document.getElementById('soldAuctions').style.display = 'block';
-}
+  function handleClick(event) {
+    event.preventDefault();
+    location.href = this.getAttribute('href');
+  }
 
-document.getElementById('ongoingLink').addEventListener('click', function(event) {
-  event.preventDefault();
-  document.querySelectorAll('.sidebar-link').forEach(node => {
-    node.classList.remove('active');
+  sidebarLinks.forEach(function(link) {
+    link.addEventListener('click', handleClick);
   });
-  this.classList.add('active');
-  showOngoingAuctions();
-});
-
-document.getElementById('soldLink').addEventListener('click', function(event) {
-  event.preventDefault();
-  document.querySelectorAll('.sidebar-link').forEach(node => {
-    node.classList.remove('active');
-  });
-  this.classList.add('active');
-  showSoldAuctions();
 });
