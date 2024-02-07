@@ -108,9 +108,18 @@
             <div class="auction-info">
               <h3 th:text="${auction.title}">Auction Title</h3>
               <div>Category: <span th:text="${auction.category.name}"></span></div>
-              <div>Ends: <span th:text="${#temporals.format(auction.endTime, 'yyyy-MM-dd HH:mm')}"></span></div>
+              <div>Ended: <span th:text="${#temporals.format(auction.endTime, 'yyyy-MM-dd HH:mm')}"></span></div>
               <div>Starting Price: <span th:text="${auction.startingPrice}"></span></div>
               <div>Highest Bid: <span th:text="${auction.highestBid}"></span></div>
+            </div>
+            <div th:if="${auction.buyer != null}" class="auction-buyer-info">
+              <div>Sold for: <span th:text="${auction.highestBid}">Final Price</span> PLN</div>
+              <div>Buyer: <span th:text="${auction.buyer.username}">Buyer's Name</span></div>
+              <div>Status: <span th:text="${auction.status}">Auction Status</span></div>
+            </div>
+            <div th:if="${auction.buyer == null}" class="auction-not-sold-message">
+              Not sold
+              <div>Status: <span th:text="${auction.status}">Auction Status</span></div>
             </div>
           </div>
         </div>

@@ -7,6 +7,7 @@ import com.stripe.param.PaymentIntentCreateParams;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -59,43 +60,6 @@ public class AuctionService {
         return paymentIntent.getClientSecret();
     }
 
-    /*
-    public boolean processBuyNow(String auctionSlug, BigDecimal buyNowPrice, String buyerEmail) throws StripeException {
-        Auction auction = auctionRepository.findBySlug(auctionSlug)
-                .orElseThrow(() -> new IllegalArgumentException("Invalid auction slug:" + auctionSlug));
-        AuctionUser buyer = userRepository.findByEmail(buyerEmail)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
-
-        // Check if buy now is available and if the buyNowPrice is correct
-        if (auction.getBuyNowPrice() != null && auction.getBuyNowPrice().compareTo(buyNowPrice) == 0) {
-            Stripe.apiKey = stripeApiKey;
-
-            // Create a PaymentIntent with the order amount and currency
-            PaymentIntentCreateParams params = PaymentIntentCreateParams.builder()
-                    .setAmount(buyNowPrice.longValue() * 100) // Stripe requires amount in cents
-                    .setCurrency("pln") // Set the currency
-                    .build();
-
-            PaymentIntent paymentIntent = PaymentIntent.create(params);
-            return paymentIntent.getClientSecret();
-
-            // TODO: Handle the confirmation and processing of the payment on the frontend
-
-            // Update the auction status to reflect the purchase
-            auction.setStatus(AuctionStatus.valueOf("SOLD"));
-            auction.setBuyer(buyer);
-
-            auctionRepository.save(auction);
-
-            // Payment was successful
-            return true;
-        }
-        // Buy now option not available or incorrect price
-        return false;
-    }
-
-     */
-
     public boolean placeBid(Auction auction, AuctionUser bidder, BigDecimal bidAmount) {
         boolean bidPlaced = false;
         if (bidAmount.compareTo(auction.getHighestBid()) > 0) {
@@ -120,7 +84,7 @@ public class AuctionService {
     }
 
     public List<Auction> findCheapestAuctions(int limit) {
-        List<Auction> auctions = auctionRepository.findByEndTimeAfter(LocalDateTime.now()).stream()
+        List<Auction> auctions = auctionRepository.findByEndTimeAfterAndStatusNot(LocalDateTime.now(), AuctionStatus.SOLD).stream()
                 .sorted(Comparator.comparing(Auction::getHighestBid))
                 .limit(limit)
                 .collect(Collectors.toList());
@@ -131,7 +95,7 @@ public class AuctionService {
     }
 
     public List<Auction> findExpensiveAuctions(int limit) {
-        List<Auction> auctions = auctionRepository.findByEndTimeAfter(LocalDateTime.now()).stream()
+        List<Auction> auctions = auctionRepository.findByEndTimeAfterAndStatusNot(LocalDateTime.now(), AuctionStatus.SOLD).stream()
                 .sorted(Comparator.comparing(Auction::getHighestBid).reversed())
                 .limit(limit)
                 .collect(Collectors.toList());
@@ -139,6 +103,15 @@ public class AuctionService {
         auctions.forEach(auction -> auction.setFeaturedType(FeaturedType.EXPENSIVE));
         auctionRepository.saveAll(auctions);
         return auctions;
+    }
+
+    @Scheduled(fixedRate = 60000) // This will run the method every 60 seconds.
+    public void updateStatusOfEndedAuctions() {
+        List<Auction> endedAuctions = auctionRepository.findByEndTimeBeforeAndStatus(LocalDateTime.now(), AuctionStatus.ACTIVE);
+        for (Auction auction : endedAuctions) {
+            auction.setStatus(AuctionStatus.SOLD);
+        }
+        auctionRepository.saveAll(endedAuctions);
     }
 
     public Auction createAndSaveAuction(Auction auction,
@@ -204,7 +177,7 @@ public class AuctionService {
     public List<Auction> searchAuctions(String query, String location, String categoryName, String sort) {
         List<Auction> auctions = new ArrayList<>();
         Category category = null;
-        LocalDateTime now = LocalDateTime.now();
+        AuctionStatus activeStatus = AuctionStatus.ACTIVE;
 
         if (categoryName != null && !categoryName.trim().isEmpty()) {
             Optional<Category> optionalCategory = categoryRepository.findByName(categoryName);
@@ -215,12 +188,12 @@ public class AuctionService {
                         category.getChildCategories().stream().map(Category::getId)
                 ).collect(Collectors.toList());
 
-                auctions = auctionRepository.findByTitleContainingIgnoreCaseAndLocationContainingIgnoreCaseAndCategoryIdInAndEndTimeAfter
-                        (query, location, categoryIds, now);
+                auctions = auctionRepository.findByTitleContainingIgnoreCaseAndLocationContainingIgnoreCaseAndCategoryIdInAndStatus
+                        (query, location, categoryIds, activeStatus);
             }
         } else {
-            auctions = auctionRepository.findByTitleContainingIgnoreCaseAndLocationContainingIgnoreCaseAndEndTimeAfter
-                    (query, location, now);
+            auctions = auctionRepository.findByTitleContainingIgnoreCaseAndLocationContainingIgnoreCaseAndStatus
+                    (query, location, activeStatus);
         }
 
         return switch (sort) {

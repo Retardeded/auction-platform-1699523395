@@ -7,6 +7,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.multipart.MultipartFile;
 import pl.use.auction.model.Auction;
+import pl.use.auction.model.AuctionStatus;
 import pl.use.auction.model.AuctionUser;
 import pl.use.auction.model.Category;
 import pl.use.auction.repository.AuctionRepository;
@@ -266,18 +267,18 @@ class AuctionServiceTest {
     void searchAuctions_WithoutCategory() {
         String query = "camera";
         String location = "";
-        LocalDateTime now = LocalDateTime.now();
+        AuctionStatus activeStatus = AuctionStatus.ACTIVE;
         List<Auction> expectedAuctions = List.of(new Auction());
 
-        when(auctionRepository.findByTitleContainingIgnoreCaseAndLocationContainingIgnoreCaseAndEndTimeAfter(
-                eq(query), eq(location), any(LocalDateTime.class)))
+        when(auctionRepository.findByTitleContainingIgnoreCaseAndLocationContainingIgnoreCaseAndStatus(
+                eq(query), eq(location), eq(activeStatus)))
                 .thenReturn(expectedAuctions);
 
         List<Auction> result = auctionService.searchAuctions(query, location, "", "date");
 
         assertEquals(expectedAuctions, result);
-        verify(auctionRepository).findByTitleContainingIgnoreCaseAndLocationContainingIgnoreCaseAndEndTimeAfter(
-                eq(query), eq(location), any(LocalDateTime.class));
+        verify(auctionRepository).findByTitleContainingIgnoreCaseAndLocationContainingIgnoreCaseAndStatus(
+                eq(query), eq(location), eq(activeStatus));
     }
 
     @Test
@@ -285,6 +286,7 @@ class AuctionServiceTest {
         String query = "camera";
         String location = "";
         String categoryName = "Electronics";
+        AuctionStatus activeStatus = AuctionStatus.ACTIVE;
         Category category = new Category();
         category.setId(1L);
         category.setName(categoryName);
@@ -292,30 +294,32 @@ class AuctionServiceTest {
         List<Auction> expectedAuctions = List.of(new Auction());
 
         when(categoryRepository.findByName(categoryName)).thenReturn(Optional.of(category));
-        when(auctionRepository.findByTitleContainingIgnoreCaseAndLocationContainingIgnoreCaseAndCategoryIdInAndEndTimeAfter(
-                eq(query), eq(location), anyList(), any(LocalDateTime.class)))
+        when(auctionRepository.findByTitleContainingIgnoreCaseAndLocationContainingIgnoreCaseAndCategoryIdInAndStatus(
+                eq(query), eq(location), anyList(), eq(activeStatus)))
                 .thenReturn(expectedAuctions);
 
         List<Auction> result = auctionService.searchAuctions(query, location, categoryName, "date");
 
         assertEquals(expectedAuctions, result);
         verify(categoryRepository).findByName(categoryName);
-        verify(auctionRepository).findByTitleContainingIgnoreCaseAndLocationContainingIgnoreCaseAndCategoryIdInAndEndTimeAfter(
-                eq(query), eq(location), anyList(), any(LocalDateTime.class));
+        verify(auctionRepository).findByTitleContainingIgnoreCaseAndLocationContainingIgnoreCaseAndCategoryIdInAndStatus(
+                eq(query), eq(location), anyList(), eq(activeStatus));
     }
 
     @Test
     void searchAuctions_SortByDate() {
+        AuctionStatus activeStatus = AuctionStatus.ACTIVE;
         List<Auction> auctions = IntStream.range(0, 3)
                 .mapToObj(i -> {
                     Auction auction = new Auction();
                     auction.setStartTime(LocalDateTime.now().minusDays(i));
+                    auction.setStatus(activeStatus);
                     return auction;
                 })
                 .collect(Collectors.toList());
 
-        when(auctionRepository.findByTitleContainingIgnoreCaseAndLocationContainingIgnoreCaseAndEndTimeAfter(
-                anyString(), anyString(), any(LocalDateTime.class)))
+        when(auctionRepository.findByTitleContainingIgnoreCaseAndLocationContainingIgnoreCaseAndStatus(
+                anyString(), anyString(), eq(activeStatus)))
                 .thenReturn(auctions);
 
         List<Auction> result = auctionService.searchAuctions("", "", "", "date");
@@ -326,6 +330,7 @@ class AuctionServiceTest {
 
     @Test
     void searchAuctions_FilterByQuery() {
+        AuctionStatus activeStatus = AuctionStatus.ACTIVE;
         Category electronics = new Category();
         electronics.setId(1L);
         electronics.setName("Electronics");
@@ -348,8 +353,8 @@ class AuctionServiceTest {
         nonMatchingAuction.setStartingPrice(new BigDecimal("500.00"));
         nonMatchingAuction.setHighestBid(new BigDecimal("700.00"));
 
-        when(auctionRepository.findByTitleContainingIgnoreCaseAndLocationContainingIgnoreCaseAndEndTimeAfter(
-                anyString(), anyString(), any(LocalDateTime.class)))
+        when(auctionRepository.findByTitleContainingIgnoreCaseAndLocationContainingIgnoreCaseAndStatus(
+                anyString(), anyString(), eq(activeStatus)))
                 .thenReturn(List.of(matchingAuction));
 
         String query = "Camera";
@@ -359,12 +364,13 @@ class AuctionServiceTest {
         assertTrue(result.contains(matchingAuction), "The result should contain the matching auction.");
         assertFalse(result.contains(nonMatchingAuction), "The result should not contain the non-matching auction.");
 
-        verify(auctionRepository).findByTitleContainingIgnoreCaseAndLocationContainingIgnoreCaseAndEndTimeAfter(
-                eq(query), eq(""), any(LocalDateTime.class));
+        verify(auctionRepository).findByTitleContainingIgnoreCaseAndLocationContainingIgnoreCaseAndStatus(
+                eq(query), eq(""), eq(activeStatus));
     }
 
     @Test
     void searchAuctions_FilterByQueryAndCategory() {
+        AuctionStatus activeStatus = AuctionStatus.ACTIVE;
         Category electronics = new Category();
         electronics.setId(1L);
         electronics.setName("Electronics");
@@ -380,8 +386,8 @@ class AuctionServiceTest {
         matchingAuction.setHighestBid(new BigDecimal("150.00"));
 
         when(categoryRepository.findByName("Electronics")).thenReturn(Optional.of(electronics));
-        when(auctionRepository.findByTitleContainingIgnoreCaseAndLocationContainingIgnoreCaseAndCategoryIdInAndEndTimeAfter(
-                eq("Camera"), eq(""), anyList(), any(LocalDateTime.class)))
+        when(auctionRepository.findByTitleContainingIgnoreCaseAndLocationContainingIgnoreCaseAndCategoryIdInAndStatus(
+                eq("Camera"), eq(""), anyList(), eq(activeStatus)))
                 .thenReturn(List.of(matchingAuction));
 
         List<Auction> result = auctionService.searchAuctions("Camera", "", "Electronics", "date");
@@ -389,7 +395,7 @@ class AuctionServiceTest {
         assertEquals(1, result.size());
         assertTrue(result.contains(matchingAuction));
         verify(categoryRepository).findByName("Electronics");
-        verify(auctionRepository).findByTitleContainingIgnoreCaseAndLocationContainingIgnoreCaseAndCategoryIdInAndEndTimeAfter(
-                eq("Camera"), eq(""), anyList(), any(LocalDateTime.class));
+        verify(auctionRepository).findByTitleContainingIgnoreCaseAndLocationContainingIgnoreCaseAndCategoryIdInAndStatus(
+                eq("Camera"), eq(""), anyList(), eq(activeStatus));
     }
 }

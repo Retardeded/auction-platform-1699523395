@@ -16,6 +16,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import pl.use.auction.model.Auction;
+import pl.use.auction.model.AuctionStatus;
 import pl.use.auction.model.AuctionUser;
 import pl.use.auction.model.Category;
 import pl.use.auction.repository.AuctionRepository;
@@ -31,7 +32,6 @@ import com.stripe.exception.StripeException;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.net.URI;
-import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -118,6 +118,7 @@ public class AuctionController {
                     .setMode(SessionCreateParams.Mode.PAYMENT)
                     .setSuccessUrl(successUrl)
                     .setCancelUrl(cancelUrl)
+                    .putMetadata("auction_slug", auctionSlug)
                     .addLineItem(SessionCreateParams.LineItem.builder()
                             .setQuantity(1L)
                             .setPriceData(SessionCreateParams.LineItem.PriceData.builder()
@@ -140,27 +141,46 @@ public class AuctionController {
         }
     }
 
-    @GetMapping("payment/success")
-    public String handlePaymentSuccess(@RequestParam("session_id") String sessionId, Model model) {
-        // You can use the session_id to retrieve the checkout session for confirmation
-        // and possibly update your database with the results of the payment.
+    @GetMapping("/payment/success")
+    public String handlePaymentSuccess(@RequestParam("session_id") String sessionId, Authentication authentication, Model model) {
         try {
             Stripe.apiKey = stripeApiKey;
 
             Session session = Session.retrieve(sessionId);
+            String auctionSlug = session.getMetadata().get("auction_slug");
 
-            // Implement your logic to handle successful checkout.
-            // This typically includes confirming the payment status,
-            // updating order records, sending confirmation emails, etc.
+            // Retrieve the corresponding auction and user from the database
+            Auction auction = auctionRepository.findBySlug(auctionSlug)
+                    .orElseThrow(() -> new IllegalArgumentException("Invalid auction slug: " + auctionSlug));
+            AuctionUser user = userRepository.findByEmail(authentication.getName())
+                    .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
-            // For now, let's just add the session to the model for the view to use.
+            Long amountPaid = session.getAmountTotal(); // This is in the smallest currency unit, e.g., cents
+            BigDecimal finalPrice = BigDecimal.valueOf(amountPaid).divide(BigDecimal.valueOf(100)); // Convert to standard currency unit, e.g., dollars
+
+            // Update auction status and buyer
+            if (auction.getStatus() != AuctionStatus.SOLD) {
+                auction.setStatus(AuctionStatus.SOLD);
+                auction.setBuyer(user);
+                auction.setHighestBid(finalPrice); // Set the highest bid to the final price paid
+                auctionRepository.save(auction);
+            } else {
+                // Handle the case where the auction is already sold
+                model.addAttribute("error", "This auction is already sold.");
+                return "error"; // Show an error page or message
+            }
+
             model.addAttribute("session", session);
 
-            return "auctions/success"; // Redirect to a 'success' view, or return a confirmation message.
+            return "auctions/success";
         } catch (StripeException e) {
             e.printStackTrace();
             model.addAttribute("error", "An error occurred while processing your payment.");
-            return "error"; // Redirect to an 'error' view, or return an error message.
+            return "error";
+        } catch (Exception e) {
+            e.printStackTrace();
+            model.addAttribute("error", "An error occurred while retrieving auction details.");
+            return "error";
         }
     }
 
@@ -215,9 +235,9 @@ public class AuctionController {
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
         Auction auction = auctionRepository.findBySlug(auctionSlug)
                 .orElseThrow(() -> new IllegalArgumentException("Invalid auction slug: " + auctionSlug));
-        if (auction.getEndTime().isBefore(LocalDateTime.now())) {
-            model.addAttribute("errorMessage", "This auction has ended.");
-            return "auctions/auction-expired";
+        if (auction.getStatus() == AuctionStatus.SOLD) {
+            model.addAttribute("errorMessage", "This auction has ended and the item has been sold.");
+            return "auctions/auction-expired"; // Assuming you have a view for expired auctions
         }
         model.addAttribute("auction", auction);
         model.addAttribute("currentUser", user);

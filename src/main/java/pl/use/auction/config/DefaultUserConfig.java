@@ -76,16 +76,16 @@ public class DefaultUserConfig {
             AuctionUser testUser = createUserIfNotFound(userRepository, passwordEncoder, "test@gmail.com", "test", "test", "Warsaw");
 
             if (auctionRepository.findByAuctionCreator(defaultUser).isEmpty()) {
-                createSampleAuctions(auctionRepository, defaultUser, categoryRepository);
+                createSampleAuctions(testUser, auctionRepository, defaultUser, categoryRepository);
             }
             if (auctionRepository.findByAuctionCreator(anotherUser).isEmpty()) {
-                createSampleAuctions(auctionRepository, anotherUser, categoryRepository);
+                createSampleAuctions(testUser, auctionRepository, anotherUser, categoryRepository);
             }
             if (auctionRepository.findByAuctionCreator(basicUser).isEmpty()) {
-                createSampleAuctions(auctionRepository, basicUser, categoryRepository);
+                createSampleAuctions(testUser, auctionRepository, basicUser, categoryRepository);
             }
             if (auctionRepository.findByAuctionCreator(testUser).isEmpty()) {
-                createSampleAuctions(auctionRepository, testUser, categoryRepository);
+                createSampleAuctions(defaultUser, auctionRepository, testUser, categoryRepository);
             }
         };
     }
@@ -102,7 +102,7 @@ public class DefaultUserConfig {
         });
     }
 
-    private void createSampleAuctions(AuctionRepository auctionRepository, AuctionUser user, CategoryRepository categoryRepository) throws Exception {
+    private void createSampleAuctions(AuctionUser auctionBuyer, AuctionRepository auctionRepository, AuctionUser user, CategoryRepository categoryRepository) throws Exception {
         String userIdentifier = user.getUsername().toUpperCase();
         Random random = new Random();
 
@@ -110,10 +110,10 @@ public class DefaultUserConfig {
         Object[][] auctionData = {
                 {"Vintage Camera", "A classic vintage camera in excellent condition.", "Cameras", "Electronics", "ACTIVE"},
                 {"Designer Dress", "A stunning dress from a renowned fashion designer.", "Dresses", "Fashion", "ACTIVE"},
-                {"Garden Shovel", "A durable shovel for gardening.", "Gardening Tools", "Home & Garden", "ACTIVE",},
+                {"Garden Shovel", "A durable shovel for gardening.", "Gardening Tools", "Home & Garden", "SOLD",},
                 {"Antique Vase", "A beautiful antique vase, perfect for collectors.", "Antiques", "Collectibles & Art", "SOLD"},
                 {"Signed Book", "A book signed by its famous author.", "Books", "Collectibles & Art", "ACTIVE"},
-                {"Handmade Jewelry", "Exquisite handmade jewelry with unique design.", "Accessories", "Fashion", "SOLD"},
+                {"Handmade Jewelry", "Exquisite handmade jewelry with unique design.", "Accessories", "Fashion", "ACTIVE"},
         };
 
         boolean isFirstAuction = true;
@@ -157,6 +157,9 @@ public class DefaultUserConfig {
             auction.setHighestBid(highestBid);
             String statusString = (String) auctionInfo[4];
             AuctionStatus statusEnum = AuctionStatus.valueOf(statusString);
+            if (statusEnum == AuctionStatus.SOLD) {
+                auction.setBuyer(auctionBuyer);
+            }
             auction.setStatus(statusEnum);
             auction.setAuctionCreator(user);
             auction.setLocation(user.getLocation());
@@ -166,6 +169,11 @@ public class DefaultUserConfig {
             String mirroredImagePath = "auctionImages/" + baseImageName + "_mirrored.png";
             String rotatedImagePath = "auctionImages/" + baseImageName + "_rotated.png";
             auction.setImageUrls(List.of(originalImagePath, mirroredImagePath, rotatedImagePath));
+
+            if (auction.getEndTime().isBefore(LocalDateTime.now()) && auction.getStatus() != AuctionStatus.SOLD) {
+                auction.setStatus(AuctionStatus.EXPIRED); // or use whatever status indicates unsold
+                auction.setBuyer(null); // Make sure buyer is null
+            }
 
             auctionRepository.save(auction);
         }
