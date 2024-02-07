@@ -1,15 +1,17 @@
 package pl.use.auction.service;
 
+import com.stripe.Stripe;
+import com.stripe.exception.StripeException;
+import com.stripe.model.PaymentIntent;
+import com.stripe.param.PaymentIntentCreateParams;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
-import pl.use.auction.model.Auction;
-import pl.use.auction.model.AuctionUser;
-import pl.use.auction.model.Category;
-import pl.use.auction.model.FeaturedType;
+import pl.use.auction.model.*;
 import pl.use.auction.repository.AuctionRepository;
 import pl.use.auction.repository.CategoryRepository;
 import pl.use.auction.repository.UserRepository;
@@ -40,6 +42,59 @@ public class AuctionService {
 
     @Autowired
     private FileSystemStorageService fileSystemStorageService;
+
+    @Value("${stripe.api.secretkey}")
+    private String stripeApiKey;
+
+    public String createPaymentIntent(BigDecimal buyNowPrice, String currency) throws StripeException {
+        Stripe.apiKey = stripeApiKey;
+
+        PaymentIntentCreateParams params = PaymentIntentCreateParams.builder()
+                .setAmount(buyNowPrice.multiply(new BigDecimal(100)).longValue()) // convert price to the smallest currency unit, e.g., cents
+                .setCurrency(currency)
+                .build();
+
+        PaymentIntent paymentIntent = PaymentIntent.create(params);
+
+        return paymentIntent.getClientSecret();
+    }
+
+    /*
+    public boolean processBuyNow(String auctionSlug, BigDecimal buyNowPrice, String buyerEmail) throws StripeException {
+        Auction auction = auctionRepository.findBySlug(auctionSlug)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid auction slug:" + auctionSlug));
+        AuctionUser buyer = userRepository.findByEmail(buyerEmail)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+        // Check if buy now is available and if the buyNowPrice is correct
+        if (auction.getBuyNowPrice() != null && auction.getBuyNowPrice().compareTo(buyNowPrice) == 0) {
+            Stripe.apiKey = stripeApiKey;
+
+            // Create a PaymentIntent with the order amount and currency
+            PaymentIntentCreateParams params = PaymentIntentCreateParams.builder()
+                    .setAmount(buyNowPrice.longValue() * 100) // Stripe requires amount in cents
+                    .setCurrency("pln") // Set the currency
+                    .build();
+
+            PaymentIntent paymentIntent = PaymentIntent.create(params);
+            return paymentIntent.getClientSecret();
+
+            // TODO: Handle the confirmation and processing of the payment on the frontend
+
+            // Update the auction status to reflect the purchase
+            auction.setStatus(AuctionStatus.valueOf("SOLD"));
+            auction.setBuyer(buyer);
+
+            auctionRepository.save(auction);
+
+            // Payment was successful
+            return true;
+        }
+        // Buy now option not available or incorrect price
+        return false;
+    }
+
+     */
 
     public boolean placeBid(Auction auction, AuctionUser bidder, BigDecimal bidAmount) {
         boolean bidPlaced = false;
@@ -102,7 +157,7 @@ public class AuctionService {
         auction.setEndTime(auction.getEndTime());
         auction.setStartingPrice(auction.getStartingPrice());
         auction.setHighestBid(BigDecimal.valueOf(0));
-        auction.setStatus("ONGOING");
+        auction.setStatus(AuctionStatus.valueOf("ACTIVE"));
         auction.setSlug(createSlugFromTitle(auction.getTitle()));
         auction.setImageUrls(new ArrayList<>()); // Make sure the list is initialized
 

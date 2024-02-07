@@ -33,6 +33,9 @@ public class Auction {
     @ManyToOne(fetch = FetchType.LAZY)
     private AuctionUser highestBidder;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    private AuctionUser buyer;
+
     @ManyToMany(mappedBy = "observedAuctions")
     private List<AuctionUser> observers;
 
@@ -45,7 +48,9 @@ public class Auction {
     private LocalDateTime endTime;
     private BigDecimal startingPrice;
     private BigDecimal highestBid;
-    private String status;
+    private BigDecimal buyNowPrice;
+    @Enumerated(EnumType.STRING)
+    private AuctionStatus status;
 
     @Enumerated(EnumType.STRING)
     private FeaturedType featuredType = FeaturedType.NONE;

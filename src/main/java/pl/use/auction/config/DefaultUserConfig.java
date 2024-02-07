@@ -4,6 +4,7 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import pl.use.auction.model.Auction;
+import pl.use.auction.model.AuctionStatus;
 import pl.use.auction.model.AuctionUser;
 import pl.use.auction.model.Category;
 import pl.use.auction.repository.AuctionRepository;
@@ -107,12 +108,12 @@ public class DefaultUserConfig {
 
         // Example data for auctions
         Object[][] auctionData = {
-                {"Vintage Camera", "A classic vintage camera in excellent condition.", "Cameras", "Electronics", "ONGOING"},
-                {"Designer Dress", "A stunning dress from a renowned fashion designer.", "Dresses", "Fashion", "ONGOING"},
-                {"Garden Shovel", "A durable shovel for gardening.", "Gardening Tools", "Home & Garden", "ONGOING",},
-                {"Antique Vase", "A beautiful antique vase, perfect for collectors.", "Antiques", "Collectibles & Art", "EXPIRED"},
-                {"Signed Book", "A book signed by its famous author.", "Books", "Collectibles & Art", "ONGOING"},
-                {"Handmade Jewelry", "Exquisite handmade jewelry with unique design.", "Accessories", "Fashion", "EXPIRED"},
+                {"Vintage Camera", "A classic vintage camera in excellent condition.", "Cameras", "Electronics", "ACTIVE"},
+                {"Designer Dress", "A stunning dress from a renowned fashion designer.", "Dresses", "Fashion", "ACTIVE"},
+                {"Garden Shovel", "A durable shovel for gardening.", "Gardening Tools", "Home & Garden", "ACTIVE",},
+                {"Antique Vase", "A beautiful antique vase, perfect for collectors.", "Antiques", "Collectibles & Art", "SOLD"},
+                {"Signed Book", "A book signed by its famous author.", "Books", "Collectibles & Art", "ACTIVE"},
+                {"Handmade Jewelry", "Exquisite handmade jewelry with unique design.", "Accessories", "Fashion", "SOLD"},
         };
 
         boolean isFirstAuction = true;
@@ -152,8 +153,11 @@ public class DefaultUserConfig {
             } else {
                 highestBid = startingPrice.add(BigDecimal.valueOf(random.nextInt(50) + 1));
             }
+            auction.setBuyNowPrice(highestBid.add(BigDecimal.valueOf(50)));
             auction.setHighestBid(highestBid);
-            auction.setStatus((String) auctionInfo[3]);
+            String statusString = (String) auctionInfo[4];
+            AuctionStatus statusEnum = AuctionStatus.valueOf(statusString);
+            auction.setStatus(statusEnum);
             auction.setAuctionCreator(user);
             auction.setLocation(user.getLocation());
 

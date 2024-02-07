@@ -1,6 +1,10 @@
 package pl.use.auction.controller;
 
+import com.stripe.model.checkout.Session;
+import com.stripe.param.checkout.SessionCreateParams;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -21,10 +25,17 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import pl.use.auction.service.AuctionService;
 import pl.use.auction.service.CategoryService;
 
+import com.stripe.Stripe;
+import com.stripe.exception.StripeException;
+
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.net.URI;
 import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Controller
 public class AuctionController {
@@ -44,6 +55,12 @@ public class AuctionController {
     @Autowired
     CategoryService categoryService;
 
+    @Value("${stripe.api.publishablekey}")
+    private String stripePublishableKey;
+
+    @Value("${stripe.api.secretkey}")
+    private String stripeApiKey;
+
     @PostMapping("/auction/{slug}/bid")
     public String placeBid(@PathVariable("slug") String auctionSlug,
                            @RequestParam("bidAmount") BigDecimal bidAmount,
@@ -62,6 +79,89 @@ public class AuctionController {
             redirectAttributes.addFlashAttribute("errorMessage", "Bid not high enough!");
         }
         return "redirect:/auction/" + auctionSlug;
+    }
+
+    @PostMapping("/auction/{slug}/buy-now")
+    @ResponseBody
+    public ResponseEntity<?> buyNow(@PathVariable("slug") String auctionSlug,
+                                    @RequestBody BigDecimal buyNowRequest,
+                                    Authentication authentication) {
+
+        try {
+            String clientSecret = auctionService.createPaymentIntent(buyNowRequest, "pln");
+            Map<String, String> response = new HashMap<>();
+            response.put("clientSecret", clientSecret);
+
+            return ResponseEntity.ok(response);
+        } catch (StripeException e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Collections.singletonMap("error", "Error processing payment: " + e.getMessage()));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Collections.singletonMap("error", "An error occurred during the purchase process."));
+        }
+    }
+
+    @PostMapping("/auction/{slug}/create-checkout-session")
+    public ResponseEntity<?> createCheckoutSession(@PathVariable("slug") String auctionSlug,
+                                                   @RequestParam("buyNowPrice") BigDecimal buyNowPrice,
+                                                   HttpServletRequest request) {
+        try {
+            Stripe.apiKey = stripeApiKey;
+            String successUrl = "http://localhost:8080/payment/success?session_id={CHECKOUT_SESSION_ID}";
+            String cancelUrl = "http://localhost:8080/auction/" + auctionSlug;
+
+            SessionCreateParams params = SessionCreateParams.builder()
+                    .addPaymentMethodType(SessionCreateParams.PaymentMethodType.CARD)
+                    .setMode(SessionCreateParams.Mode.PAYMENT)
+                    .setSuccessUrl(successUrl)
+                    .setCancelUrl(cancelUrl)
+                    .addLineItem(SessionCreateParams.LineItem.builder()
+                            .setQuantity(1L)
+                            .setPriceData(SessionCreateParams.LineItem.PriceData.builder()
+                                    .setCurrency("pln") // Use your currency here
+                                    .setUnitAmount(buyNowPrice.longValue() * 100) // Stripe expects the amount in cents
+                                    .setProductData(SessionCreateParams.LineItem.PriceData.ProductData.builder()
+                                            .setName("Auction: " + auctionSlug) // The name of your product
+                                            .build())
+                                    .build())
+                            .build())
+                    .build();
+
+            Session session = Session.create(params);
+
+            return ResponseEntity.status(HttpStatus.FOUND).location(URI.create(session.getUrl())).build();
+        } catch (StripeException e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Collections.singletonMap("error", "Error creating Stripe Checkout session: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("payment/success")
+    public String handlePaymentSuccess(@RequestParam("session_id") String sessionId, Model model) {
+        // You can use the session_id to retrieve the checkout session for confirmation
+        // and possibly update your database with the results of the payment.
+        try {
+            Stripe.apiKey = stripeApiKey;
+
+            Session session = Session.retrieve(sessionId);
+
+            // Implement your logic to handle successful checkout.
+            // This typically includes confirming the payment status,
+            // updating order records, sending confirmation emails, etc.
+
+            // For now, let's just add the session to the model for the view to use.
+            model.addAttribute("session", session);
+
+            return "auctions/success"; // Redirect to a 'success' view, or return a confirmation message.
+        } catch (StripeException e) {
+            e.printStackTrace();
+            model.addAttribute("error", "An error occurred while processing your payment.");
+            return "error"; // Redirect to an 'error' view, or return an error message.
+        }
     }
 
     @GetMapping("/auctions/create")
@@ -121,6 +221,7 @@ public class AuctionController {
         }
         model.addAttribute("auction", auction);
         model.addAttribute("currentUser", user);
+        model.addAttribute("stripePublishableKey", stripePublishableKey);
         return "auctions/auction-detail";
     }
 

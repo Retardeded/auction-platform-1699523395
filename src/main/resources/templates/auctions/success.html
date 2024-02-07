@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Payment Success</title>
+</head>
+<body>
+
+<h1>Payment Success</h1>
+<p>Thank you for your purchase!</p>
+<p>Your payment has been processed successfully.</p>
+
+<div th:if="${session != null}">
+    <p>Payment details:</p>
+    <ul>
+        <li>Payment Amount: <span th:text="${session.amountTotal}">Amount</span> PLN</li>
+        <li>Payment Status: <span th:text="${session.paymentStatus}">Status</span></li>
+    </ul>
+</div>
+
+<a href="/home">Return to homepage</a>
+
+</body>
+</html>
