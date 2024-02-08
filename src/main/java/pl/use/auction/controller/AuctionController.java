@@ -72,6 +72,11 @@ public class AuctionController {
         AuctionUser bidder = userRepository.findByEmail(authentication.getName())
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
+        if (!auction.getStatus().equals(AuctionStatus.ACTIVE)) {
+            redirectAttributes.addFlashAttribute("errorMessage", "This auction is no longer active and cannot accept bids.");
+            return "auctions/auction-expired";
+        }
+
         boolean bidPlaced = auctionService.placeBid(auction, bidder, bidAmount);
         if (bidPlaced) {
             redirectAttributes.addFlashAttribute("successMessage", "Bid placed successfully!");
@@ -88,7 +93,9 @@ public class AuctionController {
                                     Authentication authentication) {
 
         try {
-            String clientSecret = auctionService.createPaymentIntent(buyNowRequest, "pln");
+            Auction auction = auctionRepository.findBySlug(auctionSlug)
+                    .orElseThrow(() -> new IllegalArgumentException("Invalid auction slug: " + auctionSlug));
+            String clientSecret = auctionService.createPaymentIntent(buyNowRequest, auction.getCurrencyCode().toString());
             Map<String, String> response = new HashMap<>();
             response.put("clientSecret", clientSecret);
 
@@ -106,10 +113,12 @@ public class AuctionController {
 
     @PostMapping("/auction/{slug}/create-checkout-session")
     public ResponseEntity<?> createCheckoutSession(@PathVariable("slug") String auctionSlug,
-                                                   @RequestParam("buyNowPrice") BigDecimal buyNowPrice,
+                                                   @RequestParam("auctionPrice") BigDecimal auctionPrice,
                                                    HttpServletRequest request) {
         try {
             Stripe.apiKey = stripeApiKey;
+            Auction auction = auctionRepository.findBySlug(auctionSlug)
+                    .orElseThrow(() -> new IllegalArgumentException("Invalid auction slug: " + auctionSlug));
             String successUrl = "http://localhost:8080/payment/success?session_id={CHECKOUT_SESSION_ID}";
             String cancelUrl = "http://localhost:8080/auction/" + auctionSlug;
 
@@ -122,10 +131,10 @@ public class AuctionController {
                     .addLineItem(SessionCreateParams.LineItem.builder()
                             .setQuantity(1L)
                             .setPriceData(SessionCreateParams.LineItem.PriceData.builder()
-                                    .setCurrency("pln") // Use your currency here
-                                    .setUnitAmount(buyNowPrice.longValue() * 100) // Stripe expects the amount in cents
+                                    .setCurrency(auction.getCurrencyCode().toString().toLowerCase())
+                                    .setUnitAmount(auctionPrice.longValue() * 100) // Stripe expects the amount in cents
                                     .setProductData(SessionCreateParams.LineItem.PriceData.ProductData.builder()
-                                            .setName("Auction: " + auctionSlug) // The name of your product
+                                            .setName("Auction: " + auctionSlug)
                                             .build())
                                     .build())
                             .build())
@@ -155,10 +164,9 @@ public class AuctionController {
             AuctionUser user = userRepository.findByEmail(authentication.getName())
                     .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
-            Long amountPaid = session.getAmountTotal(); // This is in the smallest currency unit, e.g., cents
-            BigDecimal finalPrice = BigDecimal.valueOf(amountPaid).divide(BigDecimal.valueOf(100)); // Convert to standard currency unit, e.g., dollars
+            Long amountPaid = session.getAmountTotal();
+            BigDecimal finalPrice = BigDecimal.valueOf(amountPaid).divide(BigDecimal.valueOf(100));
 
-            // Update auction status and buyer
             if (auction.getStatus() != AuctionStatus.SOLD) {
                 auction.setStatus(AuctionStatus.SOLD);
                 auction.setBuyer(user);
@@ -235,10 +243,13 @@ public class AuctionController {
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
         Auction auction = auctionRepository.findBySlug(auctionSlug)
                 .orElseThrow(() -> new IllegalArgumentException("Invalid auction slug: " + auctionSlug));
-        if (auction.getStatus() == AuctionStatus.SOLD) {
-            model.addAttribute("errorMessage", "This auction has ended and the item has been sold.");
+
+
+        if (auction.getStatus() != AuctionStatus.ACTIVE) {
+            model.addAttribute("errorMessage", "This auction is no longer active.");
             return "auctions/auction-expired"; // Assuming you have a view for expired auctions
         }
+
         model.addAttribute("auction", auction);
         model.addAttribute("currentUser", user);
         model.addAttribute("stripePublishableKey", stripePublishableKey);
@@ -251,6 +262,11 @@ public class AuctionController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Auction not found"));
         AuctionUser currentUser = userRepository.findByEmail(authentication.getName())
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+        if (auction.getStatus() != AuctionStatus.ACTIVE) {
+            model.addAttribute("errorMessage", "This auction is no longer active.");
+            return "auctions/auction-expired"; // Assuming you have a view for expired auctions
+        }
 
         if (!currentUser.getId().equals(auction.getAuctionCreator().getId())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");

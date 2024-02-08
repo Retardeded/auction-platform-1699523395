@@ -67,10 +67,19 @@
               <h3 th:text="${auction.title}">Auction Title</h3>
               <div>Ends: <span th:text="${#temporals.format(auction.endTime, 'yyyy-MM-dd HH:mm')}"></span></div>
             </div>
+
+            <div th:if="${auction.highestBidder == currentUser and auction.status == T(pl.use.auction.model.AuctionStatus).AWAITING_PAYMENT}">
+              <form th:action="@{'/auction/' + ${auction.slug} + '/create-checkout-session'}" method="post">
+                <input type="hidden" name="auctionPrice" th:value="${auction.highestBid}" />
+                <button type="submit" class="btn confirm-transaction-button">Confirm Transaction</button>
+              </form>
+            </div>
+
             <div class="price-details">
               <div>Starting Price: <span th:text="${auction.startingPrice}"></span></div>
               <div>Highest Bid: <span th:text="${auction.highestBid}"></span></div>
               <div>Winning Bidder: <span th:text="${auction.highestBidder.username}"></span></div>
+              <div>Auction Status: <span th:text="${auction.status}"></span></div>
             </div>
 
           </a>

@@ -135,12 +135,12 @@ public class DefaultUserConfig {
 
             auction.setCategory(itemCategory);
 
-            long randomStartDays = ThreadLocalRandom.current().nextLong(-5, 0);
+            long randomStartDays = ThreadLocalRandom.current().nextLong(-3, 0);
             LocalDateTime randomStartTime = now.plusDays(randomStartDays);
 
-            LocalDateTime nowPlusOneMinute = LocalDateTime.now().plusMinutes(1);
-            long randomEndDays = ThreadLocalRandom.current().nextLong(-2, 6);
-            LocalDateTime randomEndTime = nowPlusOneMinute.plusDays(randomEndDays);
+            LocalDateTime nowPlusShortMoment = LocalDateTime.now().plusSeconds(30);
+            long randomEndDays = ThreadLocalRandom.current().nextLong(-2, 2);
+            LocalDateTime randomEndTime = nowPlusShortMoment.plusDays(randomEndDays);
 
             auction.setStartTime(randomStartTime);
             auction.setEndTime(randomEndTime);

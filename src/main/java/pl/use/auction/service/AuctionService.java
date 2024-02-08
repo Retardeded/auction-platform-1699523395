@@ -109,7 +109,11 @@ public class AuctionService {
     public void updateStatusOfEndedAuctions() {
         List<Auction> endedAuctions = auctionRepository.findByEndTimeBeforeAndStatus(LocalDateTime.now(), AuctionStatus.ACTIVE);
         for (Auction auction : endedAuctions) {
-            auction.setStatus(AuctionStatus.SOLD);
+            if (auction.getHighestBidder() != null) {
+                auction.setStatus(AuctionStatus.AWAITING_PAYMENT);
+            } else {
+                auction.setStatus(AuctionStatus.EXPIRED);
+            }
         }
         auctionRepository.saveAll(endedAuctions);
     }
