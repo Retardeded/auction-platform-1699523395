@@ -8,6 +8,7 @@
     <link th:href="@{/css/auction-detail.css}" rel="stylesheet"/>
     <script th:src="@{/js/auction-gallery.js}"></script>
     <script th:src="@{/js/user-auctions.js}"></script>
+    <script th:src="@{/js/auction.js}"></script>
 </head>
 <body>
 <div class="container">
@@ -24,7 +25,8 @@
         </ol>
     </nav>
 
-    <div class="auction-container">
+    <div class="content-container">
+        <div class="left-column">
 
         <div class="custom-carousel-container">
             <div class="custom-carousel">
@@ -38,45 +40,35 @@
             </div>
         </div>
 
-        <div class="auction-info">
-
-            <div class="detail-header">
-                <div class="title-area">
-                    <h1 th:text="${auction.title}">Auction Title</h1>
-                </div>
-                <div class="watch-button-area">
-                    <button th:if="${#lists.contains(currentUser.observedAuctions, auction)}"
-                            class="watch-toggle watch-button-detail"
-                            th:onclick="'handleWatchClick(event, ' + ${auction.id} + ', true)'"
-                            th:text="Watched">
-                    </button>
-                    <button th:unless="${#lists.contains(currentUser.observedAuctions, auction)}"
-                            class="watch-toggle watch-button-detail"
-                            th:onclick="'handleWatchClick(event, ' + ${auction.id} + ', false)'"
-                            th:text="Watch">
-                    </button>
-                </div>
+        <div class="description-container">
+            <div class="title-area">
+                <h2>About Item</h2>
             </div>
             <p th:text="${auction.description}">Auction Description</p>
-            <p>Ends: <span th:text="${#temporals.format(auction.endTime, 'yyyy-MM-dd HH:mm')}">End Time</span></p>
-            <p>Starting Price: <span th:text="${auction.startingPrice}">Starting Price</span></p>
-            <p>Current Highest Bid: <span th:text="${auction.highestBid}">Highest Bid</span></p>
+        </div>
+    </div>
 
-            <div th:if="${currentUser.id == auction.auctionCreator.id and auction.highestBid == 0}" class="button-group">
-                <a th:href="@{'/auction/' + ${auction.slug} + '/edit'}"
-                   class="btn btn-text"
-                   th:data-auction-id="${auction.id}"
-                   th:data-auction-slug="${auction.slug}"
-                   onclick="handleEditAuction(event, this.getAttribute('data-auction-id'))">
-                    Edit
-                </a>
-                <button type="button"
-                        class="btn btn-text btn-danger"
-                        th:data-auction-id="${auction.id}"
-                        onclick="handleRemoveAuction(event, this.getAttribute('data-auction-id'))">
-                    Remove
+    <div class="auction-info">
+
+        <div class="detail-group">
+            <div class="title-area">
+                <h1 th:text="${auction.title}">Auction Title</h1>
+            </div>
+            <div class="watch-button-area">
+                <button th:if="${#lists.contains(currentUser.observedAuctions, auction)}"
+                        class="watch-toggle watch-button-detail"
+                        th:onclick="'handleWatchClick(event, ' + ${auction.id} + ', true)'"
+                        th:text="Watched">
+                </button>
+                <button th:unless="${#lists.contains(currentUser.observedAuctions, auction)}"
+                        class="watch-toggle watch-button-detail"
+                        th:onclick="'handleWatchClick(event, ' + ${auction.id} + ', false)'"
+                        th:text="Watch">
                 </button>
             </div>
+        </div>
+        <div class="detail-group">
+            <h2><span th:text="${auction.startingPrice} + ' ' + ${auction.currencyCode}">Starting Price</span></h2>
 
             <div th:if="${currentUser.id != auction.auctionCreator.id}">
 
@@ -84,30 +76,55 @@
                     <form th:action="@{'/auction/' + ${auction.slug} + '/create-checkout-session'}" method="post" id="buy-now-form">
                         <input type="hidden" name="buyNowPrice" th:value="${auction.buyNowPrice}" />
                         <button type="submit" id="buy-now-button" class="btn buy-now-button" data-slug="${auction.slug}">
-                            Buy Now for <span th:text="${auction.buyNowPrice}">Buy Now Price</span>
+                            Buy Now for <span th:text="${auction.buyNowPrice} + ' ' + ${auction.currencyCode}">Buy Now Price</span>
                         </button>
                     </form>
                 </div>
-
-                <form th:action="@{'/auction/' + ${auction.slug} + '/bid'}" method="post">
-                    <div class="bid-container">
-                        <input type="number" id="bidAmount" class="form-control bid-input" name="bidAmount"
-                               th:value="${auction.highestBid}" min="0" step="0.1" required />
-                        <button type="submit" class="btn button-detail place-bid">Place Bid</button>
-                    </div>
-                </form>
             </div>
-
-            <div th:if="${successMessage}" class="success-message">
-                <p th:text="${successMessage}"></p>
-            </div>
-
-            <div th:if="${errorMessage}" class="error-message">
-                <p th:text="${errorMessage}"></p>
-            </div>
-
         </div>
+        <p>Ends: <span th:text="${#temporals.format(auction.endTime, 'yyyy-MM-dd HH:mm')}">End Time</span></p>
+        <p>Current Highest Bid:
+            <span th:text="${auction.highestBid != null ? auction.highestBid : 'No bids yet'}">Highest Bid</span>
+            <span th:if="${auction.highestBidder != null}" th:text="'by ' + ${auction.highestBidder.username}">Bidder's Username</span>
+            <span th:unless="${auction.highestBidder != null}">No highest bidder</span>
+        </p>
+
+        <div th:if="${currentUser.id == auction.auctionCreator.id and auction.highestBid == 0}" class="button-group">
+            <a th:href="@{'/auction/' + ${auction.slug} + '/edit'}"
+               class="btn btn-text"
+               th:data-auction-id="${auction.id}"
+               th:data-auction-slug="${auction.slug}"
+               onclick="handleEditAuction(event, this.getAttribute('data-auction-id'))">
+                Edit
+            </a>
+            <button type="button"
+                    class="btn btn-text btn-danger"
+                    th:data-auction-id="${auction.id}"
+                    onclick="handleRemoveAuction(event, this.getAttribute('data-auction-id'))">
+                Remove
+            </button>
+        </div>
+
+        <div th:if="${currentUser.id != auction.auctionCreator.id}">
+            <form th:action="@{'/auction/' + ${auction.slug} + '/bid'}" method="post">
+                <div class="bid-container">
+                    <input type="number" id="bidAmount" class="form-control bid-input" name="bidAmount"
+                           th:value="${auction.highestBid}" min="0" step="0.1" required />
+                    <button type="submit" class="btn button-detail place-bid">Place Bid</button>
+                </div>
+            </form>
+        </div>
+
+        <div th:if="${successMessage}" class="success-message">
+            <p th:text="${successMessage}"></p>
+        </div>
+
+        <div th:if="${errorMessage}" class="error-message">
+            <p th:text="${errorMessage}"></p>
+        </div>
+
     </div>
+</div>
 </div>
 </body>
 </html>

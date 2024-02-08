@@ -153,8 +153,9 @@ public class DefaultUserConfig {
             } else {
                 highestBid = startingPrice.add(BigDecimal.valueOf(random.nextInt(50) + 1));
             }
-            auction.setBuyNowPrice(highestBid.add(BigDecimal.valueOf(50)));
+            auction.setBuyNowPrice(startingPrice.add(BigDecimal.valueOf(50)));
             auction.setHighestBid(highestBid);
+            auction.setHighestBidder(auctionBuyer);
             String statusString = (String) auctionInfo[4];
             AuctionStatus statusEnum = AuctionStatus.valueOf(statusString);
             if (statusEnum == AuctionStatus.SOLD) {

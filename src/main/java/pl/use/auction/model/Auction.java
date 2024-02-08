@@ -47,6 +47,7 @@ public class Auction {
     private LocalDateTime startTime;
     private LocalDateTime endTime;
     private BigDecimal startingPrice;
+    private CurrencyCode currencyCode = CurrencyCode.PLN;
     private BigDecimal highestBid;
     private BigDecimal buyNowPrice;
     @Enumerated(EnumType.STRING)
