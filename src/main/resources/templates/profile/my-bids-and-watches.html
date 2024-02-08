@@ -1,43 +1,120 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
-  <title>Active Bids and Watches</title>
-  <link th:href="@{/css/styles.css}" rel="stylesheet" />
-  <link th:href="@{/css/auction.css}" rel="stylesheet" />
-  <script th:src="@{/js/auction.js}"></script>
+  <meta charset="UTF-8">
+  <title>My Purchases</title>
+  <link th:href="@{/css/search-bar.css}" rel="stylesheet" />
+  <link th:href="@{/css/sidebar.css}" rel="stylesheet" />
+  <link th:href="@{/css/user-auctions.css}" rel="stylesheet" />
+  <script th:src="@{/js/dropdown.js}"></script>
+  <script th:src="@{/js/auction-search.js}"></script>
 </head>
 <body>
-<div class="container">
-  <h1>Active Bids and Watches</h1>
 
-  <div th:if="${allAuctions.isEmpty()}" class="alert alert-info">
-    You have no active auctions.
+<nav class="navbar">
+  <div class="search-container">
+    <form action="/search" method="get" class="search-form">
+      <input type="text" placeholder="What you search for..." name="search" th:value="${param.search}" class="search-input" />
+      <input type="text" placeholder="Location..." name="location" th:value="${param.location}" class="location-input" />
+      <input type="hidden" name="category" th:value="${param.category}" class="category-input" />
+      <button type="submit" class="search-button">Search</button>
+    </form>
   </div>
-
-  <div th:each="auction : ${allAuctions}" class="auction-item">
-    <a th:href="@{/auctions/{id}(id=${auction.id})}" class="auction-detail-link">
-      <div class="auction-detail"><strong>Title:</strong> <span th:text="${auction.title}"></span></div>
-      <div class="auction-detail"><strong>Ends:</strong> <span th:text="${#temporals.format(auction.endTime, 'yyyy-MM-dd HH:mm')}"></span></div>
-      <div class="auction-detail"><strong>Highest Bid:</strong> <span th:text="${auction.highestBid}"></span></div>
-
-      <div th:if="${auction.highestBidder != null and auction.highestBidder.id == currentUser.id}" class="winning-message">
-        You are currently winning!
+  <div class="navbar-right">
+    <button onclick="window.location.href='/auctions/create';" class="create-auction-button">Create Auction</button>
+    <div class="profile-container">
+      <button class="profile-button" onclick="toggleDropdown()" th:text="${currentUser.email}">User Email</button>
+      <div id="myDropdown" class="dropdown-content">
+        <div class="dropdown-button" onclick="window.location.href='/profile';">
+          My Profile
+        </div>
+        <div class="dropdown-button" onclick="document.getElementById('logout-form').submit();">
+          Logout
+        </div>
+        <form id="logout-form" action="/logout" method="post" style="display: none;">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+          <input type="submit" value="Logout" />
+        </form>
       </div>
-    </a>
-
-    <button th:if="${#lists.contains(currentUser.observedAuctions, auction)}"
-            class="watch-toggle"
-            th:onclick="'handleWatchClick(event, ' + ${auction.id} + ', true)'">
-      Watched
-    </button>
-    <button th:unless="${#lists.contains(currentUser.observedAuctions, auction)}"
-            class="watch-toggle"
-            th:onclick="'handleWatchClick(event, ' + ${auction.id} + ', false)'">
-      Watch
-    </button>
+    </div>
   </div>
+</nav>
 
-  <a th:href="@{/profile}" class="btn">Back to Profile</a>
+<div class="layout-container">
+
+
+  <div class="sidebar">
+    <h2>Bids/Watches Sections</h2>
+    <a href="#" class="sidebar-link" id="bidsLink">Bid Auctions</a>
+    <a href="#" class="sidebar-link" id="watchesLink">Watched Auctions</a>
+    <a href="/profile" class="sidebar-link">Back to Profile</a>
+  </div>
+  <div class="main-content">
+    <div id="bidsAuctions" class="auction-list">
+      <div class="featured-auctions">
+        <div class="featured-auctions-title">
+          <img th:src="@{/auctionSectionImages/bid-auctions.webp}" alt="Bid Logo" class="featured-auctions-logo"/>
+          <h2>My Bid Auctions</h2>
+        </div>
+        <div th:if="${bidAuctions.isEmpty()}" class="no-auctions-message">
+          <div>No bid auctions to display.</div>
+        </div>
+        <div class="auction-items-container" th:unless="${bidAuctions.isEmpty()}">
+          <a th:href="@{'/auction/' + ${auction.slug}}" th:each="auction : ${bidAuctions}" class="auction-item auction-item-link" th:id="'auction-item-' + ${auction.id}">
+
+            <img th:src="@{|/${auction.imageUrls[0]}|}" alt="Auction Image" class="auction-image"/>
+            <div class="auction-info">
+              <h3 th:text="${auction.title}">Auction Title</h3>
+              <div>Ends: <span th:text="${#temporals.format(auction.endTime, 'yyyy-MM-dd HH:mm')}"></span></div>
+            </div>
+            <div class="price-details">
+              <div>Starting Price: <span th:text="${auction.startingPrice}"></span></div>
+              <div>Highest Bid: <span th:text="${auction.highestBid}"></span></div>
+              <div>Winning Bidder: <span th:text="${auction.highestBidder.username}"></span></div>
+            </div>
+
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div id="watchedAuctions" class="auction-list" style="display: none;">
+      <div class="featured-auctions">
+        <div class="featured-auctions-title">
+          <div class="featured-auctions-title">
+            <img th:src="@{/auctionSectionImages/watched-auctions.webp}" alt="Watched Logo" class="featured-auctions-logo"/>
+            <h2>Watched Auctions</h2>
+          </div>
+        </div>
+        <div th:if="${watchedAuctions.isEmpty()}" class="no-auctions-message">
+          <div>No sold auctions to display.</div>
+        </div>
+        <a class="auction-items-container" th:unless="${watchedAuctions.isEmpty()}">
+          <a th:href="@{'/auction/' + ${auction.slug}}" th:each="auction : ${watchedAuctions}" class="auction-item auction-item-link" th:id="'auction-item-' + ${auction.id}">
+            <img th:src="@{|/${auction.imageUrls[0]}|}"
+                 alt="Auction Image" class="auction-image"/>
+            <div class="auction-info">
+              <h3 th:text="${auction.title}">Auction Title</h3>
+              <div>Category: <span th:text="${auction.category.name}"></span></div>
+              <div>Ends: <span th:text="${#temporals.format(auction.endTime, 'yyyy-MM-dd HH:mm')}"></span></div>
+              <div>Starting Price: <span th:text="${auction.startingPrice}"></span></div>
+              <div>Highest Bid: <span th:text="${auction.highestBid}"></span></div>
+            </div>
+            <div th:if="${auction.buyer != null}" class="auction-buyer-info">
+              <div>Current Bid: <span th:text="${auction.highestBid}">Current Price</span> <span th:text="${auction.currencyCode}"></span> </div>
+              <div>Status: <span th:text="${auction.status}">Auction Status</span></div>
+            </div>
+            <div th:if="${auction.buyer == null}" class="auction-not-sold-message">
+              Not sold
+              <div>Status: <span th:text="${auction.status}">Auction Status</span></div>
+            </div>
+          </a>
+        </div>
+      </div>
+    </div>
+
+  </div>
 </div>
 </body>
+<script th:src="@{/js/show-user-bids-watches.js}"></script>
 </html>

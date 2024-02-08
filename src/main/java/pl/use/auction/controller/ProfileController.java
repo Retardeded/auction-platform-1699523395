@@ -99,15 +99,19 @@ public class ProfileController {
         AuctionUser currentUser = userRepository.findByEmail(currentUserName)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
-        List<Auction> highestBidAuctions = auctionRepository.findByHighestBidder(currentUser);
+        List<Auction> highestBidAuctions = auctionRepository.findByHighestBidderAndStatus(currentUser, AuctionStatus.ACTIVE);
         Set<Auction> observedAuctions = currentUser.getObservedAuctions();
 
-        List<Auction> allAuctions = new ArrayList<>(observedAuctions);
-        allAuctions.addAll(highestBidAuctions.stream()
+        /*
+        List<Auction> bidAuctions = new ArrayList<>(observedAuctions);
+        bidAuctions.addAll(highestBidAuctions.stream()
                 .filter(auction -> !observedAuctions.contains(auction))
                 .toList());
 
-        model.addAttribute("allAuctions", allAuctions);
+         */
+
+        model.addAttribute("watchedAuctions", observedAuctions);
+        model.addAttribute("bidAuctions", highestBidAuctions);
         model.addAttribute("currentUser", currentUser);
 
         return "profile/my-bids-and-watches";
