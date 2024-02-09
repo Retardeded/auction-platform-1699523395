@@ -75,6 +75,8 @@ public class DefaultUserConfig {
 
             AuctionUser testUser = createUserIfNotFound(userRepository, passwordEncoder, "test@gmail.com", "test", "test", "Warsaw");
 
+            AuctionUser bottomUser = createUserIfNotFound(userRepository, passwordEncoder, "bottom@gmail.com", "bottom", "bottom", "Wroclaw");
+
             if (auctionRepository.findByAuctionCreator(defaultUser).isEmpty()) {
                 createSampleAuctions(testUser, auctionRepository, defaultUser, categoryRepository);
             }
@@ -86,6 +88,10 @@ public class DefaultUserConfig {
             }
             if (auctionRepository.findByAuctionCreator(testUser).isEmpty()) {
                 createSampleAuctions(defaultUser, auctionRepository, testUser, categoryRepository);
+            }
+
+            if (auctionRepository.findByAuctionCreator(testUser).isEmpty()) {
+                createSampleAuctions(defaultUser, auctionRepository, bottomUser, categoryRepository);
             }
         };
     }

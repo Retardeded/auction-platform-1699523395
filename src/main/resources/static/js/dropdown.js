@@ -1,3 +1,8 @@
+const csrfTokenMetaTag = document.querySelector('meta[name="_csrf"]');
+const csrfHeaderMetaTag = document.querySelector('meta[name="_csrf_header"]');
+const csrfToken = csrfTokenMetaTag ? csrfTokenMetaTag.getAttribute('content') : null;
+const csrfHeader = csrfHeaderMetaTag ? csrfHeaderMetaTag.getAttribute('content') : null;
+
 function toggleDropdown() {
     document.getElementById("myDropdown").classList.toggle("show");
 }
@@ -17,13 +22,13 @@ window.onclick = function(event) {
 function checkForNotifications() {
     fetch('/notifications')
         .then(response => response.json())
-        .then(notifications => { // Assuming the server directly returns an array
+        .then(notifications => {
             const notificationCountSpan = document.querySelector('.notification-count');
-            notificationCountSpan.textContent = notifications.length; // Update the count on the bell icon
+            notificationCountSpan.textContent = notifications.length;
 
             if (notifications.length > 0) {
                 const notificationDropdown = document.getElementById("notificationDropdown");
-                notificationDropdown.innerHTML = ''; // Clear current notifications
+                notificationDropdown.innerHTML = '';
                 notifications.forEach(notification => {
                     const notificationElement = document.createElement('div');
                     notificationElement.classList.add('notification-item');
@@ -36,7 +41,7 @@ function checkForNotifications() {
                      const link = notificationElement.querySelector('.notification-link');
                         if (link) {
                             link.addEventListener('click', () => {
-                                markNotificationAsRead(notification.id);
+                                markNotificationAsRead(notification.id, notificationElement);
                             });
                         }
                 });
@@ -58,46 +63,27 @@ function toggleNotificationsDropdown() {
     }
 }
 
-/*
-
-notificationElement.querySelector('.notification-link').addEventListener('click', () => {
-    // Call a function to mark the notification as read
-    markNotificationAsRead(notification.id);
-});
-
-function markNotificationAsRead(notificationId) {
-    fetch(`/notifications/mark-read/${notificationId}`, {
-        method: 'POST',
-        headers: {
-            // Assuming you're sending JSON
-            'Content-Type': 'application/json',
-            // CSRF token header; replace 'csrfTokenValue' with actual token value
-            'X-CSRF-TOKEN': csrfTokenValue
-        },
-        // No need to send a body for this request
-    }).then(response => {
-        if (response.ok) {
-            console.log('Notification marked as read');
-            // Update UI if needed
-            // For example, remove the notification from the dropdown
-            document.querySelector(`#notification-item-${notificationId}`).remove();
-            // Update the notification count
-            updateNotificationCount();
-        } else {
-            console.error('Failed to mark notification as read');
-        }
-    }).catch(error => {
-        console.error('Error marking notification as read:', error);
-    });
+function markNotificationAsRead(notificationId, notificationElement) {
+  fetch(`/notifications/mark-read/${notificationId}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      [csrfHeader]: csrfToken
+    },
+  }).then(response => {
+    if (response.ok) {
+      notificationElement.remove();
+      updateNotificationCount();
+    } else {
+      console.error('Failed to mark notification as read');
+    }
+  }).catch(error => {
+    console.error('Error marking notification as read:', error);
+  });
 }
 
-// Function to update the notification count in the UI
 function updateNotificationCount() {
-    // Get the current count
-    const count = parseInt(document.querySelector('.notification-count').textContent, 10);
-    // Subtract 1 since we marked a notification as read
-    const newCount = Math.max(count - 1, 0);
-    // Update the count in the UI
-    document.querySelector('.notification-count').textContent = newCount;
+  const count = parseInt(document.querySelector('.notification-count').textContent, 10);
+  const newCount = Math.max(count - 1, 0);
+  document.querySelector('.notification-count').textContent = newCount;
 }
-*/
