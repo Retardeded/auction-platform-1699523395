@@ -15,6 +15,7 @@ import org.springframework.web.server.ResponseStatusException;
 import pl.use.auction.model.*;
 import pl.use.auction.repository.AuctionRepository;
 import pl.use.auction.repository.CategoryRepository;
+import pl.use.auction.repository.NotificationRepository;
 import pl.use.auction.repository.UserRepository;
 
 import java.io.IOException;
@@ -43,6 +44,9 @@ public class AuctionService {
 
     @Autowired
     private FileSystemStorageService fileSystemStorageService;
+
+    @Autowired
+    private NotificationRepository notificationRepository;
 
     @Value("${stripe.api.secretkey}")
     private String stripeApiKey;
@@ -111,6 +115,13 @@ public class AuctionService {
         for (Auction auction : endedAuctions) {
             if (auction.getHighestBidder() != null) {
                 auction.setStatus(AuctionStatus.AWAITING_PAYMENT);
+
+                Notification notification = new Notification();
+                notification.setUser(auction.getHighestBidder());
+                notification.setDescription("Congratulations! You are the highest bidder for the auction: " + auction.getTitle());
+                notification.setAction("Please see your bids to confirm your transaction.");
+                notification.setRead(false);
+                notificationRepository.save(notification);
             } else {
                 auction.setStatus(AuctionStatus.EXPIRED);
             }

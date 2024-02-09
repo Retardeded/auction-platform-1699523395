@@ -71,7 +71,7 @@
             <div th:if="${auction.highestBidder == currentUser and auction.status == T(pl.use.auction.model.AuctionStatus).AWAITING_PAYMENT}">
               <form th:action="@{'/auction/' + ${auction.slug} + '/create-checkout-session'}" method="post">
                 <input type="hidden" name="auctionPrice" th:value="${auction.highestBid}" />
-                <button type="submit" class="btn confirm-transaction-button">Confirm Transaction</button>
+                <button type="submit" class="btn buy-now-button" th:text="'Confirm Transaction for ' + ${auction.highestBid} + ' ' + ${auction.currencyCode}">Confirm Transaction</button>
               </form>
             </div>
 
