@@ -1,9 +1,8 @@
 package pl.use.auction.service;
 
-import com.stripe.Stripe;
 import com.stripe.exception.StripeException;
-import com.stripe.model.PaymentIntent;
-import com.stripe.param.PaymentIntentCreateParams;
+import com.stripe.model.checkout.Session;
+import com.stripe.param.checkout.SessionCreateParams;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -48,20 +47,45 @@ public class AuctionService {
     @Autowired
     private NotificationRepository notificationRepository;
 
-    @Value("${stripe.api.secretkey}")
-    private String stripeApiKey;
+    @Value("${stripe.api.publishablekey}")
+    private String stripePublishableKey;
 
-    public String createPaymentIntent(BigDecimal buyNowPrice, String currency) throws StripeException {
-        Stripe.apiKey = stripeApiKey;
+    @Value("${app.url}")
+    private String appUrl;
 
-        PaymentIntentCreateParams params = PaymentIntentCreateParams.builder()
-                .setAmount(buyNowPrice.multiply(new BigDecimal(100)).longValue()) // convert price to the smallest currency unit, e.g., cents
-                .setCurrency(currency)
+    @Autowired
+    private StripeServiceWrapper stripeServiceWrapper;
+
+    public Session createCheckoutSession(String auctionSlug, BigDecimal auctionPrice) throws StripeException {
+        Auction auction = auctionRepository.findBySlug(auctionSlug)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid auction slug: " + auctionSlug));
+
+        String successUrl = appUrl + "/payment/success?session_id={CHECKOUT_SESSION_ID}";
+        String cancelUrl = appUrl + "/auction/" + auctionSlug;
+
+        SessionCreateParams params = SessionCreateParams.builder()
+                .addPaymentMethodType(SessionCreateParams.PaymentMethodType.CARD)
+                .setMode(SessionCreateParams.Mode.PAYMENT)
+                .setSuccessUrl(successUrl)
+                .setCancelUrl(cancelUrl)
+                .putMetadata("auction_slug", auctionSlug)
+                .addLineItem(SessionCreateParams.LineItem.builder()
+                        .setQuantity(1L)
+                        .setPriceData(SessionCreateParams.LineItem.PriceData.builder()
+                                .setCurrency(auction.getCurrencyCode().toString().toLowerCase())
+                                .setUnitAmount(auctionPrice.multiply(new BigDecimal(100)).longValue()) // Convert to cents
+                                .setProductData(SessionCreateParams.LineItem.PriceData.ProductData.builder()
+                                        .setName("Auction: " + auctionSlug)
+                                        .build())
+                                .build())
+                        .build())
                 .build();
 
-        PaymentIntent paymentIntent = PaymentIntent.create(params);
+        return stripeServiceWrapper.createCheckoutSession(params);
+    }
 
-        return paymentIntent.getClientSecret();
+    public String createPaymentIntent(BigDecimal buyNowPrice, String currency) throws StripeException {
+        return stripeServiceWrapper.createPaymentIntent(buyNowPrice, currency);
     }
 
     public boolean placeBid(Auction auction, AuctionUser bidder, BigDecimal bidAmount) {
@@ -147,12 +171,12 @@ public class AuctionService {
         auction.setHighestBid(BigDecimal.valueOf(0));
         auction.setStatus(AuctionStatus.valueOf("ACTIVE"));
         auction.setSlug(createSlugFromTitle(auction.getTitle()));
-        auction.setImageUrls(new ArrayList<>()); // Make sure the list is initialized
+        auction.setImageUrls(new ArrayList<>());
 
         for (MultipartFile file : files) {
             if (!file.isEmpty()) {
                 String imageUrl = saveImage(file);
-                auction.getImageUrls().add(imageUrl); // Add the image URL to the list
+                auction.getImageUrls().add(imageUrl);
             }
         }
 

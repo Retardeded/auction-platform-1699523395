@@ -1,7 +1,6 @@
 package pl.use.auction.controller;
 
 import com.stripe.model.checkout.Session;
-import com.stripe.param.checkout.SessionCreateParams;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -116,37 +115,16 @@ public class AuctionController {
                                                    @RequestParam("auctionPrice") BigDecimal auctionPrice,
                                                    HttpServletRequest request) {
         try {
-            Stripe.apiKey = stripeApiKey;
-            Auction auction = auctionRepository.findBySlug(auctionSlug)
-                    .orElseThrow(() -> new IllegalArgumentException("Invalid auction slug: " + auctionSlug));
-            String successUrl = "http://localhost:8080/payment/success?session_id={CHECKOUT_SESSION_ID}";
-            String cancelUrl = "http://localhost:8080/auction/" + auctionSlug;
-
-            SessionCreateParams params = SessionCreateParams.builder()
-                    .addPaymentMethodType(SessionCreateParams.PaymentMethodType.CARD)
-                    .setMode(SessionCreateParams.Mode.PAYMENT)
-                    .setSuccessUrl(successUrl)
-                    .setCancelUrl(cancelUrl)
-                    .putMetadata("auction_slug", auctionSlug)
-                    .addLineItem(SessionCreateParams.LineItem.builder()
-                            .setQuantity(1L)
-                            .setPriceData(SessionCreateParams.LineItem.PriceData.builder()
-                                    .setCurrency(auction.getCurrencyCode().toString().toLowerCase())
-                                    .setUnitAmount(auctionPrice.longValue() * 100) // Stripe expects the amount in cents
-                                    .setProductData(SessionCreateParams.LineItem.PriceData.ProductData.builder()
-                                            .setName("Auction: " + auctionSlug)
-                                            .build())
-                                    .build())
-                            .build())
-                    .build();
-
-            Session session = Session.create(params);
-
+            Session session = auctionService.createCheckoutSession(auctionSlug, auctionPrice);
             return ResponseEntity.status(HttpStatus.FOUND).location(URI.create(session.getUrl())).build();
         } catch (StripeException e) {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Collections.singletonMap("error", "Error creating Stripe Checkout session: " + e.getMessage()));
+        } catch (IllegalArgumentException e) {
+            e.printStackTrace();
+            return ResponseEntity.badRequest()
+                    .body(Collections.singletonMap("error", e.getMessage()));
         }
     }
 
@@ -158,7 +136,6 @@ public class AuctionController {
             Session session = Session.retrieve(sessionId);
             String auctionSlug = session.getMetadata().get("auction_slug");
 
-            // Retrieve the corresponding auction and user from the database
             Auction auction = auctionRepository.findBySlug(auctionSlug)
                     .orElseThrow(() -> new IllegalArgumentException("Invalid auction slug: " + auctionSlug));
             AuctionUser user = userRepository.findByEmail(authentication.getName())
@@ -170,7 +147,7 @@ public class AuctionController {
             if (auction.getStatus() != AuctionStatus.SOLD) {
                 auction.setStatus(AuctionStatus.SOLD);
                 auction.setBuyer(user);
-                auction.setHighestBid(finalPrice); // Set the highest bid to the final price paid
+                auction.setHighestBid(finalPrice);
                 auctionRepository.save(auction);
             } else {
                 // Handle the case where the auction is already sold
@@ -265,7 +242,7 @@ public class AuctionController {
 
         if (auction.getStatus() != AuctionStatus.ACTIVE) {
             model.addAttribute("errorMessage", "This auction is no longer active.");
-            return "auctions/auction-expired"; // Assuming you have a view for expired auctions
+            return "auctions/auction-expired";
         }
 
         if (!currentUser.getId().equals(auction.getAuctionCreator().getId())) {

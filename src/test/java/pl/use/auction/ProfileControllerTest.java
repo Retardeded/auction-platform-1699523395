@@ -18,6 +18,7 @@ import org.thymeleaf.spring6.view.ThymeleafViewResolver;
 import org.thymeleaf.templateresolver.ClassLoaderTemplateResolver;
 import pl.use.auction.controller.ProfileController;
 import pl.use.auction.model.Auction;
+import pl.use.auction.model.AuctionStatus;
 import pl.use.auction.model.AuctionUser;
 import pl.use.auction.model.PasswordChangeResult;
 import pl.use.auction.repository.UserRepository;
@@ -247,25 +248,44 @@ public class ProfileControllerTest {
 
         verify(model).addAttribute(eq("ongoingAuctions"), ongoingAuctionListCaptor.capture());
         List<Auction> ongoingAuctions = ongoingAuctionListCaptor.getValue();
-        assertTrue(ongoingAuctions.stream().allMatch(auction -> auction.getEndTime().isAfter(LocalDateTime.now())));
+        assertTrue(ongoingAuctions.stream().allMatch(auction -> auction.getStatus() == AuctionStatus.ACTIVE));
 
         verify(model).addAttribute(eq("pastAuctions"), pastAuctionListCaptor.capture());
         List<Auction> pastAuctions = pastAuctionListCaptor.getValue();
-        assertTrue(pastAuctions.stream().allMatch(auction -> auction.getEndTime().isBefore(LocalDateTime.now())));
+        assertTrue(pastAuctions.stream().allMatch(auction -> auction.getStatus() != AuctionStatus.ACTIVE));
 
         assertEquals("profile/user-auctions", viewName);
     }
 
+    @Test
+    void testViewBoughtAuctions() {
+        String email = "user@example.com";
+        AuctionUser currentUser = new AuctionUser();
+        currentUser.setEmail(email);
+        List<Auction> boughtAuctions = List.of(new Auction(), new Auction()); // Mock some bought auctions
+
+        when(authentication.getName()).thenReturn(email);
+        when(userRepository.findByEmail(email)).thenReturn(Optional.of(currentUser));
+        when(auctionRepository.findByBuyer(currentUser)).thenReturn(boughtAuctions);
+
+        String viewName = profileController.viewBoughtAuctions(model, authentication);
+
+        verify(userRepository).findByEmail(email);
+        verify(auctionRepository).findByBuyer(currentUser);
+        verify(model).addAttribute("currentUser", currentUser);
+        verify(model).addAttribute("boughtAuctions", boughtAuctions);
+        assertEquals("profile/purchase-auctions", viewName);
+    }
+
     private List<Auction> createSampleAuctions() {
         List<Auction> auctions = new ArrayList<>();
-        LocalDateTime now = LocalDateTime.now();
 
         Auction pastAuction = new Auction();
-        pastAuction.setEndTime(now.minusDays(1));
+        pastAuction.setStatus(AuctionStatus.EXPIRED); // Set status to EXPIRED
         auctions.add(pastAuction);
 
         Auction ongoingAuction = new Auction();
-        ongoingAuction.setEndTime(now.plusDays(1));
+        ongoingAuction.setStatus(AuctionStatus.ACTIVE); // Set status to ACTIVE
         auctions.add(ongoingAuction);
 
         return auctions;
@@ -337,24 +357,20 @@ public class ProfileControllerTest {
 
         when(authentication.getName()).thenReturn("user@example.com");
         when(userRepository.findByEmail("user@example.com")).thenReturn(Optional.of(currentUser));
-        when(auctionRepository.findByHighestBidder(currentUser)).thenReturn(highestBidAuctions);
+        when(auctionRepository.findByHighestBidderAndStatusIn(eq(currentUser), anyList())).thenReturn(highestBidAuctions);
 
         currentUser.setObservedAuctions(observedAuctions);
 
         String viewName = profileController.viewMyBidsAndWatches(model, authentication);
 
         verify(userRepository).findByEmail("user@example.com");
-        verify(auctionRepository).findByHighestBidder(currentUser);
-        verify(model).addAttribute(eq("allAuctions"), anyList());
+        verify(auctionRepository).findByHighestBidderAndStatusIn(eq(currentUser), anyList());
+
+        verify(model).addAttribute("watchedAuctions", observedAuctions);
+        verify(model).addAttribute("bidAuctions", highestBidAuctions);
         verify(model).addAttribute("currentUser", currentUser);
 
         assertEquals("profile/my-bids-and-watches", viewName);
-
-        ArgumentCaptor<List<Auction>> argument = ArgumentCaptor.forClass(List.class);
-        verify(model).addAttribute(eq("allAuctions"), argument.capture());
-        List<Auction> combinedAuctions = argument.getValue();
-
-        assertTrue(combinedAuctions.containsAll(highestBidAuctions));
-        assertTrue(combinedAuctions.containsAll(observedAuctions));
     }
+
 }

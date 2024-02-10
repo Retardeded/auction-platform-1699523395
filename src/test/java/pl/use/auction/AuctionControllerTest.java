@@ -1,5 +1,8 @@
 package pl.use.auction;
 
+import com.stripe.exception.InvalidRequestException;
+import com.stripe.model.checkout.Session;
+import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -17,15 +20,12 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap;
 import pl.use.auction.controller.AuctionController;
-import pl.use.auction.model.Auction;
-import pl.use.auction.model.AuctionUser;
-import pl.use.auction.model.Category;
+import pl.use.auction.model.*;
 import pl.use.auction.repository.AuctionRepository;
 import pl.use.auction.repository.CategoryRepository;
 import pl.use.auction.repository.UserRepository;
 import pl.use.auction.service.AuctionService;
 import pl.use.auction.service.CategoryService;
-import pl.use.auction.util.StringUtils;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -52,9 +52,6 @@ class AuctionControllerTest {
     private UserRepository userRepository;
 
     @Mock
-    private CategoryRepository categoryRepository;
-
-    @Mock
     private CategoryService categoryService;
 
     @Mock
@@ -66,7 +63,6 @@ class AuctionControllerTest {
     @Test
     void testCreateAuctionForm() {
         List<Category> categories = new ArrayList<>();
-        // add categories to the list as needed for your test
 
         when(categoryService.findAllMainCategoriesWithSubcategories()).thenReturn(categories);
 
@@ -164,6 +160,7 @@ class AuctionControllerTest {
         Auction auction = new Auction();
         auction.setSlug(auctionSlug);
         auction.setEndTime(LocalDateTime.now().plusDays(1));
+        auction.setStatus(AuctionStatus.ACTIVE); // Ensure auction is ACTIVE
         Category category = new Category();
         category.setName("Category Name");
         Category parentCategory = new Category();
@@ -183,12 +180,6 @@ class AuctionControllerTest {
         verify(userRepository).findByEmail("test@example.com");
         verify(auctionRepository).findBySlug(auctionSlug);
 
-        verify(model).addAttribute(eq("auction"), auctionCaptor.capture());
-        assertEquals(auction, auctionCaptor.getValue());
-
-        verify(model).addAttribute(eq("currentUser"), userCaptor.capture());
-        assertEquals(user, userCaptor.getValue());
-
         ArgumentCaptor<Auction> auctionCaptor = ArgumentCaptor.forClass(Auction.class);
         verify(model).addAttribute(eq("auction"), auctionCaptor.capture());
         Auction capturedAuction = auctionCaptor.getValue();
@@ -197,17 +188,21 @@ class AuctionControllerTest {
         assertNotNull(capturedAuction.getCategory().getParentCategory());
         assertEquals("Parent Category Name", capturedAuction.getCategory().getParentCategory().getName());
 
+        verify(model).addAttribute(eq("currentUser"), userCaptor.capture());
+        assertEquals(user, userCaptor.getValue());
+
         assertEquals("auctions/auction-detail", viewName);
     }
-
     @Test
     void editAuction_ReturnsCorrectViewAndModel_WhenCurrentUserIsCreatorAndNoBids() {
         String slug = "some-slug";
         Auction auction = new Auction();
         auction.setSlug(slug);
+        auction.setStatus(AuctionStatus.ACTIVE);
         auction.setHighestBid(BigDecimal.ZERO);
         AuctionUser creator = new AuctionUser();
         creator.setId(1L);
+        creator.setEmail("creator@example.com");
         auction.setAuctionCreator(creator);
         List<Category> categories = new ArrayList<>();
 
@@ -241,6 +236,7 @@ class AuctionControllerTest {
         String slug = "some-slug";
         Auction auction = new Auction();
         auction.setSlug(slug);
+        auction.setStatus(AuctionStatus.ACTIVE);
         auction.setHighestBid(BigDecimal.ZERO);
         AuctionUser creator = new AuctionUser();
         creator.setId(1L);
@@ -263,6 +259,7 @@ class AuctionControllerTest {
         String slug = "some-slug";
         Auction auction = new Auction();
         auction.setSlug(slug);
+        auction.setStatus(AuctionStatus.ACTIVE);
         auction.setHighestBid(new BigDecimal("100.00"));
         AuctionUser creator = new AuctionUser();
         creator.setId(1L);
@@ -318,7 +315,7 @@ class AuctionControllerTest {
         auction.setAuctionCreator(creator);
 
         Auction auctionDetails = new Auction();
-        MultipartFile[] newImages = {}; // Mock MultipartFile array
+        MultipartFile[] newImages = {};
         List<String> imagesToDelete = new ArrayList<>();
 
         Authentication authentication = mock(Authentication.class);
@@ -415,6 +412,7 @@ class AuctionControllerTest {
         bidder.setEmail("bidder@example.com");
         Auction auction = new Auction();
         auction.setSlug(auctionSlug);
+        auction.setStatus(AuctionStatus.ACTIVE);
 
         when(authentication.getName()).thenReturn("bidder@example.com");
         when(userRepository.findByEmail("bidder@example.com")).thenReturn(Optional.of(bidder));
@@ -439,6 +437,7 @@ class AuctionControllerTest {
         bidder.setEmail("bidder@example.com");
         Auction auction = new Auction();
         auction.setSlug(auctionSlug);
+        auction.setStatus(AuctionStatus.ACTIVE);
 
         when(authentication.getName()).thenReturn("bidder@example.com");
         when(userRepository.findByEmail("bidder@example.com")).thenReturn(Optional.of(bidder));
@@ -450,4 +449,89 @@ class AuctionControllerTest {
         verify(redirectAttributes).addFlashAttribute("errorMessage", "Bid not high enough!");
         assertEquals("redirect:/auction/" + auctionSlug, viewName);
     }
+
+    @Test
+    void buyNow_Successful() throws Exception {
+        String auctionSlug = "some-auction-slug";
+        BigDecimal buyNowPrice = new BigDecimal("500.00");
+        Auction auction = new Auction();
+        auction.setSlug(auctionSlug);
+        auction.setCurrencyCode(CurrencyCode.USD);
+
+        when(auctionRepository.findBySlug(auctionSlug)).thenReturn(Optional.of(auction));
+        when(auctionService.createPaymentIntent(buyNowPrice, auction.getCurrencyCode().toString())).thenReturn("test_client_secret");
+
+        ResponseEntity<?> response = auctionController.buyNow(auctionSlug, buyNowPrice, authentication);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertTrue(response.getBody() instanceof Map);
+        assertEquals("test_client_secret", ((Map)response.getBody()).get("clientSecret"));
+    }
+
+    @Test
+    void buyNow_StripeException() throws Exception {
+        String auctionSlug = "some-auction-slug";
+        BigDecimal buyNowPrice = new BigDecimal("500.00");
+        Auction auction = new Auction();
+        auction.setCurrencyCode(CurrencyCode.PLN);
+        auction.setSlug(auctionSlug);
+
+        when(auctionRepository.findBySlug(auctionSlug)).thenReturn(Optional.of(auction));
+        when(auctionService.createPaymentIntent(buyNowPrice, "PLN"))
+                .thenThrow(new InvalidRequestException("Stripe error", null, null, null, 0, null));
+
+        ResponseEntity<?> response = auctionController.buyNow(auctionSlug, buyNowPrice, authentication);
+
+        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
+        assertTrue(response.getBody() instanceof Map);
+        assertEquals("Error processing payment: Stripe error", ((Map)response.getBody()).get("error"));
+    }
+
+    @Test
+    void buyNow_GeneralException() throws Exception {
+        String auctionSlug = "some-auction-slug";
+        BigDecimal buyNowPrice = new BigDecimal("500.00");
+
+        when(auctionRepository.findBySlug(auctionSlug)).thenReturn(Optional.of(new Auction()));
+        when(auctionService.createPaymentIntent(buyNowPrice, "USD")).thenThrow(new RuntimeException("General error"));
+
+        ResponseEntity<?> response = auctionController.buyNow(auctionSlug, buyNowPrice, authentication);
+
+        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
+        assertTrue(response.getBody() instanceof Map);
+        assertEquals("An error occurred during the purchase process.", ((Map)response.getBody()).get("error"));
+    }
+
+    @Test
+    void createCheckoutSession_Successful() throws Exception {
+        String auctionSlug = "test-slug";
+        BigDecimal auctionPrice = new BigDecimal("100.00");
+        String sessionUrl = "http://example.com/checkout";
+
+        Session session = mock(Session.class);
+        when(session.getUrl()).thenReturn(sessionUrl);
+        when(auctionService.createCheckoutSession(auctionSlug, auctionPrice)).thenReturn(session);
+
+        ResponseEntity<?> response = auctionController.createCheckoutSession(auctionSlug, auctionPrice, mock(HttpServletRequest.class));
+
+        assertEquals(HttpStatus.FOUND, response.getStatusCode());
+        assertEquals(sessionUrl, response.getHeaders().getLocation().toString());
+    }
+
+    @Test
+    void createCheckoutSession_StripeException() throws Exception {
+        String auctionSlug = "test-slug";
+        BigDecimal auctionPrice = new BigDecimal("100.00");
+
+        // Use InvalidRequestException, a concrete subclass of StripeException
+        when(auctionService.createCheckoutSession(auctionSlug, auctionPrice))
+                .thenThrow(new InvalidRequestException("Stripe error", null, null, null, null, null));
+
+        ResponseEntity<?> response = auctionController.createCheckoutSession(auctionSlug, auctionPrice, mock(HttpServletRequest.class));
+
+        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
+        assertTrue(response.getBody() instanceof Map);
+        assertEquals("Error creating Stripe Checkout session: Stripe error", ((Map)response.getBody()).get("error"));
+    }
+
 }
