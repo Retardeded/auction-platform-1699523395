@@ -1,17 +1,20 @@
 package pl.use.auction.service;
 
+import com.stripe.exception.StripeException;
+import com.stripe.model.checkout.Session;
+import com.stripe.param.checkout.SessionCreateParams;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
-import pl.use.auction.model.Auction;
-import pl.use.auction.model.AuctionUser;
-import pl.use.auction.model.Category;
-import pl.use.auction.model.FeaturedType;
+import pl.use.auction.model.*;
 import pl.use.auction.repository.AuctionRepository;
 import pl.use.auction.repository.CategoryRepository;
+import pl.use.auction.repository.NotificationRepository;
 import pl.use.auction.repository.UserRepository;
 
 import java.io.IOException;
@@ -41,6 +44,50 @@ public class AuctionService {
     @Autowired
     private FileSystemStorageService fileSystemStorageService;
 
+    @Autowired
+    private NotificationRepository notificationRepository;
+
+    @Value("${stripe.api.publishablekey}")
+    private String stripePublishableKey;
+
+    @Value("${app.url}")
+    private String appUrl;
+
+    @Autowired
+    private StripeServiceWrapper stripeServiceWrapper;
+
+    public Session createCheckoutSession(String auctionSlug, BigDecimal auctionPrice) throws StripeException {
+        Auction auction = auctionRepository.findBySlug(auctionSlug)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid auction slug: " + auctionSlug));
+
+        String successUrl = appUrl + "/payment/success?session_id={CHECKOUT_SESSION_ID}";
+        String cancelUrl = appUrl + "/auction/" + auctionSlug;
+
+        SessionCreateParams params = SessionCreateParams.builder()
+                .addPaymentMethodType(SessionCreateParams.PaymentMethodType.CARD)
+                .setMode(SessionCreateParams.Mode.PAYMENT)
+                .setSuccessUrl(successUrl)
+                .setCancelUrl(cancelUrl)
+                .putMetadata("auction_slug", auctionSlug)
+                .addLineItem(SessionCreateParams.LineItem.builder()
+                        .setQuantity(1L)
+                        .setPriceData(SessionCreateParams.LineItem.PriceData.builder()
+                                .setCurrency(auction.getCurrencyCode().toString().toLowerCase())
+                                .setUnitAmount(auctionPrice.multiply(new BigDecimal(100)).longValue()) // Convert to cents
+                                .setProductData(SessionCreateParams.LineItem.PriceData.ProductData.builder()
+                                        .setName("Auction: " + auctionSlug)
+                                        .build())
+                                .build())
+                        .build())
+                .build();
+
+        return stripeServiceWrapper.createCheckoutSession(params);
+    }
+
+    public String createPaymentIntent(BigDecimal buyNowPrice, String currency) throws StripeException {
+        return stripeServiceWrapper.createPaymentIntent(buyNowPrice, currency);
+    }
+
     public boolean placeBid(Auction auction, AuctionUser bidder, BigDecimal bidAmount) {
         boolean bidPlaced = false;
         if (bidAmount.compareTo(auction.getHighestBid()) > 0) {
@@ -65,7 +112,7 @@ public class AuctionService {
     }
 
     public List<Auction> findCheapestAuctions(int limit) {
-        List<Auction> auctions = auctionRepository.findByEndTimeAfter(LocalDateTime.now()).stream()
+        List<Auction> auctions = auctionRepository.findByEndTimeAfterAndStatusNot(LocalDateTime.now(), AuctionStatus.SOLD).stream()
                 .sorted(Comparator.comparing(Auction::getHighestBid))
                 .limit(limit)
                 .collect(Collectors.toList());
@@ -76,7 +123,7 @@ public class AuctionService {
     }
 
     public List<Auction> findExpensiveAuctions(int limit) {
-        List<Auction> auctions = auctionRepository.findByEndTimeAfter(LocalDateTime.now()).stream()
+        List<Auction> auctions = auctionRepository.findByEndTimeAfterAndStatusNot(LocalDateTime.now(), AuctionStatus.SOLD).stream()
                 .sorted(Comparator.comparing(Auction::getHighestBid).reversed())
                 .limit(limit)
                 .collect(Collectors.toList());
@@ -84,6 +131,26 @@ public class AuctionService {
         auctions.forEach(auction -> auction.setFeaturedType(FeaturedType.EXPENSIVE));
         auctionRepository.saveAll(auctions);
         return auctions;
+    }
+
+    @Scheduled(fixedRate = 60000) // This will run the method every 60 seconds.
+    public void updateStatusOfEndedAuctions() {
+        List<Auction> endedAuctions = auctionRepository.findByEndTimeBeforeAndStatus(LocalDateTime.now(), AuctionStatus.ACTIVE);
+        for (Auction auction : endedAuctions) {
+            if (auction.getHighestBidder() != null) {
+                auction.setStatus(AuctionStatus.AWAITING_PAYMENT);
+
+                Notification notification = new Notification();
+                notification.setUser(auction.getHighestBidder());
+                notification.setDescription("Congratulations! You are the highest bidder for the auction: " + auction.getTitle());
+                notification.setAction("Please see your bids to confirm your transaction.");
+                notification.setRead(false);
+                notificationRepository.save(notification);
+            } else {
+                auction.setStatus(AuctionStatus.EXPIRED);
+            }
+        }
+        auctionRepository.saveAll(endedAuctions);
     }
 
     public Auction createAndSaveAuction(Auction auction,
@@ -102,14 +169,14 @@ public class AuctionService {
         auction.setEndTime(auction.getEndTime());
         auction.setStartingPrice(auction.getStartingPrice());
         auction.setHighestBid(BigDecimal.valueOf(0));
-        auction.setStatus("ONGOING");
+        auction.setStatus(AuctionStatus.valueOf("ACTIVE"));
         auction.setSlug(createSlugFromTitle(auction.getTitle()));
-        auction.setImageUrls(new ArrayList<>()); // Make sure the list is initialized
+        auction.setImageUrls(new ArrayList<>());
 
         for (MultipartFile file : files) {
             if (!file.isEmpty()) {
                 String imageUrl = saveImage(file);
-                auction.getImageUrls().add(imageUrl); // Add the image URL to the list
+                auction.getImageUrls().add(imageUrl);
             }
         }
 
@@ -149,7 +216,7 @@ public class AuctionService {
     public List<Auction> searchAuctions(String query, String location, String categoryName, String sort) {
         List<Auction> auctions = new ArrayList<>();
         Category category = null;
-        LocalDateTime now = LocalDateTime.now();
+        AuctionStatus activeStatus = AuctionStatus.ACTIVE;
 
         if (categoryName != null && !categoryName.trim().isEmpty()) {
             Optional<Category> optionalCategory = categoryRepository.findByName(categoryName);
@@ -160,12 +227,12 @@ public class AuctionService {
                         category.getChildCategories().stream().map(Category::getId)
                 ).collect(Collectors.toList());
 
-                auctions = auctionRepository.findByTitleContainingIgnoreCaseAndLocationContainingIgnoreCaseAndCategoryIdInAndEndTimeAfter
-                        (query, location, categoryIds, now);
+                auctions = auctionRepository.findByTitleContainingIgnoreCaseAndLocationContainingIgnoreCaseAndCategoryIdInAndStatus
+                        (query, location, categoryIds, activeStatus);
             }
         } else {
-            auctions = auctionRepository.findByTitleContainingIgnoreCaseAndLocationContainingIgnoreCaseAndEndTimeAfter
-                    (query, location, now);
+            auctions = auctionRepository.findByTitleContainingIgnoreCaseAndLocationContainingIgnoreCaseAndStatus
+                    (query, location, activeStatus);
         }
 
         return switch (sort) {

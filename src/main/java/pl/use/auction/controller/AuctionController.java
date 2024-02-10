@@ -1,6 +1,9 @@
 package pl.use.auction.controller;
 
+import com.stripe.model.checkout.Session;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -12,6 +15,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import pl.use.auction.model.Auction;
+import pl.use.auction.model.AuctionStatus;
 import pl.use.auction.model.AuctionUser;
 import pl.use.auction.model.Category;
 import pl.use.auction.repository.AuctionRepository;
@@ -21,10 +25,16 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import pl.use.auction.service.AuctionService;
 import pl.use.auction.service.CategoryService;
 
+import com.stripe.Stripe;
+import com.stripe.exception.StripeException;
+
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.net.URI;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Controller
 public class AuctionController {
@@ -44,6 +54,12 @@ public class AuctionController {
     @Autowired
     CategoryService categoryService;
 
+    @Value("${stripe.api.publishablekey}")
+    private String stripePublishableKey;
+
+    @Value("${stripe.api.secretkey}")
+    private String stripeApiKey;
+
     @PostMapping("/auction/{slug}/bid")
     public String placeBid(@PathVariable("slug") String auctionSlug,
                            @RequestParam("bidAmount") BigDecimal bidAmount,
@@ -55,6 +71,11 @@ public class AuctionController {
         AuctionUser bidder = userRepository.findByEmail(authentication.getName())
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
+        if (!auction.getStatus().equals(AuctionStatus.ACTIVE)) {
+            redirectAttributes.addFlashAttribute("errorMessage", "This auction is no longer active and cannot accept bids.");
+            return "auctions/auction-expired";
+        }
+
         boolean bidPlaced = auctionService.placeBid(auction, bidder, bidAmount);
         if (bidPlaced) {
             redirectAttributes.addFlashAttribute("successMessage", "Bid placed successfully!");
@@ -62,6 +83,90 @@ public class AuctionController {
             redirectAttributes.addFlashAttribute("errorMessage", "Bid not high enough!");
         }
         return "redirect:/auction/" + auctionSlug;
+    }
+
+    @PostMapping("/auction/{slug}/buy-now")
+    @ResponseBody
+    public ResponseEntity<?> buyNow(@PathVariable("slug") String auctionSlug,
+                                    @RequestBody BigDecimal buyNowRequest,
+                                    Authentication authentication) {
+
+        try {
+            Auction auction = auctionRepository.findBySlug(auctionSlug)
+                    .orElseThrow(() -> new IllegalArgumentException("Invalid auction slug: " + auctionSlug));
+            String clientSecret = auctionService.createPaymentIntent(buyNowRequest, auction.getCurrencyCode().toString());
+            Map<String, String> response = new HashMap<>();
+            response.put("clientSecret", clientSecret);
+
+            return ResponseEntity.ok(response);
+        } catch (StripeException e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Collections.singletonMap("error", "Error processing payment: " + e.getMessage()));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Collections.singletonMap("error", "An error occurred during the purchase process."));
+        }
+    }
+
+    @PostMapping("/auction/{slug}/create-checkout-session")
+    public ResponseEntity<?> createCheckoutSession(@PathVariable("slug") String auctionSlug,
+                                                   @RequestParam("auctionPrice") BigDecimal auctionPrice,
+                                                   HttpServletRequest request) {
+        try {
+            Session session = auctionService.createCheckoutSession(auctionSlug, auctionPrice);
+            return ResponseEntity.status(HttpStatus.FOUND).location(URI.create(session.getUrl())).build();
+        } catch (StripeException e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Collections.singletonMap("error", "Error creating Stripe Checkout session: " + e.getMessage()));
+        } catch (IllegalArgumentException e) {
+            e.printStackTrace();
+            return ResponseEntity.badRequest()
+                    .body(Collections.singletonMap("error", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/payment/success")
+    public String handlePaymentSuccess(@RequestParam("session_id") String sessionId, Authentication authentication, Model model) {
+        try {
+            Stripe.apiKey = stripeApiKey;
+
+            Session session = Session.retrieve(sessionId);
+            String auctionSlug = session.getMetadata().get("auction_slug");
+
+            Auction auction = auctionRepository.findBySlug(auctionSlug)
+                    .orElseThrow(() -> new IllegalArgumentException("Invalid auction slug: " + auctionSlug));
+            AuctionUser user = userRepository.findByEmail(authentication.getName())
+                    .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+            Long amountPaid = session.getAmountTotal();
+            BigDecimal finalPrice = BigDecimal.valueOf(amountPaid).divide(BigDecimal.valueOf(100));
+
+            if (auction.getStatus() != AuctionStatus.SOLD) {
+                auction.setStatus(AuctionStatus.SOLD);
+                auction.setBuyer(user);
+                auction.setHighestBid(finalPrice);
+                auctionRepository.save(auction);
+            } else {
+                // Handle the case where the auction is already sold
+                model.addAttribute("error", "This auction is already sold.");
+                return "error"; // Show an error page or message
+            }
+
+            model.addAttribute("session", session);
+
+            return "auctions/success";
+        } catch (StripeException e) {
+            e.printStackTrace();
+            model.addAttribute("error", "An error occurred while processing your payment.");
+            return "error";
+        } catch (Exception e) {
+            e.printStackTrace();
+            model.addAttribute("error", "An error occurred while retrieving auction details.");
+            return "error";
+        }
     }
 
     @GetMapping("/auctions/create")
@@ -115,12 +220,16 @@ public class AuctionController {
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
         Auction auction = auctionRepository.findBySlug(auctionSlug)
                 .orElseThrow(() -> new IllegalArgumentException("Invalid auction slug: " + auctionSlug));
-        if (auction.getEndTime().isBefore(LocalDateTime.now())) {
-            model.addAttribute("errorMessage", "This auction has ended.");
-            return "auctions/auction-expired";
+
+
+        if (auction.getStatus() != AuctionStatus.ACTIVE) {
+            model.addAttribute("errorMessage", "This auction is no longer active.");
+            return "auctions/auction-expired"; // Assuming you have a view for expired auctions
         }
+
         model.addAttribute("auction", auction);
         model.addAttribute("currentUser", user);
+        model.addAttribute("stripePublishableKey", stripePublishableKey);
         return "auctions/auction-detail";
     }
 
@@ -130,6 +239,11 @@ public class AuctionController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Auction not found"));
         AuctionUser currentUser = userRepository.findByEmail(authentication.getName())
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+        if (auction.getStatus() != AuctionStatus.ACTIVE) {
+            model.addAttribute("errorMessage", "This auction is no longer active.");
+            return "auctions/auction-expired";
+        }
 
         if (!currentUser.getId().equals(auction.getAuctionCreator().getId())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");

@@ -1,19 +1,22 @@
 package pl.use.auction;
 
+import com.stripe.exception.StripeException;
+import com.stripe.model.checkout.Session;
+import com.stripe.param.checkout.SessionCreateParams;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.multipart.MultipartFile;
-import pl.use.auction.model.Auction;
-import pl.use.auction.model.AuctionUser;
-import pl.use.auction.model.Category;
+import pl.use.auction.model.*;
 import pl.use.auction.repository.AuctionRepository;
 import pl.use.auction.repository.CategoryRepository;
+import pl.use.auction.repository.NotificationRepository;
 import pl.use.auction.repository.UserRepository;
 import pl.use.auction.service.AuctionService;
 import pl.use.auction.service.FileSystemStorageService;
+import pl.use.auction.service.StripeServiceWrapper;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -41,8 +44,74 @@ class AuctionServiceTest {
     @Mock
     private FileSystemStorageService fileSystemStorageService;
 
+    @Mock
+    private StripeServiceWrapper stripeServiceWrapper;
+
+    @Mock
+    private NotificationRepository notificationRepository;
+
     @InjectMocks
     private AuctionService auctionService;
+
+    @Test
+    public void updateStatusOfEndedAuctions() {
+        Auction auctionWithBidder = new Auction();
+        auctionWithBidder.setEndTime(LocalDateTime.now().minusDays(1));
+        auctionWithBidder.setStatus(AuctionStatus.ACTIVE);
+        auctionWithBidder.setTitle("Auction with bidder");
+        auctionWithBidder.setHighestBidder(new AuctionUser());
+
+        Auction auctionWithoutBidder = new Auction();
+        auctionWithoutBidder.setEndTime(LocalDateTime.now().minusDays(1));
+        auctionWithoutBidder.setStatus(AuctionStatus.ACTIVE);
+        auctionWithoutBidder.setTitle("Auction without bidder");
+
+        List<Auction> endedAuctions = Arrays.asList(auctionWithBidder, auctionWithoutBidder);
+
+        when(auctionRepository.findByEndTimeBeforeAndStatus(any(LocalDateTime.class), any(AuctionStatus.class)))
+                .thenReturn(endedAuctions);
+
+        auctionService.updateStatusOfEndedAuctions();
+
+        verify(auctionRepository).saveAll(endedAuctions);
+        verify(notificationRepository, times(1)).save(any(Notification.class));
+
+        assertEquals(AuctionStatus.AWAITING_PAYMENT, auctionWithBidder.getStatus());
+        assertEquals(AuctionStatus.EXPIRED, auctionWithoutBidder.getStatus());
+    }
+
+    @Test
+    public void testCreatePaymentIntent() throws StripeException {
+        BigDecimal buyNowPrice = new BigDecimal("100.00");
+        String currency = "USD";
+        String expectedClientSecret = "some_client_secret";
+
+        when(stripeServiceWrapper.createPaymentIntent(buyNowPrice, currency)).thenReturn(expectedClientSecret);
+
+        String clientSecret = auctionService.createPaymentIntent(buyNowPrice, currency);
+
+        assertEquals(expectedClientSecret, clientSecret);
+        verify(stripeServiceWrapper).createPaymentIntent(buyNowPrice, currency);
+    }
+
+    @Test
+    void testCreateCheckoutSession() throws StripeException {
+        String auctionSlug = "auction-slug";
+        BigDecimal auctionPrice = new BigDecimal("100.00");
+
+        Auction auction = new Auction();
+        auction.setSlug(auctionSlug);
+        auction.setCurrencyCode(CurrencyCode.USD);
+
+        when(auctionRepository.findBySlug(auctionSlug)).thenReturn(Optional.of(auction));
+        Session mockSession = mock(Session.class);
+        when(stripeServiceWrapper.createCheckoutSession(any(SessionCreateParams.class))).thenReturn(mockSession);
+
+        Session session = auctionService.createCheckoutSession(auctionSlug, auctionPrice);
+
+        assertNotNull(session);
+        verify(stripeServiceWrapper).createCheckoutSession(any(SessionCreateParams.class));
+    }
 
     @Test
     void testPlaceBid() {
@@ -112,27 +181,33 @@ class AuctionServiceTest {
 
     @Test
     void testFindCheapestAuctions() {
+        // Arrange
         AuctionUser auctionCreator1 = new AuctionUser();
         AuctionUser auctionCreator2 = new AuctionUser();
         AuctionUser auctionCreator3 = new AuctionUser();
 
         Auction auction1 = new Auction();
+        auction1.setEndTime(LocalDateTime.now().plusDays(1));
+        auction1.setStatus(AuctionStatus.ACTIVE);
         auction1.setHighestBid(new BigDecimal("100.00"));
         auction1.setAuctionCreator(auctionCreator1);
 
         Auction auction2 = new Auction();
+        auction2.setEndTime(LocalDateTime.now().plusDays(1));
+        auction2.setStatus(AuctionStatus.ACTIVE);
         auction2.setHighestBid(new BigDecimal("50.00"));
         auction2.setAuctionCreator(auctionCreator2);
 
         Auction auction3 = new Auction();
+        auction3.setEndTime(LocalDateTime.now().plusDays(1));
+        auction3.setStatus(AuctionStatus.ACTIVE);
         auction3.setHighestBid(new BigDecimal("75.00"));
         auction3.setAuctionCreator(auctionCreator3);
 
         List<Auction> auctions = Arrays.asList(auction1, auction2, auction3);
 
-        when(auctionRepository.findByEndTimeAfter(any(LocalDateTime.class))).thenReturn(auctions);
-
-        AuctionUser currentUser = new AuctionUser();
+        when(auctionRepository.findByEndTimeAfterAndStatusNot(any(LocalDateTime.class), any(AuctionStatus.class)))
+                .thenReturn(auctions);
 
         List<Auction> result = auctionService.findCheapestAuctions(2);
 
@@ -151,18 +226,25 @@ class AuctionServiceTest {
         Auction auction1 = new Auction();
         auction1.setHighestBid(new BigDecimal("100.00"));
         auction1.setAuctionCreator(auctionCreator1);
+        auction1.setEndTime(LocalDateTime.now().plusDays(1));
+        auction1.setStatus(AuctionStatus.ACTIVE);
 
         Auction auction2 = new Auction();
         auction2.setHighestBid(new BigDecimal("50.00"));
         auction2.setAuctionCreator(auctionCreator2);
+        auction2.setEndTime(LocalDateTime.now().plusDays(1));
+        auction2.setStatus(AuctionStatus.ACTIVE);
 
         Auction auction3 = new Auction();
         auction3.setHighestBid(new BigDecimal("75.00"));
         auction3.setAuctionCreator(auctionCreator3);
+        auction3.setEndTime(LocalDateTime.now().plusDays(1));
+        auction3.setStatus(AuctionStatus.ACTIVE);
 
         List<Auction> auctions = Arrays.asList(auction1, auction2, auction3);
 
-        when(auctionRepository.findByEndTimeAfter(any(LocalDateTime.class))).thenReturn(auctions);
+        when(auctionRepository.findByEndTimeAfterAndStatusNot(any(LocalDateTime.class), eq(AuctionStatus.SOLD)))
+                .thenReturn(auctions);
 
         AuctionUser currentUser = new AuctionUser();
 
@@ -211,7 +293,7 @@ class AuctionServiceTest {
         assertTrue(savedAuction.getStartTime().isBefore(savedAuction.getEndTime()));
         assertEquals(new BigDecimal("50.00"), savedAuction.getStartingPrice());
         assertEquals(BigDecimal.ZERO, savedAuction.getHighestBid());
-        assertEquals("ONGOING", savedAuction.getStatus());
+        assertEquals(AuctionStatus.ACTIVE, savedAuction.getStatus());
         assertNotNull(savedAuction.getSlug());
 
         String expectedImagePath = "auctionImages/image.jpg";
@@ -266,18 +348,18 @@ class AuctionServiceTest {
     void searchAuctions_WithoutCategory() {
         String query = "camera";
         String location = "";
-        LocalDateTime now = LocalDateTime.now();
+        AuctionStatus activeStatus = AuctionStatus.ACTIVE;
         List<Auction> expectedAuctions = List.of(new Auction());
 
-        when(auctionRepository.findByTitleContainingIgnoreCaseAndLocationContainingIgnoreCaseAndEndTimeAfter(
-                eq(query), eq(location), any(LocalDateTime.class)))
+        when(auctionRepository.findByTitleContainingIgnoreCaseAndLocationContainingIgnoreCaseAndStatus(
+                eq(query), eq(location), eq(activeStatus)))
                 .thenReturn(expectedAuctions);
 
         List<Auction> result = auctionService.searchAuctions(query, location, "", "date");
 
         assertEquals(expectedAuctions, result);
-        verify(auctionRepository).findByTitleContainingIgnoreCaseAndLocationContainingIgnoreCaseAndEndTimeAfter(
-                eq(query), eq(location), any(LocalDateTime.class));
+        verify(auctionRepository).findByTitleContainingIgnoreCaseAndLocationContainingIgnoreCaseAndStatus(
+                eq(query), eq(location), eq(activeStatus));
     }
 
     @Test
@@ -285,6 +367,7 @@ class AuctionServiceTest {
         String query = "camera";
         String location = "";
         String categoryName = "Electronics";
+        AuctionStatus activeStatus = AuctionStatus.ACTIVE;
         Category category = new Category();
         category.setId(1L);
         category.setName(categoryName);
@@ -292,30 +375,32 @@ class AuctionServiceTest {
         List<Auction> expectedAuctions = List.of(new Auction());
 
         when(categoryRepository.findByName(categoryName)).thenReturn(Optional.of(category));
-        when(auctionRepository.findByTitleContainingIgnoreCaseAndLocationContainingIgnoreCaseAndCategoryIdInAndEndTimeAfter(
-                eq(query), eq(location), anyList(), any(LocalDateTime.class)))
+        when(auctionRepository.findByTitleContainingIgnoreCaseAndLocationContainingIgnoreCaseAndCategoryIdInAndStatus(
+                eq(query), eq(location), anyList(), eq(activeStatus)))
                 .thenReturn(expectedAuctions);
 
         List<Auction> result = auctionService.searchAuctions(query, location, categoryName, "date");
 
         assertEquals(expectedAuctions, result);
         verify(categoryRepository).findByName(categoryName);
-        verify(auctionRepository).findByTitleContainingIgnoreCaseAndLocationContainingIgnoreCaseAndCategoryIdInAndEndTimeAfter(
-                eq(query), eq(location), anyList(), any(LocalDateTime.class));
+        verify(auctionRepository).findByTitleContainingIgnoreCaseAndLocationContainingIgnoreCaseAndCategoryIdInAndStatus(
+                eq(query), eq(location), anyList(), eq(activeStatus));
     }
 
     @Test
     void searchAuctions_SortByDate() {
+        AuctionStatus activeStatus = AuctionStatus.ACTIVE;
         List<Auction> auctions = IntStream.range(0, 3)
                 .mapToObj(i -> {
                     Auction auction = new Auction();
                     auction.setStartTime(LocalDateTime.now().minusDays(i));
+                    auction.setStatus(activeStatus);
                     return auction;
                 })
                 .collect(Collectors.toList());
 
-        when(auctionRepository.findByTitleContainingIgnoreCaseAndLocationContainingIgnoreCaseAndEndTimeAfter(
-                anyString(), anyString(), any(LocalDateTime.class)))
+        when(auctionRepository.findByTitleContainingIgnoreCaseAndLocationContainingIgnoreCaseAndStatus(
+                anyString(), anyString(), eq(activeStatus)))
                 .thenReturn(auctions);
 
         List<Auction> result = auctionService.searchAuctions("", "", "", "date");
@@ -326,6 +411,7 @@ class AuctionServiceTest {
 
     @Test
     void searchAuctions_FilterByQuery() {
+        AuctionStatus activeStatus = AuctionStatus.ACTIVE;
         Category electronics = new Category();
         electronics.setId(1L);
         electronics.setName("Electronics");
@@ -348,8 +434,8 @@ class AuctionServiceTest {
         nonMatchingAuction.setStartingPrice(new BigDecimal("500.00"));
         nonMatchingAuction.setHighestBid(new BigDecimal("700.00"));
 
-        when(auctionRepository.findByTitleContainingIgnoreCaseAndLocationContainingIgnoreCaseAndEndTimeAfter(
-                anyString(), anyString(), any(LocalDateTime.class)))
+        when(auctionRepository.findByTitleContainingIgnoreCaseAndLocationContainingIgnoreCaseAndStatus(
+                anyString(), anyString(), eq(activeStatus)))
                 .thenReturn(List.of(matchingAuction));
 
         String query = "Camera";
@@ -359,12 +445,13 @@ class AuctionServiceTest {
         assertTrue(result.contains(matchingAuction), "The result should contain the matching auction.");
         assertFalse(result.contains(nonMatchingAuction), "The result should not contain the non-matching auction.");
 
-        verify(auctionRepository).findByTitleContainingIgnoreCaseAndLocationContainingIgnoreCaseAndEndTimeAfter(
-                eq(query), eq(""), any(LocalDateTime.class));
+        verify(auctionRepository).findByTitleContainingIgnoreCaseAndLocationContainingIgnoreCaseAndStatus(
+                eq(query), eq(""), eq(activeStatus));
     }
 
     @Test
     void searchAuctions_FilterByQueryAndCategory() {
+        AuctionStatus activeStatus = AuctionStatus.ACTIVE;
         Category electronics = new Category();
         electronics.setId(1L);
         electronics.setName("Electronics");
@@ -380,8 +467,8 @@ class AuctionServiceTest {
         matchingAuction.setHighestBid(new BigDecimal("150.00"));
 
         when(categoryRepository.findByName("Electronics")).thenReturn(Optional.of(electronics));
-        when(auctionRepository.findByTitleContainingIgnoreCaseAndLocationContainingIgnoreCaseAndCategoryIdInAndEndTimeAfter(
-                eq("Camera"), eq(""), anyList(), any(LocalDateTime.class)))
+        when(auctionRepository.findByTitleContainingIgnoreCaseAndLocationContainingIgnoreCaseAndCategoryIdInAndStatus(
+                eq("Camera"), eq(""), anyList(), eq(activeStatus)))
                 .thenReturn(List.of(matchingAuction));
 
         List<Auction> result = auctionService.searchAuctions("Camera", "", "Electronics", "date");
@@ -389,7 +476,7 @@ class AuctionServiceTest {
         assertEquals(1, result.size());
         assertTrue(result.contains(matchingAuction));
         verify(categoryRepository).findByName("Electronics");
-        verify(auctionRepository).findByTitleContainingIgnoreCaseAndLocationContainingIgnoreCaseAndCategoryIdInAndEndTimeAfter(
-                eq("Camera"), eq(""), anyList(), any(LocalDateTime.class));
+        verify(auctionRepository).findByTitleContainingIgnoreCaseAndLocationContainingIgnoreCaseAndCategoryIdInAndStatus(
+                eq("Camera"), eq(""), anyList(), eq(activeStatus));
     }
 }

@@ -1,17 +1,18 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
-  <title>User Profile</title>
+  <meta charset="UTF-8">
+  <title>My Purchases</title>
   <meta name="_csrf" th:content="${_csrf.token}"/>
   <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
   <link th:href="@{/css/search-bar.css}" rel="stylesheet" />
   <link th:href="@{/css/sidebar.css}" rel="stylesheet" />
-  <link th:href="@{/css/profile.css}" rel="stylesheet" />
+  <link th:href="@{/css/user-auctions.css}" rel="stylesheet" />
   <script th:src="@{/js/dropdown.js}"></script>
   <script th:src="@{/js/auction-search.js}"></script>
-  <script th:src="@{/js/profile.js}"></script>
 </head>
 <body>
+
 <nav class="navbar">
   <div class="search-container">
     <form action="/search" method="get" class="search-form">
@@ -48,38 +49,37 @@
 </nav>
 
 <div class="layout-container">
-  <div class="sidebar-container">
-    <div class="sidebar">
-      <h2>Auction Sections</h2>
-      <a href="/profile/user-auctions" class="sidebar-link">View My Listings</a>
-      <a href="/profile/purchase-auctions" class="sidebar-link">View My Purchases</a>
-      <a href="/profile/my-bids-and-watches" class="sidebar-link">View My Active Bids and Watches</a>
-    </div>
-    <div class="sidebar">
-      <h2>Account Sections</h2>
-      <a href="/profile/edit" class="sidebar-link">Edit Profile</a>
-      <a href="/profile/change-password" class="sidebar-link">Change Password</a>
-    </div>
-    <div class="sidebar">
-      <h2>Back Section</h2>
-      <a href="/home" class="sidebar-link">Go Back Home</a>
-    </div>
+  <div class="sidebar">
+    <!-- Sidebar links -->
+    <a href="/profile" class="sidebar-link">Back to Profile</a>
   </div>
   <div class="main-content">
-    <div class="profile-details">
-      <p><strong>Email:</strong> <span th:text="${currentUser.email}"></span></p>
-      <p><strong>Username:</strong> <span th:text="${currentUser.username}"></span></p>
-      <p><strong>First Name:</strong> <span th:text="${currentUser.firstName}"></span></p>
-      <p><strong>Last Name:</strong> <span th:text="${currentUser.lastName}"></span></p>
-      <p><strong>Location:</strong> <span th:text="${currentUser.location}"></span></p>
-      <p><strong>Phone Number:</strong> <span th:text="${currentUser.phoneNumber}"></span></p>
+    <div id="boughtAuctions" class="auction-list">
+      <div class="featured-auctions">
+        <div class="featured-auctions-title">
+          <img th:src="@{/auctionSectionImages/bought-auctions.webp}" alt="Bought Logo" class="featured-auctions-logo"/>
+          <h2>Bought Auctions</h2>
+        </div>
+        <div th:if="${boughtAuctions.isEmpty()}" class="no-auctions-message">
+          <div>No bought auctions to display.</div>
+        </div>
+        <div class="auction-items-container" th:unless="${boughtAuctions.isEmpty()}">
+          <div th:each="auction : ${boughtAuctions}" class="auction-item">
+            <img th:src="@{|/${auction.imageUrls[0]}|}" alt="Auction Image" class="auction-image"/>
+            <div class="auction-info">
+              <h3 th:text="${auction.title}">Auction Title</h3>
+              <div>Category: <span th:text="${auction.category.name}"></span></div>
+              <div>Ended: <span th:text="${#temporals.format(auction.endTime, 'yyyy-MM-dd HH:mm')}"></span></div>
+              <div>Final Price: <span th:text="${auction.highestBid}"></span></div>
+              <div>Seller: <span th:text="${auction.auctionCreator.username}">Seller's Name</span></div>
+              <div>Status: <span th:text="${auction.status}">Auction Status</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
-
-<div th:if="${message}" class="success-message">
-  <p th:text="${message}"></p>
-</div>
-
 </body>
+<script th:src="@{/js/show-user-auctions.js}"></script>
 </html>

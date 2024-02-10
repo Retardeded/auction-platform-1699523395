@@ -2,6 +2,8 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <title>Home</title>
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
     <link th:href="@{/css/search-bar.css}" rel="stylesheet" />
     <link th:href="@{/css/categories.css}" rel="stylesheet" />
     <link th:href="@{/css/featured-auction.css}" rel="stylesheet" />
@@ -35,8 +37,15 @@
                 </form>
             </div>
         </div>
+        <div class="notification-container">
+            <span class="notification-bell" onclick="toggleNotificationsDropdown()">🔔</span>
+            <span class="notification-count">0</span>
+            <div id="notificationDropdown" class="notification-dropdown-content" style="display: none;">
+            </div>
+        </div>
     </div>
 </nav>
+
 
 <div class="main-container">
     <div id="categories">

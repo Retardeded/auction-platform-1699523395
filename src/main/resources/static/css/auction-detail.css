@@ -1,5 +1,6 @@
 .container {
     position: relative;
+    padding: 10px 30px;
 }
 
 .breadcrumb {
@@ -30,18 +31,28 @@
     text-decoration: underline;
 }
 
-.auction-container {
+.content-container {
     display: flex;
-    justify-content: space-around;
-    align-items: stretch;
-    margin-bottom: 20px;
+    justify-content: center;
+    gap: 20px;
 }
 
-.custom-carousel-container {
-    width: 55%;
+.left-column {
+    width: 60%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.custom-carousel-container,
+.description-container {
+    width: 100%;
+    margin-bottom: 20px;
     border: 1px solid #ccc;
     padding: 10px;
     box-sizing: border-box;
+    border-radius: 4px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
 }
 
 .auction-info {
@@ -51,12 +62,18 @@
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
+    align-self: flex-start;
+    border-radius: 4px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
 }
 
-.auction-info h1, .auction-info p, .auction-info span, .auction-info input {
-    font-size: 1.2em;
+.auction-info h1, .auction-info input {
+    font-size: 1.5em;
     margin: 10px 0;
+}
+
+.auction-info p, .auction-info span{
+    font-size: 1.2em;
 }
 
 .auction-info input[type=number] {
@@ -99,7 +116,7 @@
   color: #c82333;
 }
 
-.detail-header {
+.detail-group {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -143,14 +160,13 @@
     margin-top: 20px;
 }
 
-
 .error-message {
     color: #dc3545;
     margin-top: 20px;
 }
 
 .custom-carousel-container {
-    width: 55%;
+    width: 100%;
     border: 1px solid #ccc;
     box-shadow: 0 2px 5px rgba(0,0,0,0.2);
     position: relative;
@@ -220,4 +236,23 @@
     flex-grow: 0;
     margin: 0;
     padding: 12px 20px;
+}
+
+.buy-now-button {
+    background-color: #5a2d82;
+    color: white;
+    border: none;
+    border-radius: 25px;
+    padding: 10px 20px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.buy-now-button:hover {
+    background-color: #4e2674;
+}
+
+.description-container {
+    margin:20px;
 }
