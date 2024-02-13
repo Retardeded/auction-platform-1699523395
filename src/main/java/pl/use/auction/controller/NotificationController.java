@@ -37,10 +37,8 @@ public class NotificationController {
         List<NotificationDTO> notificationDTOs = notifications.stream()
                 .map(notification -> new NotificationDTO(
                         notification.getId(),
-                        user.getEmail(),
                         notification.getDescription(),
-                        notification.getAction(),
-                        notification.isRead()))
+                        notification.getAction()))
                 .collect(Collectors.toList());
 
         return ResponseEntity.ok(notificationDTOs);

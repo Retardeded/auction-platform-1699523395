@@ -9,5 +9,7 @@ import java.util.List;
 public interface NotificationRepository extends JpaRepository<Notification, Long> {
     List<Notification> findByUserAndReadIsFalse(AuctionUser user);
 
+    List<Notification> findByUserAndDeliveredIsFalse(AuctionUser user);
+
     long countByUserAndReadIsFalse(AuctionUser user);
 }

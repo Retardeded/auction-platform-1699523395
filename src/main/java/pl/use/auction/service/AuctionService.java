@@ -1,11 +1,14 @@
 package pl.use.auction.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.stripe.exception.StripeException;
 import com.stripe.model.checkout.Session;
 import com.stripe.param.checkout.SessionCreateParams;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
@@ -47,6 +50,8 @@ public class AuctionService {
     @Autowired
     private NotificationRepository notificationRepository;
 
+    @Autowired NotificationService notificationService;
+
     @Value("${stripe.api.publishablekey}")
     private String stripePublishableKey;
 
@@ -55,6 +60,9 @@ public class AuctionService {
 
     @Autowired
     private StripeServiceWrapper stripeServiceWrapper;
+
+    @Autowired
+    private SimpMessagingTemplate messagingTemplate;
 
     public Session createCheckoutSession(String auctionSlug, BigDecimal auctionPrice) throws StripeException {
         Auction auction = auctionRepository.findBySlug(auctionSlug)
@@ -134,18 +142,13 @@ public class AuctionService {
     }
 
     @Scheduled(fixedRate = 60000) // This will run the method every 60 seconds.
-    public void updateStatusOfEndedAuctions() {
+    @Transactional
+    public void updateStatusOfEndedAuctions() throws JsonProcessingException {
         List<Auction> endedAuctions = auctionRepository.findByEndTimeBeforeAndStatus(LocalDateTime.now(), AuctionStatus.ACTIVE);
         for (Auction auction : endedAuctions) {
             if (auction.getHighestBidder() != null) {
                 auction.setStatus(AuctionStatus.AWAITING_PAYMENT);
-
-                Notification notification = new Notification();
-                notification.setUser(auction.getHighestBidder());
-                notification.setDescription("Congratulations! You are the highest bidder for the auction: " + auction.getTitle());
-                notification.setAction("Please see your bids to confirm your transaction.");
-                notification.setRead(false);
-                notificationRepository.save(notification);
+                notificationService.createAndSendNotification(auction);
             } else {
                 auction.setStatus(AuctionStatus.EXPIRED);
             }

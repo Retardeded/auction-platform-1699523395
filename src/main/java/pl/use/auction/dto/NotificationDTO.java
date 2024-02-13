@@ -9,8 +9,6 @@ import lombok.Setter;
 @AllArgsConstructor
 public class NotificationDTO {
     private Long id;
-    private String email;
     private String description;
     private String action;
-    private boolean read;
 }

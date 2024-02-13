@@ -20,4 +20,6 @@ public class Notification {
     private String action;
 
     private boolean read = false;
+
+    private boolean delivered = false;
 }
