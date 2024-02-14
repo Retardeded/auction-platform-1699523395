@@ -12,6 +12,7 @@ import pl.use.auction.repository.AuctionRepository;
 import pl.use.auction.repository.UserRepository;
 import pl.use.auction.service.UserService;
 
+import java.math.BigDecimal;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -100,6 +101,7 @@ public class ProfileController {
         model.addAttribute("watchedAuctions", observedAuctions);
         model.addAttribute("bidAuctions", highestBidAuctions);
         model.addAttribute("currentUser", currentUser);
+        model.addAttribute("zero", BigDecimal.ZERO);
 
         return "profile/my-bids-and-watches";
     }

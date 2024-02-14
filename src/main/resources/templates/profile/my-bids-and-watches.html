@@ -77,7 +77,17 @@
             <img th:src="@{|/${auction.imageUrls[0]}|}" alt="Auction Image" class="auction-image"/>
             <div class="auction-info">
               <h3 th:text="${auction.title}">Auction Title</h3>
+              <div>Category: <span th:text="${auction.category.name}"></span></div>
               <div>Ends: <span th:text="${#temporals.format(auction.endTime, 'yyyy-MM-dd HH:mm')}"></span></div>
+              <div>Starting Price: <span th:text="${auction.startingPrice}"></span> <span th:text="${auction.currencyCode}"></span></div>
+              <div>Highest Bid:
+                <span th:if="${auction.highestBid.compareTo(zero) == 0}">
+                  None
+                </span>
+                <span th:if="${auction.highestBid.compareTo(zero) != 0}">
+                  <span th:text="${auction.highestBid}"></span> <span th:text="${auction.currencyCode}"></span>
+                </span>
+              </div>
             </div>
 
             <div th:if="${auction.highestBidder == currentUser and auction.status == T(pl.use.auction.model.AuctionStatus).AWAITING_PAYMENT}">
@@ -88,10 +98,11 @@
             </div>
 
             <div class="price-details">
-              <div>Starting Price: <span th:text="${auction.startingPrice}"></span></div>
-              <div>Highest Bid: <span th:text="${auction.highestBid}"></span></div>
-              <div>Winning Bidder: <span th:text="${auction.highestBidder.username}"></span></div>
-              <div>Auction Status: <span th:text="${auction.status}"></span></div>
+              <div>Winning Bidder:
+                <span th:if="${auction.highestBidder != null}" th:text="${auction.highestBidder.username}"></span>
+                <span th:if="${auction.highestBidder == null}">No bidder</span>
+              </div>
+              <div>Status: <span th:text="${auction.status}"></span></div>
             </div>
 
           </a>
@@ -100,7 +111,6 @@
     </div>
 
     <div id="watchedAuctions" class="auction-list" style="display: none;">
-      <div class="featured-auctions">
         <div class="featured-auctions-title">
           <div class="featured-auctions-title">
             <img th:src="@{/auctionSectionImages/watched-auctions.webp}" alt="Watched Logo" class="featured-auctions-logo"/>
@@ -118,19 +128,32 @@
               <h3 th:text="${auction.title}">Auction Title</h3>
               <div>Category: <span th:text="${auction.category.name}"></span></div>
               <div>Ends: <span th:text="${#temporals.format(auction.endTime, 'yyyy-MM-dd HH:mm')}"></span></div>
-              <div>Starting Price: <span th:text="${auction.startingPrice}"></span></div>
-              <div>Highest Bid: <span th:text="${auction.highestBid}"></span></div>
+              <div>Starting Price: <span th:text="${auction.startingPrice}"></span> <span th:text="${auction.currencyCode}"></span></div>
+              <div>Highest Bid:
+                <span th:if="${auction.highestBid.compareTo(zero) == 0}">
+                  None
+                </span>
+                              <span th:if="${auction.highestBid.compareTo(zero) != 0}">
+                  <span th:text="${auction.highestBid}"></span> <span th:text="${auction.currencyCode}"></span>
+                </span>
+              </div>
             </div>
-            <div th:if="${auction.buyer != null}" class="auction-buyer-info">
-              <div>Current Bid: <span th:text="${auction.highestBid}">Current Price</span> <span th:text="${auction.currencyCode}"></span> </div>
+            <div class="price-details">
+            <div th:if="${auction.highestBidder == currentUser}">
+              <span class="winning-indicator">🏆 You are currently winning</span>
+            </div>
+            <div th:if="${auction.highestBidder != currentUser}" class="auction-buyer-info">
+              <div>Winning Bidder:
+                <span th:if="${auction.highestBidder != null}" th:text="${auction.highestBidder.username}"></span>
+                <span th:if="${auction.highestBidder == null}">No bidder</span>
+              </div>
+            </div>
+            <div class="auction-not-sold-message">
               <div>Status: <span th:text="${auction.status}">Auction Status</span></div>
             </div>
-            <div th:if="${auction.buyer == null}" class="auction-not-sold-message">
-              Not sold
-              <div>Status: <span th:text="${auction.status}">Auction Status</span></div>
             </div>
           </a>
-        </div>
+        </a>
       </div>
     </div>
 

@@ -160,10 +160,10 @@ public class DefaultUserConfig {
                 isFirstAuction = false; // Only for the first auction
             } else {
                 highestBid = startingPrice.add(BigDecimal.valueOf(random.nextInt(50) + 1));
+                auction.setHighestBidder(auctionBuyer);
             }
             auction.setBuyNowPrice(startingPrice.add(BigDecimal.valueOf(50)));
             auction.setHighestBid(highestBid);
-            auction.setHighestBidder(auctionBuyer);
 
             String statusString = (String) auctionInfo[4];
             AuctionStatus statusEnum = AuctionStatus.valueOf(statusString);
@@ -185,11 +185,6 @@ public class DefaultUserConfig {
             String mirroredImagePath = "auctionImages/" + baseImageName + "_mirrored.png";
             String rotatedImagePath = "auctionImages/" + baseImageName + "_rotated.png";
             auction.setImageUrls(List.of(originalImagePath, mirroredImagePath, rotatedImagePath));
-
-            if (auction.getEndTime().isBefore(LocalDateTime.now()) && auction.getStatus() != AuctionStatus.SOLD) {
-                auction.setStatus(AuctionStatus.EXPIRED);
-                auction.setBuyer(null);
-            }
 
             auctionRepository.save(auction);
         }

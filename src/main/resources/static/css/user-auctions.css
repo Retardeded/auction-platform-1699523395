@@ -125,3 +125,10 @@
 .buy-now-button:hover {
     background-color: #4e2674;
 }
+
+.winning-indicator {
+  color: green;
+  font-weight: bold;
+  display: inline-block;
+}
+
