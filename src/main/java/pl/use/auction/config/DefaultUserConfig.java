@@ -14,6 +14,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
@@ -78,20 +79,20 @@ public class DefaultUserConfig {
             AuctionUser bottomUser = createUserIfNotFound(userRepository, passwordEncoder, "bottom@gmail.com", "bottom", "bottom", "Wroclaw");
 
             if (auctionRepository.findByAuctionCreator(defaultUser).isEmpty()) {
-                createSampleAuctions(testUser, auctionRepository, defaultUser, categoryRepository);
+                createSampleAuctions(testUser, auctionRepository, defaultUser, categoryRepository, userRepository);
             }
             if (auctionRepository.findByAuctionCreator(anotherUser).isEmpty()) {
-                createSampleAuctions(testUser, auctionRepository, anotherUser, categoryRepository);
+                createSampleAuctions(testUser, auctionRepository, anotherUser, categoryRepository, userRepository);
             }
             if (auctionRepository.findByAuctionCreator(basicUser).isEmpty()) {
-                createSampleAuctions(testUser, auctionRepository, basicUser, categoryRepository);
+                createSampleAuctions(testUser, auctionRepository, basicUser, categoryRepository, userRepository);
             }
             if (auctionRepository.findByAuctionCreator(testUser).isEmpty()) {
-                createSampleAuctions(defaultUser, auctionRepository, testUser, categoryRepository);
+                createSampleAuctions(defaultUser, auctionRepository, testUser, categoryRepository, userRepository);
             }
 
             if (auctionRepository.findByAuctionCreator(testUser).isEmpty()) {
-                createSampleAuctions(defaultUser, auctionRepository, bottomUser, categoryRepository);
+                createSampleAuctions(defaultUser, auctionRepository, bottomUser, categoryRepository, userRepository);
             }
         };
     }
@@ -108,7 +109,7 @@ public class DefaultUserConfig {
         });
     }
 
-    private void createSampleAuctions(AuctionUser auctionBuyer, AuctionRepository auctionRepository, AuctionUser user, CategoryRepository categoryRepository) throws Exception {
+    private void createSampleAuctions(AuctionUser auctionBuyer, AuctionRepository auctionRepository, AuctionUser user, CategoryRepository categoryRepository, UserRepository userRepository) throws Exception {
         String userIdentifier = user.getUsername().toUpperCase();
         Random random = new Random();
 
@@ -144,9 +145,9 @@ public class DefaultUserConfig {
             long randomStartDays = ThreadLocalRandom.current().nextLong(-3, 0);
             LocalDateTime randomStartTime = now.plusDays(randomStartDays);
 
-            LocalDateTime nowPlusShortMoment = LocalDateTime.now().plusSeconds(30);
-            long randomEndDays = ThreadLocalRandom.current().nextLong(-2, 2);
-            LocalDateTime randomEndTime = nowPlusShortMoment.plusDays(randomEndDays);
+            LocalDateTime nowPlusShortMoment = LocalDateTime.now().plusHours(1).plusSeconds(30);
+            long randomHours = ThreadLocalRandom.current().nextLong(-2, 4);
+            LocalDateTime randomEndTime = nowPlusShortMoment.plusHours(randomHours);
 
             auction.setStartTime(randomStartTime);
             auction.setEndTime(randomEndTime);
@@ -163,6 +164,7 @@ public class DefaultUserConfig {
             auction.setBuyNowPrice(startingPrice.add(BigDecimal.valueOf(50)));
             auction.setHighestBid(highestBid);
             auction.setHighestBidder(auctionBuyer);
+
             String statusString = (String) auctionInfo[4];
             AuctionStatus statusEnum = AuctionStatus.valueOf(statusString);
             if (statusEnum == AuctionStatus.SOLD) {
@@ -171,7 +173,13 @@ public class DefaultUserConfig {
             auction.setStatus(statusEnum);
             auction.setAuctionCreator(user);
             auction.setLocation(user.getLocation());
+            if (!user.getObservedAuctions().contains(auction)) {
+                user.getObservedAuctions().add(auction);
+            }
 
+            if (!auction.getObservers().contains(user)) {
+                auction.getObservers().add(user);
+            }
             String baseImageName = ((String) auctionInfo[0]).replaceAll("\\s+", "_");
             String originalImagePath = "auctionImages/" + baseImageName + ".png";
             String mirroredImagePath = "auctionImages/" + baseImageName + "_mirrored.png";
@@ -179,11 +187,13 @@ public class DefaultUserConfig {
             auction.setImageUrls(List.of(originalImagePath, mirroredImagePath, rotatedImagePath));
 
             if (auction.getEndTime().isBefore(LocalDateTime.now()) && auction.getStatus() != AuctionStatus.SOLD) {
-                auction.setStatus(AuctionStatus.EXPIRED); // or use whatever status indicates unsold
-                auction.setBuyer(null); // Make sure buyer is null
+                auction.setStatus(AuctionStatus.EXPIRED);
+                auction.setBuyer(null);
             }
 
             auctionRepository.save(auction);
         }
+
+        userRepository.save(user);
     }
 }

@@ -7,7 +7,9 @@ import lombok.Setter;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Entity
 @Getter
@@ -37,7 +39,7 @@ public class Auction {
     private AuctionUser buyer;
 
     @ManyToMany(mappedBy = "observedAuctions")
-    private List<AuctionUser> observers;
+    private Set<AuctionUser> observers = new HashSet<>();
 
     @ElementCollection
     @CollectionTable(name = "auction_images", joinColumns = @JoinColumn(name = "auction_id"))

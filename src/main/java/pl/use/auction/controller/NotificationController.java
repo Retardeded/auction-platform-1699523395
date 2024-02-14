@@ -38,7 +38,8 @@ public class NotificationController {
                 .map(notification -> new NotificationDTO(
                         notification.getId(),
                         notification.getDescription(),
-                        notification.getAction()))
+                        notification.getActionUrl(),
+                        notification.getActionText()))
                 .collect(Collectors.toList());
 
         return ResponseEntity.ok(notificationDTOs);

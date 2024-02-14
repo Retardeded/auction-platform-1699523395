@@ -23,10 +23,8 @@ import pl.use.auction.repository.UserRepository;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -63,6 +61,8 @@ public class AuctionService {
 
     @Autowired
     private SimpMessagingTemplate messagingTemplate;
+
+    private final Map<String, LocalDateTime> notificationSentTimestamps = new ConcurrentHashMap<>();
 
     public Session createCheckoutSession(String auctionSlug, BigDecimal auctionPrice) throws StripeException {
         Auction auction = auctionRepository.findBySlug(auctionSlug)
@@ -141,10 +141,18 @@ public class AuctionService {
         return auctions;
     }
 
+    @Scheduled(fixedRate = 3 * 60 * 60 * 1000)
+    public void clearSentNotifications() {
+        notificationSentTimestamps.clear();
+    }
+
     @Scheduled(fixedRate = 60000) // This will run the method every 60 seconds.
     @Transactional
     public void updateStatusOfEndedAuctions() throws JsonProcessingException {
-        List<Auction> endedAuctions = auctionRepository.findByEndTimeBeforeAndStatus(LocalDateTime.now(), AuctionStatus.ACTIVE);
+        LocalDateTime now = LocalDateTime.now();
+        List<Auction> endedAuctions = auctionRepository.findByEndTimeBeforeAndStatus(now, AuctionStatus.ACTIVE);
+        List<Auction> endingSoonAuctions = auctionRepository.findByEndTimeBetweenAndStatus(now, now.plusHours(5), AuctionStatus.ACTIVE);
+
         for (Auction auction : endedAuctions) {
             if (auction.getHighestBidder() != null) {
                 auction.setStatus(AuctionStatus.AWAITING_PAYMENT);
@@ -153,6 +161,19 @@ public class AuctionService {
                 auction.setStatus(AuctionStatus.EXPIRED);
             }
         }
+
+        for (Auction auction : endingSoonAuctions) {
+            for (AuctionUser observer : auction.getObservers()) {
+                String key = auction.getId() + ":" + observer.getId();
+                LocalDateTime lastSent = notificationSentTimestamps.get(key);
+
+                if (lastSent == null || now.isAfter(lastSent.plusHours(3))) {
+                    notificationService.createAndSendEndingSoonNotification(auction, observer);
+                    notificationSentTimestamps.put(key, now);
+                }
+            }
+        }
+
         auctionRepository.saveAll(endedAuctions);
     }
 

@@ -17,7 +17,9 @@ public class Notification {
 
     private String description;
 
-    private String action;
+    private String actionUrl;
+
+    private String actionText;
 
     private boolean read = false;
 

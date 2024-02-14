@@ -9,6 +9,10 @@ import lombok.Setter;
 @AllArgsConstructor
 public class NotificationDTO {
     private Long id;
+
     private String description;
-    private String action;
+
+    private String actionUrl;
+
+    private String actionText;
 }

@@ -38,9 +38,9 @@ function displayNotifications(notifications) {
             const notificationElement = document.createElement('div');
             notificationElement.classList.add('notification-item');
             notificationElement.innerHTML = `
-                <div><strong>${notification.description}</strong></div>
-                <div><a href="/profile/my-bids-and-watches" class="notification-link">${notification.action}</a></div>
-            `;
+                    <div><strong>${notification.description}</strong></div>
+                    <div><a href="${notification.actionUrl}" class="notification-link">${notification.actionText}</a></div>
+                `;
             notificationDropdown.appendChild(notificationElement);
             const link = notificationElement.querySelector('.notification-link');
                     if (link) {
@@ -75,9 +75,9 @@ function showNotification(notification) {
     const notificationElement = document.createElement('div');
     notificationElement.classList.add('notification-item');
     notificationElement.innerHTML = `
-        <div><strong>${notification.description}</strong></div>
-        <div><a href="/profile/my-bids-and-watches" class="notification-link">${notification.action}</a></div>
-    `;
+            <div><strong>${notification.description}</strong></div>
+            <div><a href="${notification.actionUrl}" class="notification-link">${notification.actionText}</a></div>
+        `;
 
     notificationDropdown.appendChild(notificationElement);
 

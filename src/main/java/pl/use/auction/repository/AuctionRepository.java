@@ -45,4 +45,6 @@ public interface AuctionRepository extends JpaRepository<Auction, Long> {
     List<Auction> findByHighestBidderAndStatus(AuctionUser currentUser, AuctionStatus active);
 
     List<Auction> findByHighestBidderAndStatusIn(AuctionUser highestBidder, List<AuctionStatus> statuses);
+
+    List<Auction> findByEndTimeBetweenAndStatus(LocalDateTime now, LocalDateTime plusHours, AuctionStatus active);
 }
