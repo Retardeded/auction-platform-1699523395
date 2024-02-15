@@ -1,5 +1,6 @@
 package pl.use.auction;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.stripe.exception.StripeException;
 import com.stripe.model.checkout.Session;
 import com.stripe.param.checkout.SessionCreateParams;
@@ -54,7 +55,7 @@ class AuctionServiceTest {
     private AuctionService auctionService;
 
     @Test
-    public void updateStatusOfEndedAuctions() {
+    public void updateStatusOfEndedAuctions() throws JsonProcessingException {
         Auction auctionWithBidder = new Auction();
         auctionWithBidder.setEndTime(LocalDateTime.now().minusDays(1));
         auctionWithBidder.setStatus(AuctionStatus.ACTIVE);

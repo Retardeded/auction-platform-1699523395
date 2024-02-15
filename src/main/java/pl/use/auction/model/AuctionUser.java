@@ -8,6 +8,7 @@ import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -44,13 +45,13 @@ public class AuctionUser {
     @OneToMany(mappedBy = "highestBidder")
     private List<Auction> bidAuctions;
 
-    @ManyToMany
+    @ManyToMany(cascade = CascadeType.PERSIST)
     @JoinTable(
             name = "observed_auctions",
             joinColumns = @JoinColumn(name = "user_id"),
             inverseJoinColumns = @JoinColumn(name = "auction_id")
     )
-    private Set<Auction> observedAuctions;
+    private Set<Auction> observedAuctions = new HashSet<>();
 
     @Override
     public String toString() {

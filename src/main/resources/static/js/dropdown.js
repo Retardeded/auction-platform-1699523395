@@ -23,36 +23,80 @@ function checkForNotifications() {
     fetch('/notifications')
         .then(response => response.json())
         .then(notifications => {
-            const notificationCountSpan = document.querySelector('.notification-count');
-            notificationCountSpan.textContent = notifications.length;
-
-            if (notifications.length > 0) {
-                const notificationDropdown = document.getElementById("notificationDropdown");
-                notificationDropdown.innerHTML = '';
-                notifications.forEach(notification => {
-                    const notificationElement = document.createElement('div');
-                    notificationElement.classList.add('notification-item');
-                    notificationElement.innerHTML = `
-                        <div><strong>${notification.description}</strong></div>
-                        <div><a href="/profile/my-bids-and-watches" class="notification-link">${notification.action}</a></div>
-                    `;
-                    notificationDropdown.appendChild(notificationElement);
-
-                     const link = notificationElement.querySelector('.notification-link');
-                        if (link) {
-                            link.addEventListener('click', () => {
-                                markNotificationAsRead(notification.id, notificationElement);
-                            });
-                        }
-                });
-            }
+            displayNotifications(notifications);
         })
         .catch(error => console.error('Error fetching notifications:', error));
 }
 
-checkForNotifications();
+function displayNotifications(notifications) {
+    const notificationCountSpan = document.querySelector('.notification-count');
+    const notificationDropdown = document.getElementById("notificationDropdown");
+    notificationDropdown.innerHTML = '';
 
-setInterval(checkForNotifications, 60000);
+    notifications.forEach(notification => {
+        try {
+            const notificationElement = document.createElement('div');
+            notificationElement.classList.add('notification-item');
+            notificationElement.innerHTML = `
+                    <div><strong>${notification.description}</strong></div>
+                    <div><a href="${notification.actionUrl}" class="notification-link">${notification.actionText}</a></div>
+                `;
+            notificationDropdown.appendChild(notificationElement);
+            const link = notificationElement.querySelector('.notification-link');
+                    if (link) {
+                        link.addEventListener('click', () => {
+                            markNotificationAsRead(notification.id, notificationElement);
+                        });
+                    }
+        } catch (e) {
+            console.error('Error handling notification:', e);
+        }
+    });
+
+    notificationCountSpan.textContent = notificationDropdown.children.length;
+}
+
+function connect() {
+    var socket = new SockJS('/ws');
+    stompClient = Stomp.over(socket);
+    stompClient.connect({}, function(frame) {
+        console.log('Connected: ' + frame);
+        stompClient.subscribe('/user/queue/notifications', function(notification) {
+            showNotification(JSON.parse(notification.body));
+        });
+    });
+}
+
+function showNotification(notification) {
+    console.log("Received notification:", notification);
+    const notificationDropdown = document.getElementById("notificationDropdown");
+    const notificationCountSpan = document.querySelector('.notification-count');
+
+    const notificationElement = document.createElement('div');
+    notificationElement.classList.add('notification-item');
+    notificationElement.innerHTML = `
+            <div><strong>${notification.description}</strong></div>
+            <div><a href="${notification.actionUrl}" class="notification-link">${notification.actionText}</a></div>
+        `;
+
+    notificationDropdown.appendChild(notificationElement);
+
+     const link = notificationElement.querySelector('.notification-link');
+        if (link) {
+            link.addEventListener('click', () => {
+                markNotificationAsRead(notification.id, notificationElement);
+            });
+        }
+
+    notificationDropdown.style.display = 'block';
+    const currentCount = parseInt(notificationCountSpan.textContent, 10);
+    notificationCountSpan.textContent = currentCount + 1;
+}
+
+document.addEventListener('DOMContentLoaded', (event) => {
+    checkForNotifications();
+    connect();
+});
 
 function toggleNotificationsDropdown() {
     var notificationDropdown = document.getElementById("notificationDropdown");
