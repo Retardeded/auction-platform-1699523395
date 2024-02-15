@@ -78,12 +78,12 @@
   color: #c82333;
 }
 
-.price-details {
+.auction-info-status {
+    text-align: center;
     padding-right:50px;
 }
 
-.price-details div {
-  text-align: right;
+.auction-info-status div {
   margin: 5px 0;
 }
 
@@ -131,4 +131,5 @@
   font-weight: bold;
   display: inline-block;
 }
+
 
