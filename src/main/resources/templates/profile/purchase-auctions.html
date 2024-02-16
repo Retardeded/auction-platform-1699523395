@@ -2,9 +2,9 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
   <meta charset="UTF-8">
-  <title>My Purchases</title>
   <meta name="_csrf" th:content="${_csrf.token}"/>
   <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
+  <title>My Purchases</title>
   <link th:href="@{/css/search-bar.css}" rel="stylesheet" />
   <link th:href="@{/css/sidebar.css}" rel="stylesheet" />
   <link th:href="@{/css/user-auctions.css}" rel="stylesheet" />
@@ -96,8 +96,8 @@
               </div>
 
               <div th:if="${feedbackMap[auction.id] != null}" class="auction-feedback">
-                <p>Rating: <span th:text="${feedbackMap[auction.id].rating}"></span></p>
-                <p>Comment: <span th:text="${feedbackMap[auction.id].comment}"></span></p>
+                <p>Rating: <span th:text="${feedbackMap[auction.id].ratingByBuyer}"></span></p>
+                <p>Comment: <span th:text="${feedbackMap[auction.id].commentByBuyer}"></span></p>
               </div>
             </div>
           </div>

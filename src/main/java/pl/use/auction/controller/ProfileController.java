@@ -50,8 +50,16 @@ public class ProfileController {
                 .filter(auction -> auction.getStatus() != AuctionStatus.ACTIVE)
                 .collect(Collectors.toList());
 
+        Map<Long, TransactionFeedback> feedbackMap = new HashMap<>();
+
+        for (Auction auction : pastAuctions) {
+            transactionFeedbackRepository.findByAuction(auction).ifPresent(feedback ->
+                    feedbackMap.put(auction.getId(), feedback));
+        }
+
         model.addAttribute("ongoingAuctions", ongoingAuctions);
         model.addAttribute("pastAuctions", pastAuctions);
+        model.addAttribute("feedbackMap", feedbackMap);
 
         return "profile/user-auctions";
     }
@@ -203,42 +211,79 @@ public class ProfileController {
         AuctionUser currentUser = userRepository.findByEmail(authentication.getName())
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
+        String role = auction.getAuctionCreator().equals(currentUser) ? "seller" : "buyer";
+
         model.addAttribute("auction", auction);
         model.addAttribute("currentUser", currentUser);
+        model.addAttribute("role", role);
+
         return "profile/auction-feedback";
     }
 
-    @PostMapping("/rate-auction/{slug}")
+    @PostMapping("/rate-auction/{slug}/buyer")
     @ResponseBody
-    public ResponseEntity<?> submitFeedback(@PathVariable("slug") String auctionSlug,
-                                            @ModelAttribute TransactionFeedbackDTO transactionFeedbackDTO,
-                                            BindingResult result,
-                                            Authentication authentication) {
-        if (result.hasErrors()) {
-            String errorMessage = result.getAllErrors().toString();
-            return ResponseEntity.badRequest().body(errorMessage);
-        }
-
+    public ResponseEntity<?> submitBuyerFeedback(@PathVariable("slug") String auctionSlug,
+                                                 @ModelAttribute TransactionFeedbackDTO transactionFeedbackDTO,
+                                                 Authentication authentication) {
         Auction auction = auctionRepository.findBySlug(auctionSlug)
                 .orElseThrow(() -> new IllegalArgumentException("Invalid Auction slug: " + auctionSlug));
         AuctionUser buyer = userRepository.findByEmail(authentication.getName())
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
-        Optional<TransactionFeedback> existingFeedback = transactionFeedbackRepository.findByAuctionAndBuyer(auction, buyer);
-        if (existingFeedback.isPresent()) {
-            return ResponseEntity.badRequest().body("Feedback already submitted for this auction.");
+        TransactionFeedback feedback = transactionFeedbackRepository.findByAuction(auction)
+                .orElseGet(() -> {
+                    TransactionFeedback newFeedback = new TransactionFeedback();
+                    newFeedback.setAuction(auction);
+                    newFeedback.setSeller(auction.getAuctionCreator());
+                    newFeedback.setBuyer(buyer);
+                    return newFeedback;
+                });
+
+        if (feedback.getBuyer().equals(buyer)) {
+            if (feedback.getRatingByBuyer() != null) {
+                return ResponseEntity.badRequest().body("Feedback already submitted for this auction by the buyer.");
+            }
+            feedback.setCommentByBuyer(transactionFeedbackDTO.getComment());
+            feedback.setRatingByBuyer(transactionFeedbackDTO.getRating());
+        } else {
+            return ResponseEntity.badRequest().body("You are not authorized to submit feedback as the buyer for this auction.");
         }
 
-        AuctionUser seller = auction.getAuctionCreator();
+        transactionFeedbackRepository.save(feedback);
+        return ResponseEntity.ok().build();
+    }
 
-        TransactionFeedback transactionFeedback = new TransactionFeedback();
-        transactionFeedback.setAuction(auction);
-        transactionFeedback.setBuyer(buyer);
-        transactionFeedback.setSeller(seller);
-        transactionFeedback.setComment(transactionFeedbackDTO.getComment());
-        transactionFeedback.setRating(transactionFeedbackDTO.getRating());
-        transactionFeedbackRepository.save(transactionFeedback);
+    @PostMapping("/rate-auction/{slug}/seller")
+    @ResponseBody
+    public ResponseEntity<?> submitSellerFeedback(@PathVariable("slug") String auctionSlug,
+                                                  @ModelAttribute TransactionFeedbackDTO transactionFeedbackDTO,
+                                                  Authentication authentication) {
+        Auction auction = auctionRepository.findBySlug(auctionSlug)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid Auction slug: " + auctionSlug));
+        AuctionUser seller = userRepository.findByEmail(authentication.getName())
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
+        if (!auction.getAuctionCreator().equals(seller)) {
+            return ResponseEntity.badRequest().body("You are not authorized to submit feedback as the seller for this auction.");
+        }
+
+        TransactionFeedback feedback = transactionFeedbackRepository.findByAuction(auction)
+                .orElseGet(() -> {
+                    TransactionFeedback newFeedback = new TransactionFeedback();
+                    newFeedback.setAuction(auction);
+                    newFeedback.setSeller(seller);
+                    newFeedback.setBuyer(auction.getBuyer());
+                    return newFeedback;
+                });
+
+        if (feedback.getRatingBySeller() != null) {
+            return ResponseEntity.badRequest().body("Feedback already submitted for this auction by the seller.");
+        }
+
+        feedback.setCommentBySeller(transactionFeedbackDTO.getComment());
+        feedback.setRatingBySeller(transactionFeedbackDTO.getRating());
+
+        transactionFeedbackRepository.save(feedback);
         return ResponseEntity.ok().build();
     }
 }

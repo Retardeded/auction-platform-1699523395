@@ -53,6 +53,9 @@ function submitFeedback() {
         if(response.ok) {
             document.getElementById('feedbackModal').style.display = 'none';
             location.reload();
+            if (localStorage.getItem('activeTab') === 'soldAuctions') {
+                    showSoldAuctions();
+                  }
         } else {
             response.text().then(text => {
                 var feedbackContent = document.getElementById('feedbackContent');

@@ -5,7 +5,7 @@
 <body>
 <div class="container">
   <h1>Rate Auction</h1>
-  <form id="feedbackForm" th:action="@{'/rate-auction/' + ${auction.slug}}" method="post" class="feedback-form">
+  <form id="feedbackForm" th:action="@{'/rate-auction/' + ${auction.slug} + '/' + ${role}}" method="post" class="feedback-form">
     <input type="hidden" name="auctionId" th:value="${auction.id}" />
     <div class="form-group">
       <label for="rating" class="form-label">Rating:</label>

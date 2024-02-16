@@ -22,8 +22,10 @@ public class TransactionFeedback {
     @ManyToOne
     private AuctionUser seller;
 
-    private String comment;
+    private String commentByBuyer;
+    private Rating ratingByBuyer;
 
-    private Rating rating;
+    private String commentBySeller;
+    private Rating ratingBySeller;
 }
 
