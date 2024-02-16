@@ -1,14 +1,18 @@
 package pl.use.auction.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import pl.use.auction.dto.TransactionFeedbackDTO;
 import pl.use.auction.model.*;
 import pl.use.auction.repository.AuctionRepository;
+import pl.use.auction.repository.TransactionFeedbackRepository;
 import pl.use.auction.repository.UserRepository;
 import pl.use.auction.service.UserService;
 
@@ -27,6 +31,9 @@ public class ProfileController {
 
     @Autowired
     private AuctionRepository auctionRepository;
+
+    @Autowired
+    private TransactionFeedbackRepository transactionFeedbackRepository;
 
     @GetMapping("/profile/user-auctions")
     public String viewUserAuctions(Model model, Authentication authentication) {
@@ -57,8 +64,15 @@ public class ProfileController {
         model.addAttribute("currentUser", currentUser);
 
         List<Auction> boughtAuctions = auctionRepository.findByBuyer(currentUser);
+        Map<Long, TransactionFeedback> feedbackMap = new HashMap<>();
+
+        for (Auction auction : boughtAuctions) {
+            transactionFeedbackRepository.findByAuction(auction).ifPresent(feedback ->
+                    feedbackMap.put(auction.getId(), feedback));
+        }
 
         model.addAttribute("boughtAuctions", boughtAuctions);
+        model.addAttribute("feedbackMap", feedbackMap);
 
         return "profile/purchase-auctions";
     }
@@ -179,5 +193,52 @@ public class ProfileController {
         }
         model.addAttribute("user", user);
         return "profile/change-password";
+    }
+
+    @GetMapping("/rate-auction/{slug}")
+    public String showRatingPage(@PathVariable("slug") String auctionSlug, Model model, Authentication authentication) {
+        Auction auction = auctionRepository.findBySlug(auctionSlug)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid auction slug: " + auctionSlug));
+
+        AuctionUser currentUser = userRepository.findByEmail(authentication.getName())
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+        model.addAttribute("auction", auction);
+        model.addAttribute("currentUser", currentUser);
+        return "profile/auction-feedback";
+    }
+
+    @PostMapping("/rate-auction/{slug}")
+    @ResponseBody
+    public ResponseEntity<?> submitFeedback(@PathVariable("slug") String auctionSlug,
+                                            @ModelAttribute TransactionFeedbackDTO transactionFeedbackDTO,
+                                            BindingResult result,
+                                            Authentication authentication) {
+        if (result.hasErrors()) {
+            String errorMessage = result.getAllErrors().toString();
+            return ResponseEntity.badRequest().body(errorMessage);
+        }
+
+        Auction auction = auctionRepository.findBySlug(auctionSlug)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid Auction slug: " + auctionSlug));
+        AuctionUser buyer = userRepository.findByEmail(authentication.getName())
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+        Optional<TransactionFeedback> existingFeedback = transactionFeedbackRepository.findByAuctionAndBuyer(auction, buyer);
+        if (existingFeedback.isPresent()) {
+            return ResponseEntity.badRequest().body("Feedback already submitted for this auction.");
+        }
+
+        AuctionUser seller = auction.getAuctionCreator();
+
+        TransactionFeedback transactionFeedback = new TransactionFeedback();
+        transactionFeedback.setAuction(auction);
+        transactionFeedback.setBuyer(buyer);
+        transactionFeedback.setSeller(seller);
+        transactionFeedback.setComment(transactionFeedbackDTO.getComment());
+        transactionFeedback.setRating(transactionFeedbackDTO.getRating());
+        transactionFeedbackRepository.save(transactionFeedback);
+
+        return ResponseEntity.ok().build();
     }
 }
