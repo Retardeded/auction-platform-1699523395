@@ -103,7 +103,7 @@
                 <span th:if="${auction.highestBidder != null}" th:text="${auction.highestBidder.username}"></span>
                 <span th:if="${auction.highestBidder == null}">No bidder</span>
               </div>
-              <div>Status: <span th:text="${auction.status}"></span></div>
+              <div class="status-info">Status: <span th:text="${auction.status}">Auction Status</span></div>
             </div>
 
           </a>
@@ -143,14 +143,14 @@
             <div th:if="${auction.highestBidder == currentUser}">
               <span class="winning-indicator">🏆 You are currently winning</span>
             </div>
-            <div th:if="${auction.highestBidder != currentUser}" class="auction-buyer-info">
+            <div th:if="${auction.highestBidder != currentUser}" class="auction-info-right">
               <div>Winning Bidder:
                 <span th:if="${auction.highestBidder != null}" th:text="${auction.highestBidder.username}"></span>
                 <span th:if="${auction.highestBidder == null}">No bidder</span>
               </div>
             </div>
             <div class="auction-not-sold-message">
-              <div>Status: <span th:text="${auction.status}">Auction Status</span></div>
+              <div class="status-info">Status: <span th:text="${auction.status}">Auction Status</span></div>
             </div>
               <form th:action="@{'/remove-from-watchlist/' + ${auction.id}}" method="post" class="remove-watchlist-form">
                 <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />

@@ -132,4 +132,13 @@
   display: inline-block;
 }
 
+.user-link {
+    text-decoration: none;
+}
+
+.status-info {
+    padding: 10px 20px;
+    margin: 10px;
+}
+
 

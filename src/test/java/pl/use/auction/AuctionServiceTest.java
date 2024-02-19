@@ -17,6 +17,7 @@ import pl.use.auction.repository.NotificationRepository;
 import pl.use.auction.repository.UserRepository;
 import pl.use.auction.service.AuctionService;
 import pl.use.auction.service.FileSystemStorageService;
+import pl.use.auction.service.NotificationService;
 import pl.use.auction.service.StripeServiceWrapper;
 
 import java.io.IOException;
@@ -51,6 +52,9 @@ class AuctionServiceTest {
     @Mock
     private NotificationRepository notificationRepository;
 
+    @Mock
+    private NotificationService notificationService;
+
     @InjectMocks
     private AuctionService auctionService;
 
@@ -75,7 +79,7 @@ class AuctionServiceTest {
         auctionService.updateStatusOfEndedAuctions();
 
         verify(auctionRepository).saveAll(endedAuctions);
-        verify(notificationRepository, times(1)).save(any(Notification.class));
+        verify(notificationService, times(1)).createAndSendNotification(any(Auction.class));
 
         assertEquals(AuctionStatus.AWAITING_PAYMENT, auctionWithBidder.getStatus());
         assertEquals(AuctionStatus.EXPIRED, auctionWithoutBidder.getStatus());

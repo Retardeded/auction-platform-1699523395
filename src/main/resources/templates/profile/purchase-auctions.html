@@ -2,18 +2,20 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
   <meta charset="UTF-8">
-  <title>My Purchases</title>
   <meta name="_csrf" th:content="${_csrf.token}"/>
   <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
+  <title>My Purchases</title>
   <link th:href="@{/css/search-bar.css}" rel="stylesheet" />
   <link th:href="@{/css/sidebar.css}" rel="stylesheet" />
   <link th:href="@{/css/user-auctions.css}" rel="stylesheet" />
+  <link th:href="@{/css/auction-create.css}" rel="stylesheet"/>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.js"></script>
 
   <script th:src="@{/js/dropdown.js}"></script>
   <script th:src="@{/js/auction-search.js}"></script>
+  <script th:src="@{/js/auction-feedback.js}"></script>
 </head>
 <body>
 
@@ -74,8 +76,30 @@
               <h3 th:text="${auction.title}">Auction Title</h3>
               <div>Category: <span th:text="${auction.category.name}"></span></div>
               <div>Ended: <span th:text="${#temporals.format(auction.endTime, 'yyyy-MM-dd HH:mm')}"></span></div>
+              <div>Starting Price: <span th:text="${auction.startingPrice}"></span></div>
               <div>Final Price: <span th:text="${auction.highestBid}"></span></div>
-              <div>Seller: <span th:text="${auction.auctionCreator.username}">Seller's Name</span></div>
+            </div>
+            <div class="auction-info-status">
+
+              <div th:if="${feedbackMap[auction.id] == null}">
+                <button type="button" class="btn" th:data-auction-slug="${auction.slug}" onclick="openFeedbackModal(this)">Rate This Auction</button>
+
+                <div id="feedbackModal" class="modal">
+                  <div class="modal-content">
+                    <span class="close" onclick="closeFeedbackModal()">&times;</span>
+                    <div id="feedbackContent">
+                      <!-- The feedback form will be injected here -->
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div th:if="${feedbackMap[auction.id] != null}" class="auction-feedback">
+                <p>Rating: <span th:text="${feedbackMap[auction.id].ratingByBuyer}"></span></p>
+              </div>
+
+              <div>Bought for: <span th:text="${auction.highestBid}">Final Price</span> PLN</div>
+              <div>Seller: <a th:href="@{'/user/' + ${auction.auctionCreator.username}}" class="user-link" th:text="${auction.auctionCreator.username}">Buyer's Name</a></div>
               <div>Status: <span th:text="${auction.status}">Auction Status</span></div>
             </div>
           </div>
@@ -85,5 +109,4 @@
   </div>
 </div>
 </body>
-<script th:src="@{/js/show-user-auctions.js}"></script>
 </html>
