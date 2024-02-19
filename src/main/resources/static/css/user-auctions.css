@@ -132,4 +132,8 @@
   display: inline-block;
 }
 
+.user-link {
+    text-decoration: none;
+}
+
 

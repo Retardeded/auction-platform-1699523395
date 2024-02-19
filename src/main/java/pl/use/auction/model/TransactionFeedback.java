@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Getter
 @Setter
@@ -24,8 +26,10 @@ public class TransactionFeedback {
 
     private String commentByBuyer;
     private Rating ratingByBuyer;
+    private LocalDateTime dateOfBuyerFeedback;
 
     private String commentBySeller;
     private Rating ratingBySeller;
+    private LocalDateTime dateOfSellerFeedback;
 }
 

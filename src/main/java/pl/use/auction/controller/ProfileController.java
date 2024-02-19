@@ -1,6 +1,7 @@
 package pl.use.auction.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -8,6 +9,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import pl.use.auction.dto.TransactionFeedbackDTO;
 import pl.use.auction.model.*;
@@ -17,6 +19,7 @@ import pl.use.auction.repository.UserRepository;
 import pl.use.auction.service.UserService;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -126,6 +129,23 @@ public class ProfileController {
         model.addAttribute("zero", BigDecimal.ZERO);
 
         return "profile/my-bids-and-watches";
+    }
+
+    @GetMapping("/user/{username}")
+    public String viewUserProfile(@PathVariable("username") String username, Authentication authentication, Model model) {
+        String currentUserName = authentication.getName();
+        AuctionUser currentUser = userRepository.findByEmail(currentUserName)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        AuctionUser user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+
+        List<TransactionFeedback> feedbackList = transactionFeedbackRepository.findBySellerOrBuyer(user, user);
+
+        model.addAttribute("currentUser", currentUser);
+        model.addAttribute("profileUser", user);
+        model.addAttribute("feedbackList", feedbackList);
+
+        return "profile/user-profile";
     }
 
     @GetMapping("/profile")
@@ -245,6 +265,7 @@ public class ProfileController {
             }
             feedback.setCommentByBuyer(transactionFeedbackDTO.getComment());
             feedback.setRatingByBuyer(transactionFeedbackDTO.getRating());
+            feedback.setDateOfBuyerFeedback(LocalDateTime.now());
         } else {
             return ResponseEntity.badRequest().body("You are not authorized to submit feedback as the buyer for this auction.");
         }
@@ -282,6 +303,7 @@ public class ProfileController {
 
         feedback.setCommentBySeller(transactionFeedbackDTO.getComment());
         feedback.setRatingBySeller(transactionFeedbackDTO.getRating());
+        feedback.setDateOfSellerFeedback(LocalDateTime.now());
 
         transactionFeedbackRepository.save(feedback);
         return ResponseEntity.ok().build();
