@@ -59,7 +59,7 @@
   <div class="sidebar">
     <h2>Auction Sections</h2>
     <a href="#" class="sidebar-link" id="ongoingLink">Ongoing Auctions</a>
-    <a href="#" class="sidebar-link" id="soldLink">Sold Auctions</a>
+    <a href="#" class="sidebar-link" id="soldLink">Ended Auctions</a>
     <a href="/profile" class="sidebar-link">Back to Profile</a>
   </div>
   <div class="main-content">
@@ -107,11 +107,11 @@
         <div class="featured-auctions-title">
           <div class="featured-auctions-title">
             <img th:src="@{/auctionSectionImages/sold-auctions.png}" alt="Sold Logo" class="featured-auctions-logo"/>
-            <h2>Sold Auctions</h2>
+            <h2>Ended Auctions</h2>
           </div>
         </div>
         <div th:if="${pastAuctions.isEmpty()}" class="no-auctions-message">
-          <div>No sold auctions to display.</div>
+          <div>No ended auctions to display.</div>
         </div>
         <div class="auction-items-container" th:unless="${pastAuctions.isEmpty()}">
           <div th:each="auction : ${pastAuctions}" class="auction-item">
@@ -122,11 +122,11 @@
               <div>Category: <span th:text="${auction.category.name}"></span></div>
               <div>Ended: <span th:text="${#temporals.format(auction.endTime, 'yyyy-MM-dd HH:mm')}"></span></div>
               <div>Starting Price: <span th:text="${auction.startingPrice}"></span></div>
-              <div>Highest Bid: <span th:text="${auction.highestBid}"></span></div>
+              <div>Final Price: <span th:text="${auction.highestBid}"></span></div>
             </div>
             <div class="auction-info-status">
 
-            <div th:if="${auction.buyer != null}" class="auction-buyer-info">
+            <div th:if="${auction.buyer != null}" class="auction-info-right">
 
               <div th:if="${feedbackMap[auction.id] == null}">
                 <button type="button" class="btn" th:data-auction-slug="${auction.slug}" onclick="openFeedbackModal(this)">Rate This Auction</button>
@@ -147,8 +147,13 @@
 
               <div>Sold for: <span th:text="${auction.highestBid}">Final Price</span> PLN</div>
               <div>Buyer: <a th:href="@{'/user/' + ${auction.buyer.username}}" class="user-link" th:text="${auction.buyer.username}">Buyer's Name</a></div>
-              <div>Status: <span th:text="${auction.status}">Auction Status</span></div>
+              <div class="status-info">Status: <span th:text="${auction.status}">Auction Status</span></div>
             </div>
+
+              <div th:if="${auction.buyer == null}" class="auction-info-right">
+                <div class="status-info">Status: <span th:text="${auction.status}">Auction Status</span></div>
+              </div>
+
             </div>
           </div>
         </div>

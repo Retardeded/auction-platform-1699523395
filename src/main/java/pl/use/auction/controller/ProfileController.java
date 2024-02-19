@@ -141,9 +141,29 @@ public class ProfileController {
 
         List<TransactionFeedback> feedbackList = transactionFeedbackRepository.findBySellerOrBuyer(user, user);
 
+        long totalFeedback = feedbackList.size();
+        String cumulativeRating;
+
+        if (totalFeedback > 0) {
+            long positiveCount = feedbackList.stream().filter(f -> f.getRatingByBuyer() == Rating.POSITIVE || f.getRatingBySeller() == Rating.POSITIVE).count();
+            long neutralCount = feedbackList.stream().filter(f -> f.getRatingByBuyer() == Rating.NEUTRAL || f.getRatingBySeller() == Rating.NEUTRAL).count();
+            long negativeCount = feedbackList.stream().filter(f -> f.getRatingByBuyer() == Rating.NEGATIVE || f.getRatingBySeller() == Rating.NEGATIVE).count();
+
+            if (positiveCount >= neutralCount && positiveCount >= negativeCount) {
+                cumulativeRating = String.format("%.0f%% Positive", (positiveCount / (double) totalFeedback) * 100);
+            } else if (neutralCount > positiveCount && neutralCount >= negativeCount) {
+                cumulativeRating = String.format("%.0f%% Neutral", (neutralCount / (double) totalFeedback) * 100);
+            } else {
+                cumulativeRating = String.format("%.0f%% Negative", (negativeCount / (double) totalFeedback) * 100);
+            }
+        } else {
+            cumulativeRating = "No feedback so far.";
+        }
+
         model.addAttribute("currentUser", currentUser);
         model.addAttribute("profileUser", user);
         model.addAttribute("feedbackList", feedbackList);
+        model.addAttribute("cumulativeRating", cumulativeRating);
 
         return "profile/user-profile";
     }
