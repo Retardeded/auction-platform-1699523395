@@ -16,6 +16,7 @@ import pl.use.auction.model.*;
 import pl.use.auction.repository.AuctionRepository;
 import pl.use.auction.repository.TransactionFeedbackRepository;
 import pl.use.auction.repository.UserRepository;
+import pl.use.auction.service.ProfileService;
 import pl.use.auction.service.UserService;
 
 import java.math.BigDecimal;
@@ -31,6 +32,9 @@ public class ProfileController {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private ProfileService profileService;
 
     @Autowired
     private AuctionRepository auctionRepository;
@@ -140,25 +144,9 @@ public class ProfileController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
         List<TransactionFeedback> feedbackList = transactionFeedbackRepository.findBySellerOrBuyer(user, user);
-
         long totalFeedback = feedbackList.size();
-        String cumulativeRating;
 
-        if (totalFeedback > 0) {
-            long positiveCount = feedbackList.stream().filter(f -> f.getRatingByBuyer() == Rating.POSITIVE || f.getRatingBySeller() == Rating.POSITIVE).count();
-            long neutralCount = feedbackList.stream().filter(f -> f.getRatingByBuyer() == Rating.NEUTRAL || f.getRatingBySeller() == Rating.NEUTRAL).count();
-            long negativeCount = feedbackList.stream().filter(f -> f.getRatingByBuyer() == Rating.NEGATIVE || f.getRatingBySeller() == Rating.NEGATIVE).count();
-
-            if (positiveCount >= neutralCount && positiveCount >= negativeCount) {
-                cumulativeRating = String.format("%.0f%% Positive", (positiveCount / (double) totalFeedback) * 100);
-            } else if (neutralCount > positiveCount && neutralCount >= negativeCount) {
-                cumulativeRating = String.format("%.0f%% Neutral", (neutralCount / (double) totalFeedback) * 100);
-            } else {
-                cumulativeRating = String.format("%.0f%% Negative", (negativeCount / (double) totalFeedback) * 100);
-            }
-        } else {
-            cumulativeRating = "No feedback so far.";
-        }
+        String cumulativeRating = profileService.calculateCumulativeRating(feedbackList, totalFeedback);
 
         model.addAttribute("currentUser", currentUser);
         model.addAttribute("profileUser", user);

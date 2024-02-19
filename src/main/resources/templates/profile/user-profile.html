@@ -70,9 +70,6 @@
                 <div class="cumulative-rating" th:text="${cumulativeRating}"></div>
             </div>
 
-            <div th:if="${feedbackList.isEmpty()}" class="no-feedback-message">
-                No feedback so far.
-            </div>
             <div th:each="feedback : ${feedbackList}" class="feedback-container">
                 <div th:if="${feedback.seller == profileUser}" class="feedback-item">
                     <div class="feedback-header">

@@ -47,14 +47,14 @@ public class NotificationControllerTest {
         notification1.setId(1L);
         notification1.setUser(currentUser);
         notification1.setDescription("Notification 1");
-        notification1.setAction("Action 1");
+        notification1.setActionText("Action 1");
         notification1.setRead(false);
 
         Notification notification2 = new Notification();
         notification2.setId(2L);
         notification2.setUser(currentUser);
         notification2.setDescription("Notification 2");
-        notification2.setAction("Action 2");
+        notification2.setActionText("Action 2");
         notification2.setRead(false);
 
         List<Notification> notifications = List.of(notification1, notification2);

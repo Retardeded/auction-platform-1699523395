@@ -27,7 +27,6 @@ public class TransactionFeedback {
     private String commentByBuyer;
     private Rating ratingByBuyer;
     private LocalDateTime dateOfBuyerFeedback;
-
     private String commentBySeller;
     private Rating ratingBySeller;
     private LocalDateTime dateOfSellerFeedback;

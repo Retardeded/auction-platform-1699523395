@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -17,21 +18,19 @@ import org.thymeleaf.spring6.SpringTemplateEngine;
 import org.thymeleaf.spring6.view.ThymeleafViewResolver;
 import org.thymeleaf.templateresolver.ClassLoaderTemplateResolver;
 import pl.use.auction.controller.ProfileController;
-import pl.use.auction.model.Auction;
-import pl.use.auction.model.AuctionStatus;
-import pl.use.auction.model.AuctionUser;
-import pl.use.auction.model.PasswordChangeResult;
+import pl.use.auction.dto.TransactionFeedbackDTO;
+import pl.use.auction.model.*;
+import pl.use.auction.repository.TransactionFeedbackRepository;
 import pl.use.auction.repository.UserRepository;
 import pl.use.auction.repository.AuctionRepository;
+import pl.use.auction.service.ProfileService;
 import pl.use.auction.service.UserService;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.*;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -49,7 +48,13 @@ public class ProfileControllerTest {
     private UserService userService;
 
     @Mock
+    private ProfileService profileService;
+
+    @Mock
     private AuctionRepository auctionRepository;
+
+    @Mock
+    private TransactionFeedbackRepository transactionFeedbackRepository;
 
     @Mock
     private Authentication authentication;
@@ -371,6 +376,159 @@ public class ProfileControllerTest {
         verify(model).addAttribute("currentUser", currentUser);
 
         assertEquals("profile/my-bids-and-watches", viewName);
+    }
+
+    private AuctionUser createSpecificUser(String username) {
+        AuctionUser user = new AuctionUser();
+        user.setUsername(username);
+        // Set other necessary fields
+        return user;
+    }
+
+    @Test
+    void testViewUserProfile() {
+        String currentUserName = "user@example.com";
+        String profileUsername = "profileUser";
+        AuctionUser currentUser = createSpecificUser(currentUserName);
+        AuctionUser profileUser = createSpecificUser(profileUsername);
+        List<TransactionFeedback> feedbackList = List.of();
+        String cumulativeRating = "80% Positive";
+
+        when(authentication.getName()).thenReturn(currentUserName);
+        when(userRepository.findByEmail(currentUserName)).thenReturn(Optional.of(currentUser));
+        when(userRepository.findByUsername(profileUsername)).thenReturn(Optional.of(profileUser));
+        when(transactionFeedbackRepository.findBySellerOrBuyer(profileUser, profileUser)).thenReturn(feedbackList);
+        when(profileService.calculateCumulativeRating(feedbackList, feedbackList.size())).thenReturn(cumulativeRating);
+
+        String viewName = profileController.viewUserProfile(profileUsername, authentication, model);
+
+        verify(userRepository).findByEmail(currentUserName);
+        verify(userRepository).findByUsername(profileUsername);
+        verify(transactionFeedbackRepository).findBySellerOrBuyer(profileUser, profileUser);
+        verify(model).addAttribute("currentUser", currentUser);
+        verify(model).addAttribute("profileUser", profileUser);
+        verify(model).addAttribute("feedbackList", feedbackList);
+        verify(model).addAttribute("cumulativeRating", cumulativeRating);
+
+        assertEquals("profile/user-profile", viewName);
+    }
+
+    @Test
+    void testShowRatingPageAsSeller() {
+        String auctionSlug = "unique-auction-slug";
+        Auction auction = new Auction();
+        auction.setSlug(auctionSlug);
+        AuctionUser seller = new AuctionUser();
+        auction.setAuctionCreator(seller);
+
+        when(authentication.getName()).thenReturn(seller.getEmail());
+        when(auctionRepository.findBySlug(auctionSlug)).thenReturn(Optional.of(auction));
+        when(userRepository.findByEmail(seller.getEmail())).thenReturn(Optional.of(seller));
+
+        String viewName = profileController.showRatingPage(auctionSlug, model, authentication);
+
+        verify(auctionRepository).findBySlug(auctionSlug);
+        verify(userRepository).findByEmail(seller.getEmail());
+        verify(model).addAttribute("auction", auction);
+        verify(model).addAttribute("currentUser", seller);
+        verify(model).addAttribute("role", "seller");
+
+        assertEquals("profile/auction-feedback", viewName);
+    }
+
+    @Test
+    void testShowRatingPageAsBuyer() {
+        String auctionSlug = "unique-auction-slug";
+        Auction auction = new Auction();
+        AuctionUser buyer = new AuctionUser();
+        AuctionUser seller = new AuctionUser();
+        auction.setAuctionCreator(seller);
+
+        when(authentication.getName()).thenReturn(buyer.getEmail());
+        when(auctionRepository.findBySlug(auctionSlug)).thenReturn(Optional.of(auction));
+        when(userRepository.findByEmail(buyer.getEmail())).thenReturn(Optional.of(buyer));
+
+        String viewName = profileController.showRatingPage(auctionSlug, model, authentication);
+
+        verify(auctionRepository).findBySlug(auctionSlug);
+        verify(userRepository).findByEmail(buyer.getEmail());
+        verify(model).addAttribute("auction", auction);
+        verify(model).addAttribute("currentUser", buyer);
+        verify(model).addAttribute("role", "buyer");
+
+        assertEquals("profile/auction-feedback", viewName);
+    }
+
+    @Test
+    void testSubmitBuyerFeedback_Success() {
+        String auctionSlug = "test-slug";
+        Auction auction = new Auction();
+        auction.setSlug(auctionSlug);
+        AuctionUser buyer = new AuctionUser();
+        buyer.setEmail("buyer@example.com");
+        AuctionUser seller = new AuctionUser();
+        auction.setAuctionCreator(seller);
+
+        TransactionFeedbackDTO transactionFeedbackDTO = new TransactionFeedbackDTO();
+        transactionFeedbackDTO.setComment("Great transaction!");
+        transactionFeedbackDTO.setRating(Rating.POSITIVE);
+
+        when(authentication.getName()).thenReturn(buyer.getEmail());
+
+        when(auctionRepository.findBySlug(auctionSlug)).thenReturn(Optional.of(auction));
+        when(userRepository.findByEmail(buyer.getEmail())).thenReturn(Optional.of(buyer));
+        when(transactionFeedbackRepository.findByAuction(auction)).thenReturn(Optional.empty());
+
+        ResponseEntity<?> response = profileController.submitBuyerFeedback(auctionSlug, transactionFeedbackDTO, authentication);
+
+        verify(transactionFeedbackRepository).save(any(TransactionFeedback.class));
+        assertEquals(200, response.getStatusCodeValue());
+    }
+
+    @Test
+    void testSubmitBuyerFeedback_AuctionNotFound() {
+        String auctionSlug = "test-slug";
+        Auction auction = new Auction();
+        auction.setSlug(auctionSlug);
+        AuctionUser buyer = new AuctionUser();
+        buyer.setEmail("buyer@example.com");
+        AuctionUser seller = new AuctionUser();
+        auction.setAuctionCreator(seller);
+
+        TransactionFeedbackDTO transactionFeedbackDTO = new TransactionFeedbackDTO();
+        transactionFeedbackDTO.setComment("Great transaction!");
+        transactionFeedbackDTO.setRating(Rating.POSITIVE);
+
+        when(auctionRepository.findBySlug(anyString())).thenThrow(new IllegalArgumentException("Invalid Auction slug: " + auction.getSlug()));
+
+        Exception exception = assertThrows(IllegalArgumentException.class, () ->
+                profileController.submitBuyerFeedback(auction.getSlug(), transactionFeedbackDTO, authentication));
+
+        assertEquals("Invalid Auction slug: " + auction.getSlug(), exception.getMessage());
+    }
+
+    @Test
+    void testSubmitSellerFeedback_Success() {
+        String auctionSlug = "test-slug";
+        Auction auction = new Auction();
+        auction.setSlug(auctionSlug);
+        AuctionUser seller = new AuctionUser();
+        seller.setEmail("seller@example.com");
+        auction.setAuctionCreator(seller);
+
+        TransactionFeedbackDTO transactionFeedbackDTO = new TransactionFeedbackDTO();
+        transactionFeedbackDTO.setComment("Excellent buyer!");
+        transactionFeedbackDTO.setRating(Rating.POSITIVE);
+
+        when(authentication.getName()).thenReturn(seller.getEmail());
+        when(auctionRepository.findBySlug(auctionSlug)).thenReturn(Optional.of(auction));
+        when(userRepository.findByEmail(seller.getEmail())).thenReturn(Optional.of(seller));
+        when(transactionFeedbackRepository.findByAuction(auction)).thenReturn(Optional.empty());
+
+        ResponseEntity<?> response = profileController.submitSellerFeedback(auctionSlug, transactionFeedbackDTO, authentication);
+
+        verify(transactionFeedbackRepository).save(any(TransactionFeedback.class));
+        assertEquals(200, response.getStatusCodeValue());
     }
 
 }
