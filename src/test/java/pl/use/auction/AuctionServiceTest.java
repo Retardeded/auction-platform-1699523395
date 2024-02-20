@@ -1,6 +1,7 @@
 package pl.use.auction;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.stripe.exception.AuthenticationException;
 import com.stripe.exception.StripeException;
 import com.stripe.model.checkout.Session;
 import com.stripe.param.checkout.SessionCreateParams;
@@ -9,6 +10,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.multipart.MultipartFile;
 import pl.use.auction.model.*;
 import pl.use.auction.repository.AuctionRepository;
@@ -79,10 +82,98 @@ class AuctionServiceTest {
         auctionService.updateStatusOfEndedAuctions();
 
         verify(auctionRepository).saveAll(endedAuctions);
-        verify(notificationService, times(1)).createAndSendNotification(any(Auction.class));
+        verify(notificationService, times(1)).createAndSendNotificationForEndedAuction(any(Auction.class));
 
         assertEquals(AuctionStatus.AWAITING_PAYMENT, auctionWithBidder.getStatus());
         assertEquals(AuctionStatus.EXPIRED, auctionWithoutBidder.getStatus());
+    }
+
+    @Test
+    void proceedToPayment_Successful() throws StripeException {
+        String auctionSlug = "test-slug";
+        BigDecimal auctionPrice = new BigDecimal("100.00");
+
+        Auction auction = new Auction();
+        auction.setSlug(auctionSlug);
+
+        Session session = mock(Session.class);
+        when(session.getUrl()).thenReturn("http://example.com/payment");
+
+        when(auctionRepository.findBySlug(auctionSlug)).thenReturn(Optional.of(auction));
+
+        when(stripeServiceWrapper.createCheckoutSession(any(SessionCreateParams.class))).thenReturn(session);
+
+        ResponseEntity<?> response = auctionService.proceedToPayment(auctionSlug, auctionPrice);
+
+        assertEquals(HttpStatus.FOUND, response.getStatusCode());
+        assertEquals("http://example.com/payment", response.getHeaders().getLocation().toString());
+    }
+
+    @Test
+    void proceedToPayment_StripeException() throws Exception {
+        String auctionSlug = "test-slug";
+        BigDecimal auctionPrice = new BigDecimal("100.00");
+        Auction auction = new Auction();
+        auction.setSlug(auctionSlug);
+
+        AuthenticationException stripeException = new AuthenticationException("Stripe error", null, null, null);
+
+        when(auctionRepository.findBySlug(auctionSlug)).thenReturn(Optional.of(auction));
+        when(stripeServiceWrapper.createCheckoutSession(any(SessionCreateParams.class)))
+                .thenThrow(stripeException);
+
+        ResponseEntity<?> response = auctionService.proceedToPayment(auctionSlug, auctionPrice);
+
+        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
+        assertTrue(response.getBody().toString().contains("Error creating Stripe Checkout session"));
+    }
+
+    @Test
+    void proceedToPayment_IllegalArgumentException() {
+        String auctionSlug = "invalid-slug";
+        BigDecimal auctionPrice = new BigDecimal("100.00");
+
+        when(auctionRepository.findBySlug(auctionSlug)).thenThrow(new IllegalArgumentException("Invalid auction slug: " + auctionSlug));
+
+        ResponseEntity<?> response = auctionService.proceedToPayment(auctionSlug, auctionPrice);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertTrue(response.getBody().toString().contains("Invalid auction slug: " + auctionSlug));
+    }
+
+    @Test
+    void createCheckoutSession_Successful() throws Exception {
+        String auctionSlug = "test-auction";
+        BigDecimal auctionPrice = new BigDecimal("100.00");
+        Auction auction = new Auction();
+        auction.setSlug(auctionSlug);
+        auction.setCurrencyCode(CurrencyCode.USD); // Assuming CurrencyCode is an enum or similar
+
+        Session mockSession = mock(Session.class);
+        when(mockSession.getUrl()).thenReturn("http://example.com/checkout");
+
+        when(stripeServiceWrapper.createCheckoutSession(any(SessionCreateParams.class))).thenReturn(mockSession);
+
+        Session resultSession = auctionService.createCheckoutSession(auction, auctionPrice);
+
+        assertNotNull(resultSession);
+        assertEquals("http://example.com/checkout", resultSession.getUrl());
+    }
+
+    @Test
+    void handleCheckoutSessionCreation_AuctionNotFound() {
+        String auctionSlug = "nonexistent-auction";
+        BigDecimal auctionPrice = new BigDecimal("100.00");
+
+        when(auctionRepository.findBySlug(auctionSlug)).thenReturn(Optional.empty());
+
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+            Auction auction = auctionRepository.findBySlug(auctionSlug)
+                    .orElseThrow(() -> new IllegalArgumentException("Invalid auction slug: " + auctionSlug));
+            auctionService.createCheckoutSession(auction, auctionPrice);
+        });
+
+        assertEquals("Invalid auction slug: " + auctionSlug, exception.getMessage());
     }
 
     @Test
@@ -100,22 +191,53 @@ class AuctionServiceTest {
     }
 
     @Test
-    void testCreateCheckoutSession() throws StripeException {
-        String auctionSlug = "auction-slug";
-        BigDecimal auctionPrice = new BigDecimal("100.00");
-
+    void finalizeAuctionSale_Successful() {
+        String auctionSlug = "valid-auction";
+        AuctionUser buyer = new AuctionUser();
+        BigDecimal finalPrice = new BigDecimal("100.00");
         Auction auction = new Auction();
-        auction.setSlug(auctionSlug);
-        auction.setCurrencyCode(CurrencyCode.USD);
+        auction.setStatus(AuctionStatus.ACTIVE); // Ensure the auction is not already sold
 
         when(auctionRepository.findBySlug(auctionSlug)).thenReturn(Optional.of(auction));
-        Session mockSession = mock(Session.class);
-        when(stripeServiceWrapper.createCheckoutSession(any(SessionCreateParams.class))).thenReturn(mockSession);
 
-        Session session = auctionService.createCheckoutSession(auctionSlug, auctionPrice);
+        auctionService.finalizeAuctionSale(auctionSlug, buyer, finalPrice);
 
-        assertNotNull(session);
-        verify(stripeServiceWrapper).createCheckoutSession(any(SessionCreateParams.class));
+        assertEquals(AuctionStatus.SOLD, auction.getStatus());
+        assertEquals(buyer, auction.getBuyer());
+        assertEquals(finalPrice, auction.getHighestBid());
+        verify(auctionRepository).save(auction);
+    }
+
+    @Test
+    void finalizeAuctionSale_AuctionNotFound() {
+        String auctionSlug = "nonexistent-auction";
+        AuctionUser buyer = new AuctionUser(); // Assume initialized
+        BigDecimal finalPrice = new BigDecimal("100.00");
+
+        when(auctionRepository.findBySlug(auctionSlug)).thenReturn(Optional.empty());
+
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+            auctionService.finalizeAuctionSale(auctionSlug, buyer, finalPrice);
+        });
+
+        assertEquals("Invalid auction slug: " + auctionSlug, exception.getMessage());
+    }
+
+    @Test
+    void finalizeAuctionSale_AuctionAlreadySold() {
+        String auctionSlug = "sold-auction";
+        AuctionUser buyer = new AuctionUser(); // Assume initialized
+        BigDecimal finalPrice = new BigDecimal("100.00");
+        Auction auction = new Auction();
+        auction.setStatus(AuctionStatus.SOLD);
+
+        when(auctionRepository.findBySlug(auctionSlug)).thenReturn(Optional.of(auction));
+
+        Exception exception = assertThrows(IllegalStateException.class, () -> {
+            auctionService.finalizeAuctionSale(auctionSlug, buyer, finalPrice);
+        });
+
+        assertEquals("This auction is already sold.", exception.getMessage());
     }
 
     @Test

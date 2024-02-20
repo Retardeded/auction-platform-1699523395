@@ -1,8 +1,8 @@
 package pl.use.auction;
 
-import com.stripe.exception.InvalidRequestException;
+import com.stripe.exception.AuthenticationException;
+import com.stripe.exception.StripeException;
 import com.stripe.model.checkout.Session;
-import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -22,7 +22,6 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap;
 import pl.use.auction.controller.AuctionController;
 import pl.use.auction.model.*;
 import pl.use.auction.repository.AuctionRepository;
-import pl.use.auction.repository.CategoryRepository;
 import pl.use.auction.repository.UserRepository;
 import pl.use.auction.service.AuctionService;
 import pl.use.auction.service.CategoryService;
@@ -59,6 +58,8 @@ class AuctionControllerTest {
 
     @Mock
     private Authentication authentication;
+
+    private static final String STRIPE_API_KEY = "sk_test_123";
 
     @Test
     void testCreateAuctionForm() {
@@ -451,87 +452,133 @@ class AuctionControllerTest {
     }
 
     @Test
-    void buyNow_Successful() throws Exception {
+    void buyNow_PriceDoesNotMatch() {
+        String auctionSlug = "some-auction-slug";
+        BigDecimal buyNowPrice = new BigDecimal("500.00");
+        BigDecimal differentPrice = new BigDecimal("600.00");
+        Auction auction = new Auction();
+        auction.setSlug(auctionSlug);
+        auction.setBuyNowPrice(differentPrice);
+
+        when(auctionRepository.findBySlug(auctionSlug)).thenReturn(Optional.of(auction));
+
+        ResponseEntity<?> response = auctionController.buyNow(auctionSlug, buyNowPrice);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertTrue(response.getBody().toString().contains("The buy now price does not match."));
+    }
+
+    @Test
+    void buyNow_PriceMatches_ProceedToPayment() {
         String auctionSlug = "some-auction-slug";
         BigDecimal buyNowPrice = new BigDecimal("500.00");
         Auction auction = new Auction();
         auction.setSlug(auctionSlug);
-        auction.setCurrencyCode(CurrencyCode.USD);
+        auction.setBuyNowPrice(buyNowPrice);
 
         when(auctionRepository.findBySlug(auctionSlug)).thenReturn(Optional.of(auction));
-        when(auctionService.createPaymentIntent(buyNowPrice, auction.getCurrencyCode().toString())).thenReturn("test_client_secret");
+        when(auctionService.proceedToPayment(anyString(), any(BigDecimal.class)))
+                .thenReturn(ResponseEntity.ok().build());
 
-        ResponseEntity<?> response = auctionController.buyNow(auctionSlug, buyNowPrice, authentication);
+        ResponseEntity<?> response = auctionController.buyNow(auctionSlug, buyNowPrice);
+
+        verify(auctionService).proceedToPayment(eq(auctionSlug), eq(buyNowPrice));
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+    }
+    @Test
+    void finalizeAuctionPayment_Successful() throws Exception {
+        String auctionSlug = "valid-slug";
+        BigDecimal highestBidPrice = new BigDecimal("1000.00");
+        Auction auction = new Auction();
+        auction.setSlug(auctionSlug);
+        auction.setStatus(AuctionStatus.AWAITING_PAYMENT);
+        AuctionUser highestBidder = new AuctionUser();
+        auction.setHighestBidder(highestBidder);
+
+        when(auctionRepository.findBySlug(auctionSlug)).thenReturn(Optional.of(auction));
+        when(userRepository.findByEmail(anyString())).thenReturn(Optional.of(highestBidder));
+        when(authentication.getName()).thenReturn("highestBidder@example.com");
+        when(auctionService.proceedToPayment(anyString(), any(BigDecimal.class)))
+                .thenReturn(ResponseEntity.ok().build());
+
+        ResponseEntity<?> response = auctionController.finalizeAuctionPayment(auctionSlug, highestBidPrice, authentication);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertTrue(response.getBody() instanceof Map);
-        assertEquals("test_client_secret", ((Map)response.getBody()).get("clientSecret"));
+        verify(auctionService).proceedToPayment(auctionSlug, highestBidPrice);
     }
 
     @Test
-    void buyNow_StripeException() throws Exception {
-        String auctionSlug = "some-auction-slug";
-        BigDecimal buyNowPrice = new BigDecimal("500.00");
+    void finalizeAuctionPayment_AuctionNotFound() {
+        String auctionSlug = "invalid-slug";
+        BigDecimal highestBidPrice = new BigDecimal("1000.00");
+
+        when(auctionRepository.findBySlug(auctionSlug)).thenThrow(new IllegalArgumentException("Invalid auction slug: " + auctionSlug));
+
+        Exception exception = assertThrows(IllegalArgumentException.class, () ->
+                auctionController.finalizeAuctionPayment(auctionSlug, highestBidPrice, authentication));
+
+        assertEquals("Invalid auction slug: " + auctionSlug, exception.getMessage());
+    }
+
+    @Test
+    void finalizeAuctionPayment_Unauthorized() {
+        String auctionSlug = "valid-slug";
+        BigDecimal highestBidPrice = new BigDecimal("1000.00");
         Auction auction = new Auction();
-        auction.setCurrencyCode(CurrencyCode.PLN);
         auction.setSlug(auctionSlug);
+        auction.setStatus(AuctionStatus.ACTIVE); // Not awaiting payment
+        AuctionUser currentUser = new AuctionUser();
 
         when(auctionRepository.findBySlug(auctionSlug)).thenReturn(Optional.of(auction));
-        when(auctionService.createPaymentIntent(buyNowPrice, "PLN"))
-                .thenThrow(new InvalidRequestException("Stripe error", null, null, null, 0, null));
+        when(userRepository.findByEmail(anyString())).thenReturn(Optional.of(currentUser));
+        when(authentication.getName()).thenReturn("currentUser@example.com");
 
-        ResponseEntity<?> response = auctionController.buyNow(auctionSlug, buyNowPrice, authentication);
+        ResponseEntity<?> response = auctionController.finalizeAuctionPayment(auctionSlug, highestBidPrice, authentication);
 
-        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
-        assertTrue(response.getBody() instanceof Map);
-        assertEquals("Error processing payment: Stripe error", ((Map)response.getBody()).get("error"));
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertTrue(response.getBody().toString().contains("You are not authorized to perform this operation."));
     }
 
     @Test
-    void buyNow_GeneralException() throws Exception {
-        String auctionSlug = "some-auction-slug";
-        BigDecimal buyNowPrice = new BigDecimal("500.00");
+    void handlePaymentSuccess_Successful() throws StripeException {
+        String sessionId = "sess_123";
+        String auctionSlug = "unique-auction-slug";
+        BigDecimal finalPrice = new BigDecimal("100.00");
+        AuctionUser user = new AuctionUser();
+        user.setEmail("user@example.com");
 
-        when(auctionRepository.findBySlug(auctionSlug)).thenReturn(Optional.of(new Auction()));
-        when(auctionService.createPaymentIntent(buyNowPrice, "USD")).thenThrow(new RuntimeException("General error"));
-
-        ResponseEntity<?> response = auctionController.buyNow(auctionSlug, buyNowPrice, authentication);
-
-        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
-        assertTrue(response.getBody() instanceof Map);
-        assertEquals("An error occurred during the purchase process.", ((Map)response.getBody()).get("error"));
-    }
-
-    @Test
-    void createCheckoutSession_Successful() throws Exception {
-        String auctionSlug = "test-slug";
-        BigDecimal auctionPrice = new BigDecimal("100.00");
-        String sessionUrl = "http://example.com/checkout";
+        when(authentication.getName()).thenReturn("user@example.com");
 
         Session session = mock(Session.class);
-        when(session.getUrl()).thenReturn(sessionUrl);
-        when(auctionService.createCheckoutSession(auctionSlug, auctionPrice)).thenReturn(session);
+        when(session.getAmountTotal()).thenReturn(10000L);
+        Map<String, String> metadata = new HashMap<>();
+        metadata.put("auction_slug", auctionSlug);
+        when(session.getMetadata()).thenReturn(metadata);
 
-        ResponseEntity<?> response = auctionController.createCheckoutSession(auctionSlug, auctionPrice, mock(HttpServletRequest.class));
+        when(Session.retrieve(sessionId)).thenReturn(session);
 
-        assertEquals(HttpStatus.FOUND, response.getStatusCode());
-        assertEquals(sessionUrl, response.getHeaders().getLocation().toString());
+        when(userRepository.findByEmail("user@example.com")).thenReturn(Optional.of(user));
+        doNothing().when(auctionService).finalizeAuctionSale(eq(auctionSlug), eq(user), any(BigDecimal.class));
+
+        String viewName = auctionController.handlePaymentSuccess(sessionId, authentication, model);
+
+        assertEquals("auctions/success", viewName);
+        verify(model).addAttribute("session", session);
     }
 
     @Test
-    void createCheckoutSession_StripeException() throws Exception {
-        String auctionSlug = "test-slug";
-        BigDecimal auctionPrice = new BigDecimal("100.00");
+    void handlePaymentSuccess_StripeException() throws StripeException {
+        String sessionId = "sess_1234";
 
-        // Use InvalidRequestException, a concrete subclass of StripeException
-        when(auctionService.createCheckoutSession(auctionSlug, auctionPrice))
-                .thenThrow(new InvalidRequestException("Stripe error", null, null, null, null, null));
+        AuthenticationException stripeException = new AuthenticationException("Stripe error", null, null, null);
 
-        ResponseEntity<?> response = auctionController.createCheckoutSession(auctionSlug, auctionPrice, mock(HttpServletRequest.class));
+        mockStatic(Session.class);
+        when(Session.retrieve(sessionId)).thenThrow(stripeException);
 
-        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
-        assertTrue(response.getBody() instanceof Map);
-        assertEquals("Error creating Stripe Checkout session: Stripe error", ((Map)response.getBody()).get("error"));
+        String viewName = auctionController.handlePaymentSuccess(sessionId, authentication, model);
+
+        assertEquals("error", viewName);
+        verify(model).addAttribute(eq("error"), anyString());
     }
 
 }
