@@ -106,7 +106,7 @@ public class NotificationService {
         }
     }
 
-    private boolean isUserOnline(AuctionUser user) {
+    public boolean isUserOnline(AuctionUser user) {
         return webSocketUserService.isUserOnline(user.getEmail());
     }
 
