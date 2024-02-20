@@ -26,13 +26,25 @@ public class NotificationService {
     @Autowired
     private WebSocketUserService webSocketUserService;
 
-    public void createAndSendNotification(Auction auction) throws JsonProcessingException {
-        Notification notification = new Notification();
-        notification.setDescription("Congratulations! You are the highest bidder for the auction: " + auction.getTitle());
-        notification.setActionUrl("/profile/my-bids-and-watches");
-        notification.setActionText("Check your bids");
+    public void createAndSendNotificationForEndedAuction(Auction auction) throws JsonProcessingException {
+        Notification bidderNotification = new Notification();
+        bidderNotification.setDescription("Congratulations! You are the highest bidder for the auction: " + auction.getTitle());
+        bidderNotification.setActionUrl("/profile/my-bids-and-watches");
+        bidderNotification.setActionText("Check your bids");
         AuctionUser highestBidder = auction.getHighestBidder();
-        storeNotificationForUser(highestBidder, notification);
+        storeNotificationForUser(highestBidder, bidderNotification);
+        sendNotification(highestBidder, bidderNotification);
+
+        Notification creatorNotification = new Notification();
+        creatorNotification.setDescription("Your auction '" + auction.getTitle() + "' has ended. The highest bidder is now expected to proceed with the payment.");
+        creatorNotification.setActionUrl("/profile/user-auctions");
+        creatorNotification.setActionText("View your auctions");
+        AuctionUser auctionCreator = auction.getAuctionCreator();
+        storeNotificationForUser(auctionCreator, creatorNotification);
+        sendNotification(auctionCreator, creatorNotification);
+    }
+
+    private void sendNotification(AuctionUser user, Notification notification) throws JsonProcessingException {
         NotificationDTO notificationDTO = new NotificationDTO(
                 notification.getId(),
                 notification.getDescription(),
@@ -42,9 +54,9 @@ public class NotificationService {
 
         String notificationJson = new ObjectMapper().writeValueAsString(notificationDTO);
 
-        if (isUserOnline(highestBidder)) {
+        if (isUserOnline(user)) {
             messagingTemplate.convertAndSendToUser(
-                    highestBidder.getEmail(),
+                    user.getEmail(),
                     "/queue/notifications",
                     notificationJson
             );

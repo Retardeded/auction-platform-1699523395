@@ -156,7 +156,7 @@ public class AuctionService {
         for (Auction auction : endedAuctions) {
             if (auction.getHighestBidder() != null) {
                 auction.setStatus(AuctionStatus.AWAITING_PAYMENT);
-                notificationService.createAndSendNotification(auction);
+                notificationService.createAndSendNotificationForEndedAuction(auction);
             } else {
                 auction.setStatus(AuctionStatus.EXPIRED);
             }

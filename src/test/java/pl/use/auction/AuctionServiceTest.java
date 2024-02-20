@@ -79,7 +79,7 @@ class AuctionServiceTest {
         auctionService.updateStatusOfEndedAuctions();
 
         verify(auctionRepository).saveAll(endedAuctions);
-        verify(notificationService, times(1)).createAndSendNotification(any(Auction.class));
+        verify(notificationService, times(1)).createAndSendNotificationForEndedAuction(any(Auction.class));
 
         assertEquals(AuctionStatus.AWAITING_PAYMENT, auctionWithBidder.getStatus());
         assertEquals(AuctionStatus.EXPIRED, auctionWithoutBidder.getStatus());

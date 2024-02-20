@@ -92,9 +92,9 @@
                 Remove
               </button>
             </div>
-            <div class="price-details">
-              <div>Starting Price: <span th:text="${auction.startingPrice}"></span></div>
-              <div>Highest Bid: <span th:text="${auction.highestBid}"></span></div>
+            <div class="auction-info-status">
+              <div>Starting Price: <span th:text="${auction.startingPrice}"></span> <span th:text="${auction.currencyCode}"></span></div>
+              <div>Highest Bid: <span th:text="${auction.highestBid}"></span> <span th:text="${auction.currencyCode}"></span></div>
             </div>
 
           </a>
@@ -121,8 +121,8 @@
               <h3 th:text="${auction.title}">Auction Title</h3>
               <div>Category: <span th:text="${auction.category.name}"></span></div>
               <div>Ended: <span th:text="${#temporals.format(auction.endTime, 'yyyy-MM-dd HH:mm')}"></span></div>
-              <div>Starting Price: <span th:text="${auction.startingPrice}"></span></div>
-              <div>Final Price: <span th:text="${auction.highestBid}"></span></div>
+              <div>Starting Price: <span th:text="${auction.startingPrice}"></span> <span th:text="${auction.currencyCode}"></span></div>
+              <div>Final Price: <span th:text="${auction.highestBid}"></span> <span th:text="${auction.currencyCode}"></span></div>
             </div>
             <div class="auction-info-status">
 
