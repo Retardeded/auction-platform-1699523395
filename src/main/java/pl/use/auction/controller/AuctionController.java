@@ -1,7 +1,6 @@
 package pl.use.auction.controller;
 
 import com.stripe.model.checkout.Session;
-import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -30,11 +29,7 @@ import com.stripe.exception.StripeException;
 
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.net.URI;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Controller
 public class AuctionController {
@@ -86,46 +81,36 @@ public class AuctionController {
     }
 
     @PostMapping("/auction/{slug}/buy-now")
-    @ResponseBody
     public ResponseEntity<?> buyNow(@PathVariable("slug") String auctionSlug,
-                                    @RequestBody BigDecimal buyNowRequest,
-                                    Authentication authentication) {
+                                    @RequestParam("auctionPrice") BigDecimal buyNowPrice) {
 
-        try {
-            Auction auction = auctionRepository.findBySlug(auctionSlug)
-                    .orElseThrow(() -> new IllegalArgumentException("Invalid auction slug: " + auctionSlug));
-            String clientSecret = auctionService.createPaymentIntent(buyNowRequest, auction.getCurrencyCode().toString());
-            Map<String, String> response = new HashMap<>();
-            response.put("clientSecret", clientSecret);
+        Auction auction = auctionRepository.findBySlug(auctionSlug)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid auction slug: " + auctionSlug));
 
-            return ResponseEntity.ok(response);
-        } catch (StripeException e) {
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Collections.singletonMap("error", "Error processing payment: " + e.getMessage()));
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Collections.singletonMap("error", "An error occurred during the purchase process."));
+        if (auction.getBuyNowPrice() == null || auction.getBuyNowPrice().compareTo(buyNowPrice) != 0) {
+            return ResponseEntity.badRequest()
+                    .body(Collections.singletonMap("error", "The buy now price does not match."));
         }
+
+        return auctionService.proceedToPayment(auctionSlug, buyNowPrice);
     }
 
-    @PostMapping("/auction/{slug}/create-checkout-session")
-    public ResponseEntity<?> createCheckoutSession(@PathVariable("slug") String auctionSlug,
-                                                   @RequestParam("auctionPrice") BigDecimal auctionPrice,
-                                                   HttpServletRequest request) {
-        try {
-            Session session = auctionService.createCheckoutSession(auctionSlug, auctionPrice);
-            return ResponseEntity.status(HttpStatus.FOUND).location(URI.create(session.getUrl())).build();
-        } catch (StripeException e) {
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Collections.singletonMap("error", "Error creating Stripe Checkout session: " + e.getMessage()));
-        } catch (IllegalArgumentException e) {
-            e.printStackTrace();
-            return ResponseEntity.badRequest()
-                    .body(Collections.singletonMap("error", e.getMessage()));
-        }
+    @PostMapping("/auction/{slug}/finalize-auction-payment")
+    public ResponseEntity<?> finalizeAuctionPayment(@PathVariable("slug") String auctionSlug,
+                                    @RequestParam("auctionPrice") BigDecimal highestBidPrice,
+                                    Authentication authentication) {
+            Auction auction = auctionRepository.findBySlug(auctionSlug)
+                    .orElseThrow(() -> new IllegalArgumentException("Invalid auction slug: " + auctionSlug));
+            AuctionUser currentUser = userRepository.findByEmail(authentication.getName())
+                    .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+            if (!(auction.getStatus() == AuctionStatus.AWAITING_PAYMENT &&
+                    auction.getHighestBidder().equals(currentUser))) {
+                return ResponseEntity.badRequest()
+                        .body(Collections.singletonMap("error", "You are not authorized to perform this operation."));
+            }
+
+        return auctionService.proceedToPayment(auctionSlug, highestBidPrice);
     }
 
     @GetMapping("/payment/success")
@@ -136,24 +121,13 @@ public class AuctionController {
             Session session = Session.retrieve(sessionId);
             String auctionSlug = session.getMetadata().get("auction_slug");
 
-            Auction auction = auctionRepository.findBySlug(auctionSlug)
-                    .orElseThrow(() -> new IllegalArgumentException("Invalid auction slug: " + auctionSlug));
             AuctionUser user = userRepository.findByEmail(authentication.getName())
                     .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
             Long amountPaid = session.getAmountTotal();
             BigDecimal finalPrice = BigDecimal.valueOf(amountPaid).divide(BigDecimal.valueOf(100));
 
-            if (auction.getStatus() != AuctionStatus.SOLD) {
-                auction.setStatus(AuctionStatus.SOLD);
-                auction.setBuyer(user);
-                auction.setHighestBid(finalPrice);
-                auctionRepository.save(auction);
-            } else {
-                // Handle the case where the auction is already sold
-                model.addAttribute("error", "This auction is already sold.");
-                return "error"; // Show an error page or message
-            }
+            auctionService.finalizeAuctionSale(auctionSlug, user, finalPrice);
 
             model.addAttribute("session", session);
 

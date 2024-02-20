@@ -8,6 +8,7 @@ import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -22,6 +23,7 @@ import pl.use.auction.repository.UserRepository;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.net.URI;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -64,26 +66,42 @@ public class AuctionService {
 
     private final Map<String, LocalDateTime> notificationSentTimestamps = new ConcurrentHashMap<>();
 
-    public Session createCheckoutSession(String auctionSlug, BigDecimal auctionPrice) throws StripeException {
-        Auction auction = auctionRepository.findBySlug(auctionSlug)
-                .orElseThrow(() -> new IllegalArgumentException("Invalid auction slug: " + auctionSlug));
+    public ResponseEntity<?> proceedToPayment(String auctionSlug, BigDecimal auctionPrice) {
+        try {
+            Auction auction = auctionRepository.findBySlug(auctionSlug)
+                    .orElseThrow(() -> new IllegalArgumentException("Invalid auction slug: " + auctionSlug));
+
+            Session session = createCheckoutSession(auction, auctionPrice);
+            return ResponseEntity.status(HttpStatus.FOUND).location(URI.create(session.getUrl())).build();
+        } catch (StripeException e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Collections.singletonMap("error", "Error creating Stripe Checkout session: " + e.getMessage()));
+        } catch (IllegalArgumentException e) {
+            e.printStackTrace();
+            return ResponseEntity.badRequest()
+                    .body(Collections.singletonMap("error", e.getMessage()));
+        }
+    }
+
+    public Session createCheckoutSession(Auction auction, BigDecimal auctionPrice) throws StripeException {
 
         String successUrl = appUrl + "/payment/success?session_id={CHECKOUT_SESSION_ID}";
-        String cancelUrl = appUrl + "/auction/" + auctionSlug;
+        String cancelUrl = appUrl + "/auction/" + auction.getSlug();
 
         SessionCreateParams params = SessionCreateParams.builder()
                 .addPaymentMethodType(SessionCreateParams.PaymentMethodType.CARD)
                 .setMode(SessionCreateParams.Mode.PAYMENT)
                 .setSuccessUrl(successUrl)
                 .setCancelUrl(cancelUrl)
-                .putMetadata("auction_slug", auctionSlug)
+                .putMetadata("auction_slug", auction.getSlug())
                 .addLineItem(SessionCreateParams.LineItem.builder()
                         .setQuantity(1L)
                         .setPriceData(SessionCreateParams.LineItem.PriceData.builder()
                                 .setCurrency(auction.getCurrencyCode().toString().toLowerCase())
                                 .setUnitAmount(auctionPrice.multiply(new BigDecimal(100)).longValue()) // Convert to cents
                                 .setProductData(SessionCreateParams.LineItem.PriceData.ProductData.builder()
-                                        .setName("Auction: " + auctionSlug)
+                                        .setName("Auction: " + auction.getSlug())
                                         .build())
                                 .build())
                         .build())
@@ -95,6 +113,21 @@ public class AuctionService {
     public String createPaymentIntent(BigDecimal buyNowPrice, String currency) throws StripeException {
         return stripeServiceWrapper.createPaymentIntent(buyNowPrice, currency);
     }
+
+    public void finalizeAuctionSale(String auctionSlug, AuctionUser buyer, BigDecimal finalPrice) {
+        Auction auction = auctionRepository.findBySlug(auctionSlug)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid auction slug: " + auctionSlug));
+
+        if (auction.getStatus() != AuctionStatus.SOLD) {
+            auction.setStatus(AuctionStatus.SOLD);
+            auction.setBuyer(buyer);
+            auction.setHighestBid(finalPrice);
+            auctionRepository.save(auction);
+        } else {
+            throw new IllegalStateException("This auction is already sold.");
+        }
+    }
+
 
     public boolean placeBid(Auction auction, AuctionUser bidder, BigDecimal bidAmount) {
         boolean bidPlaced = false;

@@ -83,7 +83,7 @@
             <div th:if="${currentUser.id != auction.auctionCreator.id}">
 
                 <div th:if="${auction.buyNowPrice != null and auction.buyNowPrice > 0}">
-                    <form th:action="@{'/auction/' + ${auction.slug} + '/create-checkout-session'}" method="post" id="buy-now-form">
+                    <form th:action="@{'/auction/' + ${auction.slug} + '/buy-now'}" method="post" id="buy-now-form">
                         <input type="hidden" name="auctionPrice" th:value="${auction.buyNowPrice}" />
                         <button type="submit" id="buy-now-button" class="btn buy-now-button" data-slug="${auction.slug}">
                             Buy Now for <span th:text="${auction.buyNowPrice} + ' ' + ${auction.currencyCode}">Buy Now Price</span>
