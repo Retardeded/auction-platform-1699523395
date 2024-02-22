@@ -1,0 +1,136 @@
+
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
+    <title>My Listings</title>
+    <link th:href="@{/css/search-bar.css}" rel="stylesheet" />
+    <link th:href="@{/css/sidebar.css}" rel="stylesheet" />
+    <link th:href="@{/css/user-auctions.css}" rel="stylesheet" />
+    <link th:href="@{/css/auction-create.css}" rel="stylesheet"/>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.js"></script>
+
+    <script th:src="@{/js/dropdown.js}"></script>
+    <script th:src="@{/js/auction-search.js}"></script>
+    <script th:src="@{/js/user-auctions.js}"></script>
+</head>
+<body>
+
+<nav class="navbar">
+    <div class="search-container">
+        <form action="/search" method="get" class="search-form">
+            <input type="text" placeholder="What you search for..." name="search" th:value="${param.search}" class="search-input" />
+            <input type="text" placeholder="Location..." name="location" th:value="${param.location}" class="location-input" />
+            <input type="hidden" name="category" th:value="${param.category}" class="category-input" />
+            <button type="submit" class="search-button">Search</button>
+        </form>
+    </div>
+    <div class="navbar-right">
+        <button onclick="window.location.href='/auctions/create';" class="create-auction-button">Create Auction</button>
+        <div class="profile-container">
+            <button class="profile-button" onclick="toggleDropdown()" th:text="${currentUser.email}">User Email</button>
+            <div id="myDropdown" class="dropdown-content">
+                <div class="dropdown-button" onclick="window.location.href='/profile';">
+                    My Profile
+                </div>
+                <div class="dropdown-button" onclick="document.getElementById('logout-form').submit();">
+                    Logout
+                </div>
+                <form id="logout-form" action="/logout" method="post" style="display: none;">
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                    <input type="submit" value="Logout" />
+                </form>
+            </div>
+        </div>
+        <div class="notification-container">
+            <span class="notification-bell" onclick="toggleNotificationsDropdown()">🔔</span>
+            <span class="notification-count">0</span>
+            <div id="notificationDropdown" class="notification-dropdown-content" style="display: none;">
+            </div>
+        </div>
+    </div>
+</nav>
+
+<div class="layout-container">
+    <div class="sidebar">
+        <h2>Auction Sections</h2>
+        <a href="#" class="sidebar-link" id="ongoingLink">Ongoing Auctions</a>
+        <a href="#" class="sidebar-link" id="soldLink">Ended Auctions</a>
+        <a href="/profile" class="sidebar-link">Back to Profile</a>
+    </div>
+    <div class="main-content">
+        <div id="ongoingAuctions" class="auction-list">
+            <div class="featured-auctions">
+                <div class="featured-auctions-title">
+                    <img th:src="@{/auctionSectionImages/ongoing-auctions.png}" alt="OnGoing Logo" class="featured-auctions-logo"/>
+                    <h2>Ongoing Auctions</h2>
+                </div>
+                <div th:if="${ongoingAuctions.isEmpty()}" class="no-auctions-message">
+                    <div>No ongoing auctions available.</div>
+                </div>
+                <div class="auction-items-container" th:unless="${ongoingAuctions.isEmpty()}">
+                    <a th:href="@{'/auction/' + ${auction.slug}}" th:each="auction : ${ongoingAuctions}" class="auction-item auction-item-link" th:id="'auction-item-' + ${auction.id}">
+
+                        <img th:src="@{|/${auction.imageUrls[0]}|}" alt="Auction Image" class="auction-image"/>
+                        <div class="auction-info">
+                            <h3 th:text="${auction.title}">Auction Title</h3>
+                            <div>Starts/Ends: <span th:text="${#temporals.format(auction.startTime, 'yyyy-MM-dd HH:mm')}"></span> - <span th:text="${#temporals.format(auction.endTime, 'yyyy-MM-dd HH:mm')}"></span></div>
+                        </div>
+                        <div class="auction-info-status">
+                            <div>Starting Price: <span th:text="${auction.startingPrice}"></span> <span th:text="${auction.currencyCode}"></span></div>
+                            <div>Highest Bid: <span th:text="${auction.highestBid}"></span> <span th:text="${auction.currencyCode}"></span></div>
+                        </div>
+
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div id="soldAuctions" class="auction-list" style="display: none;">
+            <div class="featured-auctions">
+                <div class="featured-auctions-title">
+                    <div class="featured-auctions-title">
+                        <img th:src="@{/auctionSectionImages/sold-auctions.png}" alt="Sold Logo" class="featured-auctions-logo"/>
+                        <h2>Ended Auctions</h2>
+                    </div>
+                </div>
+                <div th:if="${pastAuctions.isEmpty()}" class="no-auctions-message">
+                    <div>No ended auctions to display.</div>
+                </div>
+                <div class="auction-items-container" th:unless="${pastAuctions.isEmpty()}">
+                    <div th:each="auction : ${pastAuctions}" class="auction-item">
+                        <img th:src="@{|/${auction.imageUrls[0]}|}"
+                             alt="Auction Image" class="auction-image"/>
+                        <div class="auction-info">
+                            <h3 th:text="${auction.title}">Auction Title</h3>
+                            <div>Category: <span th:text="${auction.category.name}"></span></div>
+                            <div>Ended: <span th:text="${#temporals.format(auction.endTime, 'yyyy-MM-dd HH:mm')}"></span></div>
+                            <div>Starting Price: <span th:text="${auction.startingPrice}"></span> <span th:text="${auction.currencyCode}"></span></div>
+                            <div>Final Price: <span th:text="${auction.highestBid}"></span> <span th:text="${auction.currencyCode}"></span></div>
+                        </div>
+                        <div class="auction-info-status">
+
+                            <div th:if="${auction.buyer != null}" class="auction-info-right">
+                                <div>Sold for: <span th:text="${auction.highestBid}">Final Price</span> PLN</div>
+                                <div>Buyer: <a th:href="@{'/user/' + ${auction.buyer.username}}" class="user-link" th:text="${auction.buyer.username}">Buyer's Name</a></div>
+                                <div class="status-info">Status: <span th:text="${auction.status}">Auction Status</span></div>
+                            </div>
+
+                            <div th:if="${auction.buyer == null}" class="auction-info-right">
+                                <div class="status-info">Status: <span th:text="${auction.status}">Auction Status</span></div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+</body>
+<script th:src="@{/js/show-user-auctions.js}"></script>
+</html>

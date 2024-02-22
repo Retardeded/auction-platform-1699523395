@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Home</title>
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
+    <link th:href="@{/css/search-bar.css}" rel="stylesheet" />
+    <link th:href="@{/css/categories.css}" rel="stylesheet" />
+    <link th:href="@{/css/featured-auction.css}" rel="stylesheet" />
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.js"></script>
+
+    <script th:src="@{/js/dropdown.js}"></script>
+    <script th:src="@{/js/auction-search.js}"></script>
+</head>
+<body>
+<nav class="navbar">
+    <div class="search-container">
+        <form action="/search" method="get" class="search-form">
+            <input type="text" placeholder="What you search for..." name="search" th:value="${param.search}" class="search-input" />
+            <input type="text" placeholder="Location..." name="location" th:value="${param.location}" class="location-input" />
+            <input type="hidden" name="category" th:value="${param.category}" class="category-input" />
+            <button type="submit" class="search-button">Search</button>
+        </form>
+    </div>
+    <div class="navbar-right">
+        <button onclick="window.location.href='/auctions/create';" class="create-auction-button">Create Auction</button>
+        <div class="profile-container">
+            <button class="profile-button" onclick="toggleDropdown()" th:text="${currentUser.email}">User Email</button>
+            <div id="myDropdown" class="dropdown-content">
+                <div class="dropdown-button" onclick="window.location.href='/admin/profile';">
+                    My Profile
+                </div>
+                <div class="dropdown-button" onclick="document.getElementById('logout-form').submit();">
+                    Logout
+                </div>
+                <form id="logout-form" action="/logout" method="post" style="display: none;">
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                    <input type="submit" value="Logout" />
+                </form>
+            </div>
+        </div>
+        <div class="notification-container">
+            <span class="notification-bell" onclick="toggleNotificationsDropdown()">🔔</span>
+            <span class="notification-count">0</span>
+            <div id="notificationDropdown" class="notification-dropdown-content" style="display: none;">
+            </div>
+        </div>
+    </div>
+</nav>
+
+<div class="main-container">
+    <div id="categories">
+        <h2>Browse Categories</h2>
+        <ul>
+            <li th:each="category : ${parentCategories}">
+                <a href="#" th:data-category-name="${category.name}" class="category-link">
+                    <span th:text="${category.name}">Parent Category Name</span>
+                </a>
+                <ul class="subcategories" th:if="${!category.childCategories.isEmpty()}">
+                    <li th:each="subCategory : ${category.childCategories}">
+                        <a href="#" th:data-category-name="${subCategory.name}" class="category-link" th:text="${subCategory.name}">Subcategory Name</a>
+                    </li>
+                </ul>
+            </li>
+        </ul>
+    </div>
+
+    <div class="featured-auctions">
+        <div class="featured-auctions-title">
+            <h2>Cheapest Auctions</h2>
+            <img src="auctionSectionImages/cheap.png" alt="Cheap Logo" class="featured-auctions-logo"/>
+        </div>
+        <div class="auction-items-container">
+            <div th:each="auction : ${cheapestAuctions}" class="auction-item">
+                <a th:href="@{|/auction/${auction.slug}|}" class="auction-detail-link">
+                    <img th:src="@{|/${auction.imageUrls[0]}|}"
+                         alt="Auction Image" class="auction-image"/>
+                    <div class="auction-info">
+                        <h3 th:text="${auction.title}">Auction Title</h3>
+                        <p><span>Starting Price: </span><span th:text="${auction.startingPrice}">Starting Price</span></p>
+                        <p><span>Highest Bid: </span><span th:text="${auction.highestBid}">Highest Bid</span></p>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="featured-auctions">
+        <div class="featured-auctions-title">
+            <h2>Most Expensive Auctions</h2>
+            <img src="auctionSectionImages/expensive.png" alt="Expensive Logo" class="featured-auctions-logo"/>
+        </div>
+        <div class="auction-items-container">
+            <div th:each="auction : ${expensiveAuctions}" class="auction-item">
+                <a th:href="@{|/auction/${auction.slug}|}" class="auction-detail-link">
+                    <img th:src="@{|/${auction.imageUrls[0]}|}"
+                         alt="Auction Image" class="auction-image"/>
+                    <div class="auction-info">
+                        <h3 th:text="${auction.title}">Auction Title</h3>
+                        <p><span>Starting Price: </span><span th:text="${auction.startingPrice}">Starting Price</span></p>
+                        <p><span>Highest Bid: </span><span th:text="${auction.highestBid}">Highest Bid</span></p>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

@@ -19,7 +19,7 @@ public class AuctionUser {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
+    private String role;
     @Email
     @Column(unique = true)
     private String email;

@@ -68,15 +68,17 @@ public class DefaultUserConfig {
                                                     CategoryRepository categoryRepository,
                                                     PasswordEncoder passwordEncoder) {
         return args -> {
-            AuctionUser defaultUser = createUserIfNotFound(userRepository, passwordEncoder, "default@gmail.com", "default", "default", "Krakow");
+            AuctionUser defaultUser = createUserIfNotFound(userRepository, passwordEncoder, "default@gmail.com", "default", "default", "Krakow", "USER");
 
-            AuctionUser anotherUser = createUserIfNotFound(userRepository, passwordEncoder, "another@gmail.com", "another", "another", "Warsaw");
+            AuctionUser anotherUser = createUserIfNotFound(userRepository, passwordEncoder, "another@gmail.com", "another", "another", "Warsaw", "USER");
 
-            AuctionUser basicUser = createUserIfNotFound(userRepository, passwordEncoder, "basic@gmail.com", "basic", "basic", "Krakow");
+            AuctionUser basicUser = createUserIfNotFound(userRepository, passwordEncoder, "basic@gmail.com", "basic", "basic", "Krakow", "USER");
 
-            AuctionUser testUser = createUserIfNotFound(userRepository, passwordEncoder, "test@gmail.com", "test", "test", "Warsaw");
+            AuctionUser testUser = createUserIfNotFound(userRepository, passwordEncoder, "test@gmail.com", "test", "test", "Warsaw", "USER");
 
-            AuctionUser bottomUser = createUserIfNotFound(userRepository, passwordEncoder, "bottom@gmail.com", "bottom", "bottom", "Wroclaw");
+            AuctionUser bottomUser = createUserIfNotFound(userRepository, passwordEncoder, "bottom@gmail.com", "bottom", "bottom", "Wroclaw", "USER");
+
+            AuctionUser adminUser = createUserIfNotFound(userRepository, passwordEncoder, "admin@gmail.com", "admin", "admin", "Wroclaw", "ADMIN");
 
             if (auctionRepository.findByAuctionCreator(defaultUser).isEmpty()) {
                 createSampleAuctions(testUser, auctionRepository, defaultUser, categoryRepository, userRepository);
@@ -97,9 +99,11 @@ public class DefaultUserConfig {
         };
     }
 
-    private AuctionUser createUserIfNotFound(UserRepository userRepository, PasswordEncoder passwordEncoder, String email, String username, String password, String location) {
+    private AuctionUser createUserIfNotFound(UserRepository userRepository, PasswordEncoder passwordEncoder,
+                                             String email, String username, String password, String location, String role) {
         return userRepository.findByEmail(email).orElseGet(() -> {
             AuctionUser user = new AuctionUser();
+            user.setRole(role);
             user.setEmail(email);
             user.setUsername(username);
             user.setPassword(passwordEncoder.encode(password));

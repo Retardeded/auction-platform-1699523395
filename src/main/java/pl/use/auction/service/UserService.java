@@ -5,6 +5,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -19,10 +21,7 @@ import pl.use.auction.model.PasswordChangeResult;
 import pl.use.auction.repository.UserRepository;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 public class UserService implements UserDetailsService {
@@ -65,19 +64,19 @@ public class UserService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        Optional<AuctionUser> user = userRepository.findByEmail(email);
+        Optional<AuctionUser> userOptional = userRepository.findByEmail(email);
 
-        if (user.isEmpty()) {
-            throw new UsernameNotFoundException("User not found with email: " + email);
-        }
+        AuctionUser auctionUser = userOptional.orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
 
-        AuctionUser auctionUser = user.get();
         if (!auctionUser.isVerified()) {
             throw new UsernameNotFoundException("User not verified");
         }
 
-        return new User(auctionUser.getEmail(), auctionUser.getPassword(), new ArrayList<>());
+        List<GrantedAuthority> authorities = Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + auctionUser.getRole().toUpperCase()));
+
+        return new User(auctionUser.getEmail(), auctionUser.getPassword(), authorities);
     }
+
     @Transactional
     public PasswordChangeResult changeUserPassword(String oldPassword, String newPassword, String confirmNewPassword, AuctionUser user) {
         if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
