@@ -1,6 +1,7 @@
 package pl.use.auction.controller;
 
 import com.stripe.model.checkout.Session;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -168,9 +169,10 @@ public class AuctionController {
             return "auctions/create-auction";
         }
 
-        return "redirect:/profile/auctions";
+        return "redirect:/profile/user-auctions";
     }
 
+    @Transactional
     @DeleteMapping("/auctions/delete/{auctionId}")
     public ResponseEntity<?> deleteAuction(@PathVariable Long auctionId, Authentication authentication) {
         Auction auction = auctionRepository.findById(auctionId).orElse(null);
@@ -181,7 +183,14 @@ public class AuctionController {
 
         if (auction.getHighestBid().compareTo(BigDecimal.ZERO) == 0
                 && auction.getAuctionCreator().getEmail().equals(authentication.getName())) {
+
+            auction.getObservers().forEach(observer -> {
+                observer.getObservedAuctions().remove(auction);
+                userRepository.save(observer);
+            });
+
             auctionRepository.delete(auction);
+
             return ResponseEntity.ok("Auction deleted successfully.");
         } else {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("You cannot delete an auction with bids or that you did not create.");
@@ -263,7 +272,7 @@ public class AuctionController {
             return "redirect:/auction/" + slug + "/edit";
         }
 
-        return "redirect:/profile/auctions";
+        return "redirect:/auction/" + slug;
     }
 
     @PostMapping("/add-to-watchlist/{auctionId}")
