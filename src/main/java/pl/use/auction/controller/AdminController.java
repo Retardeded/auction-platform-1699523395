@@ -9,6 +9,9 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import pl.use.auction.model.*;
 import pl.use.auction.repository.AuctionRepository;
 import pl.use.auction.repository.CategoryRepository;
@@ -16,6 +19,7 @@ import pl.use.auction.repository.UserRepository;
 import pl.use.auction.service.AuctionService;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Controller
@@ -29,29 +33,6 @@ public class AdminController {
     private CategoryRepository categoryRepository;
     @Autowired
     private AuctionService auctionService;
-
-    @PreAuthorize("hasRole('ADMIN')")
-    @GetMapping("/admin/home")
-    public String adminHome(Model model, Authentication authentication) {
-        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-        String email = userDetails.getUsername();
-        model.addAttribute("username", email);
-
-        AuctionUser currentUser = userRepository.findByEmail(email)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
-        model.addAttribute("currentUser", currentUser);
-
-        List<Category> parentCategories = categoryRepository.findByParentCategoryIsNull();
-        model.addAttribute("parentCategories", parentCategories);
-
-        List<Auction> cheapestAuctions = auctionService.findCheapestAuctions(6);
-        model.addAttribute("cheapestAuctions", cheapestAuctions);
-
-        List<Auction> expensiveAuctions = auctionService.findExpensiveAuctions(6);
-        model.addAttribute("expensiveAuctions", expensiveAuctions);
-
-        return "admin/home";
-    }
 
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/admin/profile")
@@ -87,5 +68,29 @@ public class AdminController {
         model.addAttribute("pastAuctions", pastAuctions);
 
         return "admin/all-auctions";
+    }
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/feature-auction")
+    public String featureAuction(@RequestParam("auctionId") Long auctionId,
+                                 @RequestParam("featuredType") String featuredType,
+                                 RedirectAttributes redirectAttributes) {
+        Optional<Auction> optionalAuction = auctionRepository.findById(auctionId);
+
+        if (optionalAuction.isPresent()) {
+            Auction auction = optionalAuction.get();
+
+            if (!featuredType.isEmpty()) {
+                auction.setFeaturedType(FeaturedType.valueOf(featuredType));
+            } else {
+                auction.setFeaturedType(FeaturedType.NONE);
+            }
+
+            auctionRepository.save(auction);
+            redirectAttributes.addFlashAttribute("successMessage", "Auction feature type updated successfully.");
+            return "redirect:/admin/all-auctions";
+        } else {
+            redirectAttributes.addFlashAttribute("errorMessage", "Auction not found.");
+            return "redirect:/admin/all-auctions";
+        }
     }
 }

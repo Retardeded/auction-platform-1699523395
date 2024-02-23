@@ -19,6 +19,11 @@ window.onclick = function(event) {
     }
 }
 
+function navigateToProfile(element) {
+        var url = element.getAttribute('data-target-url');
+        window.location.href = url;
+}
+
 function checkForNotifications() {
     fetch('/notifications')
         .then(response => response.json())
