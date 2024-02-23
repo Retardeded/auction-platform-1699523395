@@ -3,18 +3,15 @@ package pl.use.auction.config;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import pl.use.auction.model.Auction;
-import pl.use.auction.model.AuctionStatus;
-import pl.use.auction.model.AuctionUser;
-import pl.use.auction.model.Category;
+import pl.use.auction.model.*;
 import pl.use.auction.repository.AuctionRepository;
 import pl.use.auction.repository.CategoryRepository;
 import pl.use.auction.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import pl.use.auction.service.AuctionService;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
@@ -66,6 +63,7 @@ public class DefaultUserConfig {
     CommandLineRunner createDefaultUsersAndAuctions(UserRepository userRepository,
                                                     AuctionRepository auctionRepository,
                                                     CategoryRepository categoryRepository,
+                                                    AuctionService auctionService,
                                                     PasswordEncoder passwordEncoder) {
         return args -> {
             AuctionUser defaultUser = createUserIfNotFound(userRepository, passwordEncoder, "default@gmail.com", "default", "default", "Krakow", "USER");
@@ -96,6 +94,9 @@ public class DefaultUserConfig {
             if (auctionRepository.findByAuctionCreator(testUser).isEmpty()) {
                 createSampleAuctions(defaultUser, auctionRepository, bottomUser, categoryRepository, userRepository);
             }
+
+            auctionService.setCheapestAuctions(6);
+            auctionService.setExpensiveAuctions(6);
         };
     }
 

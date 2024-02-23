@@ -7,6 +7,7 @@ import com.stripe.param.checkout.SessionCreateParams;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -152,7 +153,7 @@ public class AuctionService {
         userRepository.save(user);
     }
 
-    public List<Auction> findCheapestAuctions(int limit) {
+    public List<Auction> setCheapestAuctions(int limit) {
         List<Auction> auctions = auctionRepository.findByEndTimeAfterAndStatusNot(LocalDateTime.now(), AuctionStatus.SOLD).stream()
                 .sorted(Comparator.comparing(Auction::getHighestBid))
                 .limit(limit)
@@ -163,7 +164,7 @@ public class AuctionService {
         return auctions;
     }
 
-    public List<Auction> findExpensiveAuctions(int limit) {
+    public List<Auction> setExpensiveAuctions(int limit) {
         List<Auction> auctions = auctionRepository.findByEndTimeAfterAndStatusNot(LocalDateTime.now(), AuctionStatus.SOLD).stream()
                 .sorted(Comparator.comparing(Auction::getHighestBid).reversed())
                 .limit(limit)
@@ -172,6 +173,18 @@ public class AuctionService {
         auctions.forEach(auction -> auction.setFeaturedType(FeaturedType.EXPENSIVE));
         auctionRepository.saveAll(auctions);
         return auctions;
+    }
+
+    public List<Auction> getCheapestAuctions(int limit) {
+        return auctionRepository.findByFeaturedType(FeaturedType.CHEAP, PageRequest.of(0, limit));
+    }
+
+    public List<Auction> getExpensiveAuctions(int limit) {
+        return auctionRepository.findByFeaturedType(FeaturedType.EXPENSIVE, PageRequest.of(0, limit));
+    }
+
+    public List<Auction> getGoodDealAuctions(int limit) {
+        return auctionRepository.findByFeaturedType(FeaturedType.GOODDEAL, PageRequest.of(0, limit));
     }
 
     @Scheduled(fixedRate = 3 * 60 * 60 * 1000)

@@ -15,7 +15,6 @@ import pl.use.auction.repository.UserRepository;
 import pl.use.auction.service.AuctionService;
 
 import java.util.List;
-import java.util.Optional;
 
 @Controller
 public class HomeController {
@@ -47,11 +46,14 @@ public class HomeController {
         List<Category> parentCategories = categoryRepository.findByParentCategoryIsNull();
         model.addAttribute("parentCategories", parentCategories);
 
-        List<Auction> cheapestAuctions = auctionService.findCheapestAuctions(6);
+        List<Auction> cheapestAuctions = auctionService.getCheapestAuctions(6);
         model.addAttribute("cheapestAuctions", cheapestAuctions);
 
-        List<Auction> expensiveAuctions = auctionService.findExpensiveAuctions(6);
+        List<Auction> expensiveAuctions = auctionService.getExpensiveAuctions(6);
         model.addAttribute("expensiveAuctions", expensiveAuctions);
+
+        List<Auction> goodDealAuctions = auctionService.getGoodDealAuctions(6);
+        model.addAttribute("goodDealAuctions", goodDealAuctions);
 
         return "home";
     }

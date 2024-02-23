@@ -1,10 +1,8 @@
 package pl.use.auction.repository;
 
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.jpa.repository.JpaRepository;
-import pl.use.auction.model.Auction;
-import pl.use.auction.model.AuctionStatus;
-import pl.use.auction.model.AuctionUser;
-import pl.use.auction.model.Category;
+import pl.use.auction.model.*;
 
 import java.time.LocalDateTime;
 import java.util.Collection;
@@ -47,4 +45,6 @@ public interface AuctionRepository extends JpaRepository<Auction, Long> {
     List<Auction> findByHighestBidderAndStatusIn(AuctionUser highestBidder, List<AuctionStatus> statuses);
 
     List<Auction> findByEndTimeBetweenAndStatus(LocalDateTime now, LocalDateTime plusHours, AuctionStatus active);
+
+    List<Auction> findByFeaturedType(FeaturedType cheap, PageRequest of);
 }

@@ -20,6 +20,28 @@ window.onclick = function(event) {
     }
 }
 
-function submitForm(form) {
-    form.submit();
+function submitFeatureAuction() {
+    var form = document.getElementById('featureAuctionForm');
+    var formData = new FormData(form);
+    fetch(form.getAttribute('action'), {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRF-TOKEN': formData.get('_csrf')
+        }
+    }).then(response => response.json())
+    .then(data => {
+        if (data.imagePath) {
+            var auctionId = formData.get('auctionId');
+            var featuredLogoContainer = document.getElementById(`featured-logo-${auctionId}`);
+            if (featuredLogoContainer) {
+                featuredLogoContainer.innerHTML = `<img src="${data.imagePath}" alt="Featured Auction Label" style="display:block;">`;
+            }
+            closeEditModal();
+        } else {
+            console.error('Failed to update feature type');
+        }
+    }).catch(error => {
+        console.error('Error:', error);
+    });
 }

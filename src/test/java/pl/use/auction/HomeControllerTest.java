@@ -59,16 +59,16 @@ class HomeControllerTest {
         when(userDetails.getUsername()).thenReturn(username);
         when(userRepository.findByEmail(username)).thenReturn(Optional.of(auctionUser));
         when(categoryRepository.findByParentCategoryIsNull()).thenReturn(parentCategories);
-        when(auctionService.findCheapestAuctions(6)).thenReturn(cheapestAuctions);
-        when(auctionService.findExpensiveAuctions(6)).thenReturn(expensiveAuctions);
+        when(auctionService.setCheapestAuctions(6)).thenReturn(cheapestAuctions);
+        when(auctionService.setExpensiveAuctions(6)).thenReturn(expensiveAuctions);
 
         String viewName = homeController.home(model, authentication);
 
         verify(userDetails).getUsername();
         verify(userRepository).findByEmail("test@example.com");
         verify(categoryRepository).findByParentCategoryIsNull();
-        verify(auctionService).findCheapestAuctions(6);
-        verify(auctionService).findExpensiveAuctions(6);
+        verify(auctionService).setCheapestAuctions(6);
+        verify(auctionService).setExpensiveAuctions(6);
 
         assertEquals("home", viewName);
         verify(model).addAttribute(eq("username"), anyString());

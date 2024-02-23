@@ -49,9 +49,11 @@
                             <div>Starts/Ends: <span th:text="${#temporals.format(auction.startTime, 'yyyy-MM-dd HH:mm')}"></span> - <span th:text="${#temporals.format(auction.endTime, 'yyyy-MM-dd HH:mm')}"></span></div>
                         </div>
 
-                        <img th:if="${auction.featuredType != T(pl.use.auction.model.FeaturedType).NONE}"
-                             th:src="@{'/auctionSectionImages/' + ${auction.featuredType.imagePath}}"
-                             alt="Featured Auction Label" class="featured-auction-label"/>
+                        <div class="featured-auction-logo" th:id="'featured-logo-' + ${auction.id}">
+                            <img th:if="${auction.featuredType != T(pl.use.auction.model.FeaturedType).NONE}"
+                                 th:src="@{'/auctionSectionImages/' + ${auction.featuredType.imagePath}}"
+                                 alt="Featured Auction Label"/>
+                        </div>
 
                         <div class="auction-info-status">
                             <div>Starting Price: <span th:text="${auction.startingPrice}"></span> <span th:text="${auction.currencyCode}"></span></div>
@@ -78,10 +80,11 @@
                                 <option value="">Not Featured</option>
                                 <option value="CHEAP">Cheapest Auctions</option>
                                 <option value="EXPENSIVE">Most Expensive Auctions</option>
+                                <option value="GOODDEAL">Good Deal Auctions</option>
                                 <!-- add more feature types as needed -->
                             </select>
+                            <button type="button" class="btn btn-text" onclick="submitFeatureAuction()">Feature this auction</button>
                             <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
-                            <button type="submit">Update Feature</button>
                         </form>
                     </div>
                 </div>

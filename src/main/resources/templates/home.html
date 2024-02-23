@@ -35,7 +35,7 @@
         </ul>
     </div>
 
-    <div class="featured-auctions">
+    <div th:if="${!cheapestAuctions.isEmpty()}" class="featured-auctions">
         <div class="featured-auctions-title">
             <h2>Cheapest Auctions</h2>
             <img src="auctionSectionImages/cheap.png" alt="Cheap Logo" class="featured-auctions-logo"/>
@@ -55,7 +55,7 @@
         </div>
     </div>
 
-    <div class="featured-auctions">
+    <div th:if="${!expensiveAuctions.isEmpty()}" class="featured-auctions">
         <div class="featured-auctions-title">
             <h2>Most Expensive Auctions</h2>
             <img src="auctionSectionImages/expensive.png" alt="Expensive Logo" class="featured-auctions-logo"/>
@@ -74,6 +74,27 @@
             </div>
         </div>
     </div>
+
+    <div th:if="${!goodDealAuctions.isEmpty()}" class="featured-auctions">
+        <div class="featured-auctions-title">
+            <h2>Good Deal Auctions</h2>
+            <img src="auctionSectionImages/good-deal.webp" alt="Expensive Logo" class="featured-auctions-logo"/>
+        </div>
+        <div class="auction-items-container">
+            <div th:each="auction : ${goodDealAuctions}" class="auction-item">
+                <a th:href="@{|/auction/${auction.slug}|}" class="auction-detail-link">
+                    <img th:src="@{|/${auction.imageUrls[0]}|}"
+                         alt="Auction Image" class="auction-image"/>
+                    <div class="auction-info">
+                        <h3 th:text="${auction.title}">Auction Title</h3>
+                        <p><span>Starting Price: </span><span th:text="${auction.startingPrice}">Starting Price</span></p>
+                        <p><span>Highest Bid: </span><span th:text="${auction.highestBid}">Highest Bid</span></p>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </div>
+
 </div>
 
 </body>
