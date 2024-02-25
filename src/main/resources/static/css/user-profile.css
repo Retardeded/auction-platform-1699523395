@@ -58,3 +58,19 @@
     border-radius: 5px;
     margin-bottom: 20px;
 }
+
+.admin-actions form {
+    display: inline-block;
+    margin: 10px;
+}
+
+.btn {
+    background-color: #f44336;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    cursor: pointer;
+    opacity: 0.9;
+}
+
+.btn:hover { opacity: 1; }

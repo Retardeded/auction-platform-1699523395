@@ -12,6 +12,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import pl.use.auction.model.*;
 import pl.use.auction.repository.AuctionRepository;
 import pl.use.auction.repository.CategoryRepository;
@@ -92,5 +93,57 @@ public class AdminController {
         Map<String, String> response = new HashMap<>();
         response.put("imagePath", imagePath);
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/admin/suspend-user")
+    @PreAuthorize("hasRole('ADMIN')")
+    public String suspendUser(@RequestParam Long userId, @RequestParam int suspensionDays, RedirectAttributes redirectAttributes) {
+        userRepository.findById(userId).ifPresent(user -> {
+            Calendar calendar = Calendar.getInstance();
+            calendar.add(Calendar.DAY_OF_MONTH, suspensionDays);
+            user.setSuspensionEndDate(calendar.getTime());
+            user.setStatus(UserStatus.SUSPENDED);
+            userRepository.save(user);
+            redirectAttributes.addAttribute("username", user.getUsername());
+            redirectAttributes.addFlashAttribute("successMessage", "User suspended successfully for " + suspensionDays + " days.");
+        });
+        return "redirect:/user/{username}";
+    }
+
+    @PostMapping("/admin/ban-user")
+    @PreAuthorize("hasRole('ADMIN')")
+    public String banUser(@RequestParam Long userId, RedirectAttributes redirectAttributes) {
+        userRepository.findById(userId).ifPresent(user -> {
+            user.setStatus(UserStatus.BANNED);
+            userRepository.save(user);
+            redirectAttributes.addAttribute("username", user.getUsername());
+            redirectAttributes.addFlashAttribute("successMessage", "User banned successfully");
+        });
+        return "redirect:/user/{username}";
+    }
+
+    @PostMapping("/admin/unban-user")
+    @PreAuthorize("hasRole('ADMIN')")
+    public String unbanUser(@RequestParam Long userId, RedirectAttributes redirectAttributes) {
+        userRepository.findById(userId).ifPresent(user -> {
+            user.setStatus(UserStatus.ACTIVE);
+            userRepository.save(user);
+            redirectAttributes.addAttribute("username", user.getUsername());
+        });
+        redirectAttributes.addFlashAttribute("successMessage", "User unbanned successfully.");
+        return "redirect:/user/{username}";
+    }
+
+    @PostMapping("/admin/unsuspend-user")
+    @PreAuthorize("hasRole('ADMIN')")
+    public String unsuspendUser(@RequestParam Long userId, RedirectAttributes redirectAttributes) {
+        userRepository.findById(userId).ifPresent(user -> {
+            user.setSuspensionEndDate(null);
+            user.setStatus(UserStatus.ACTIVE);
+            userRepository.save(user);
+            redirectAttributes.addAttribute("username", user.getUsername());
+        });
+        redirectAttributes.addFlashAttribute("successMessage", "User suspension lifted successfully.");
+        return "redirect:/user/{username}";
     }
 }

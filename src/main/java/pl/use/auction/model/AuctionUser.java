@@ -8,6 +8,7 @@ import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
 import java.time.LocalDateTime;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -38,6 +39,12 @@ public class AuctionUser {
 
     private String resetToken;
     private LocalDateTime resetTokenExpiryTime;
+
+    @Enumerated(EnumType.STRING)
+    private UserStatus status = UserStatus.ACTIVE;
+
+    @Temporal(TemporalType.TIMESTAMP)
+    private Date suspensionEndDate;
 
     @OneToMany(mappedBy = "auctionCreator")
     private List<Auction> createdAuctions;

@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
@@ -18,6 +19,7 @@ import pl.use.auction.exception.InvalidTokenException;
 import pl.use.auction.exception.TokenExpiredException;
 import pl.use.auction.model.AuctionUser;
 import pl.use.auction.model.PasswordChangeResult;
+import pl.use.auction.model.UserStatus;
 import pl.use.auction.repository.UserRepository;
 
 import java.time.LocalDateTime;
@@ -51,6 +53,8 @@ public class UserService implements UserDetailsService {
 
     public AuctionUser registerNewUser(UserRegistrationDto registrationDto, String token) {
         AuctionUser auctionUser = new AuctionUser();
+        auctionUser.setRole("USER");
+        auctionUser.setVerified(false);
         auctionUser.setEmail(registrationDto.getEmail());
         auctionUser.setUsername(registrationDto.getUsername());
         auctionUser.setPassword(passwordEncoder.encode(registrationDto.getPassword()));
@@ -70,6 +74,14 @@ public class UserService implements UserDetailsService {
 
         if (!auctionUser.isVerified()) {
             throw new UsernameNotFoundException("User not verified");
+        }
+
+        if (auctionUser.getStatus() == UserStatus.BANNED) {
+            throw new LockedException("User is banned");
+        }
+
+        if (auctionUser.getSuspensionEndDate() != null && auctionUser.getSuspensionEndDate().after(new Date())) {
+            throw new LockedException("User is currently suspended.");
         }
 
         List<GrantedAuthority> authorities = Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + auctionUser.getRole().toUpperCase()));
