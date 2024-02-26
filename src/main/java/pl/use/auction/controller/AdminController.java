@@ -1,6 +1,7 @@
 package pl.use.auction.controller;
 
 
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -93,6 +94,69 @@ public class AdminController {
         Map<String, String> response = new HashMap<>();
         response.put("imagePath", imagePath);
         return ResponseEntity.ok(response);
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/admin/all-categories")
+    public String viewAllCategoriesForAdmin(Model model, Authentication authentication) {
+        String currentUserName = authentication.getName();
+
+        AuctionUser currentUser = userRepository.findByEmail(currentUserName)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        model.addAttribute("currentUser", currentUser);
+
+        List<Category> parentCategories = categoryRepository.findByParentCategoryIsNull();
+        model.addAttribute("parentCategories", parentCategories);
+
+        return "admin/all-categories";
+    }
+
+    @PostMapping("/admin/edit-category")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> editCategory(@RequestParam Long categoryId,
+                                          @RequestParam String name,
+                                          @RequestParam(required = false) Long parentCategoryId) {
+        try {
+            Category category = categoryRepository.findById(categoryId)
+                    .orElseThrow(() -> new EntityNotFoundException("Category not found with id: " + categoryId));
+
+            if (parentCategoryId != null && parentCategoryId.equals(categoryId)) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", "A category cannot be its own parent."));
+            }
+
+            if (parentCategoryId != null) {
+                Category parentCategory = categoryRepository.findById(parentCategoryId)
+                        .orElseThrow(() -> new EntityNotFoundException("Parent category not found with id: " + parentCategoryId));
+
+                if (isSubcategoryOf(category, parentCategory)) {
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", "Invalid parent category."));
+                }
+
+                category.setParentCategory(parentCategory);
+            } else {
+                category.setParentCategory(null);
+            }
+
+            category.setName(name);
+            categoryRepository.save(category);
+
+            return ResponseEntity.ok().body(Map.of("message", "Category updated successfully"));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Failed to update category"));
+        }
+    }
+
+    private boolean isSubcategoryOf(Category currentCategory, Category potentialParent) {
+        Category parent = potentialParent.getParentCategory();
+        while (parent != null) {
+            if
+            (parent.getId().equals(currentCategory.getId())) {
+                return true;
+            }
+            parent = parent.getParentCategory();
+        }
+        return false;
     }
 
     @PostMapping("/admin/suspend-user")
