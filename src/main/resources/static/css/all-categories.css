@@ -32,21 +32,21 @@
     cursor: pointer;
 }
 
-#editCategoryForm div {
+.category-form div {
     margin-bottom: 10px;
 }
 
-#editCategoryForm label {
+.category-form label {
     margin-right: 5px;
 }
 
-#editCategoryForm input[type="text"],
-#editCategoryForm select {
+.category-form input[type="text"],
+.category-form select {
     padding: 5px;
     margin-left: 5px;
 }
 
-#editCategoryForm button {
+button {
     background-color: #4CAF50;
     border: none;
     color: white;

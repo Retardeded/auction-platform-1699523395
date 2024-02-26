@@ -159,6 +159,25 @@ public class AdminController {
         return false;
     }
 
+    @PostMapping("/admin/add-category")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> addCategory(@RequestParam String name,
+                                         @RequestParam(required = false) Long parentCategoryId) {
+        try {
+            Category newCategory = new Category(name, null);
+            if (parentCategoryId != null) {
+                Category parentCategory = categoryRepository.findById(parentCategoryId)
+                        .orElseThrow(() -> new EntityNotFoundException("Parent category not found with id: " + parentCategoryId));
+                newCategory.setParentCategory(parentCategory);
+            }
+            categoryRepository.save(newCategory);
+            return ResponseEntity.ok().body(Map.of("message", "New category created successfully"));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Failed to create category"));
+        }
+    }
+
     @PostMapping("/admin/suspend-user")
     @PreAuthorize("hasRole('ADMIN')")
     public String suspendUser(@RequestParam Long userId, @RequestParam int suspensionDays, RedirectAttributes redirectAttributes) {

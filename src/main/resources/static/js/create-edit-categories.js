@@ -52,3 +52,38 @@ function submitEditCategory() {
         alert(error.message);
     });
 }
+
+function showAddCategoryModal() {
+    document.getElementById('newCategoryName').value = '';
+    document.getElementById('newParentCategory').value = '';
+    document.getElementById('addCategoryModal').style.display = 'block';
+}
+
+function closeAddModal() {
+    document.getElementById('addCategoryModal').style.display = 'none';
+}
+
+function submitNewCategory() {
+    var form = document.getElementById('addCategoryForm');
+    var formData = new FormData(form);
+    fetch('/admin/add-category', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="_csrf"]').getAttribute('content')
+        }
+    }).then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok.');
+        }
+        return response.json();
+    })
+    .then(data => {
+        alert(data.message);
+        closeAddModal();
+        window.location.reload();
+    }).catch(error => {
+        console.error('Error:', error);
+        alert('Failed to create category');
+    });
+}
