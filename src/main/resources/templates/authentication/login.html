@@ -8,8 +8,8 @@
 <div class="container">
     <h2>Login</h2>
 
-    <div th:if="${param.error}" style="color: red;">
-        Invalid username or password or banned.
+    <div th:if="${errorMessage}" style="color: red;">
+        <p th:text="${errorMessage}"></p>
     </div>
 
     <form th:action="@{/login}" th:object="${userLogin}" method="post">

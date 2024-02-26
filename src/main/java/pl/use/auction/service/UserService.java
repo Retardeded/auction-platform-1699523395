@@ -18,6 +18,7 @@ import pl.use.auction.dto.UserRegistrationDto;
 import pl.use.auction.exception.InvalidTokenException;
 import pl.use.auction.exception.TokenExpiredException;
 import pl.use.auction.model.AuctionUser;
+import pl.use.auction.model.CustomUserDetails;
 import pl.use.auction.model.PasswordChangeResult;
 import pl.use.auction.model.UserStatus;
 import pl.use.auction.repository.UserRepository;
@@ -68,25 +69,24 @@ public class UserService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        Optional<AuctionUser> userOptional = userRepository.findByEmail(email);
+        AuctionUser auctionUser = userRepository.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
 
-        AuctionUser auctionUser = userOptional.orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
+        boolean enabled = true;
+        boolean accountNonLocked = true;
 
         if (!auctionUser.isVerified()) {
-            throw new UsernameNotFoundException("User not verified");
-        }
-
-        if (auctionUser.getStatus() == UserStatus.BANNED) {
-            throw new LockedException("User is banned");
-        }
-
-        if (auctionUser.getSuspensionEndDate() != null && auctionUser.getSuspensionEndDate().after(new Date())) {
-            throw new LockedException("User is currently suspended.");
+            enabled = false;
+        } else if (auctionUser.getStatus() == UserStatus.BANNED) {
+            accountNonLocked = false;
+        } else if (auctionUser.getSuspensionEndDate() != null && auctionUser.getSuspensionEndDate().after(new Date())) {
+            accountNonLocked = false;
         }
 
         List<GrantedAuthority> authorities = Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + auctionUser.getRole().toUpperCase()));
 
-        return new User(auctionUser.getEmail(), auctionUser.getPassword(), authorities);
+        return new CustomUserDetails(auctionUser.getEmail(), auctionUser.getPassword(), enabled,
+                true, true, accountNonLocked, authorities);
     }
 
     @Transactional

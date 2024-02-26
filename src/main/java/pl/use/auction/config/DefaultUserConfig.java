@@ -73,6 +73,8 @@ public class DefaultUserConfig {
             AuctionUser basicUser = createUserIfNotFound(userRepository, passwordEncoder, "basic@gmail.com", "basic", "basic", "Krakow", "USER");
 
             AuctionUser testUser = createUserIfNotFound(userRepository, passwordEncoder, "test@gmail.com", "test", "test", "Warsaw", "USER");
+            testUser.setStatus(UserStatus.BANNED);
+            userRepository.save(testUser);
 
             AuctionUser bottomUser = createUserIfNotFound(userRepository, passwordEncoder, "bottom@gmail.com", "bottom", "bottom", "Wroclaw", "USER");
 
