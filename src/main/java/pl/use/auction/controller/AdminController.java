@@ -1,6 +1,5 @@
 package pl.use.auction.controller;
 
-
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -16,10 +15,10 @@ import pl.use.auction.model.*;
 import pl.use.auction.repository.AuctionRepository;
 import pl.use.auction.repository.CategoryRepository;
 import pl.use.auction.repository.UserRepository;
+import pl.use.auction.service.AdminService;
 import pl.use.auction.service.AuctionService;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Controller
 public class AdminController {
@@ -32,6 +31,8 @@ public class AdminController {
     private CategoryRepository categoryRepository;
     @Autowired
     private AuctionService auctionService;
+    @Autowired
+    private AdminService adminService;
 
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/admin/profile")
@@ -54,14 +55,8 @@ public class AdminController {
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
         model.addAttribute("currentUser", currentUser);
 
-        List<Auction> allAuctions = auctionRepository.findAll();
-
-        List<Auction> ongoingAuctions = allAuctions.stream()
-                .filter(auction -> auction.getStatus() == AuctionStatus.ACTIVE)
-                .collect(Collectors.toList());
-        List<Auction> pastAuctions = allAuctions.stream()
-                .filter(auction -> auction.getStatus() != AuctionStatus.ACTIVE)
-                .collect(Collectors.toList());
+        List<Auction> ongoingAuctions = adminService.getAllOngoingAuctions();
+        List<Auction> pastAuctions = adminService.getAllPastAuctions();
 
         model.addAttribute("ongoingAuctions", ongoingAuctions);
         model.addAttribute("pastAuctions", pastAuctions);
@@ -71,27 +66,16 @@ public class AdminController {
 
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/feature-auction")
-    public ResponseEntity<?> featureAuction(@RequestParam("auctionId") Long auctionId,
+    public ResponseEntity<Map<String, String> > featureAuction(@RequestParam("auctionId") Long auctionId,
                                             @RequestParam("featuredType") String featuredType) {
+
         Optional<Auction> optionalAuction = auctionRepository.findById(auctionId);
-        if (!optionalAuction.isPresent()) {
+        if (optionalAuction.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Collections.singletonMap("error", "Auction not found."));
         }
-
         Auction auction = optionalAuction.get();
-        if (!featuredType.isEmpty()) {
-            auction.setFeaturedType(FeaturedType.valueOf(featuredType));
-        } else {
-            auction.setFeaturedType(FeaturedType.NONE);
-        }
 
-        auctionRepository.save(auction);
-
-        String imagePath = "/auctionSectionImages/" + auction.getFeaturedType().getImagePath();
-
-        Map<String, String> response = new HashMap<>();
-        response.put("imagePath", imagePath);
-        return ResponseEntity.ok(response);
+        return adminService.featureAuction(auction, featuredType);
     }
 
     @PreAuthorize("hasRole('ADMIN')")
@@ -126,7 +110,7 @@ public class AdminController {
                 Category parentCategory = categoryRepository.findById(parentCategoryId)
                         .orElseThrow(() -> new EntityNotFoundException("Parent category not found with id: " + parentCategoryId));
 
-                if (isSubcategoryOf(category, parentCategory)) {
+                if (adminService.isSubcategoryOf(category, parentCategory)) {
                     return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", "Invalid parent category."));
                 }
 
@@ -139,22 +123,11 @@ public class AdminController {
             categoryRepository.save(category);
 
             return ResponseEntity.ok().body(Map.of("message", "Category updated successfully"));
+
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Failed to update category"));
         }
-    }
-
-    private boolean isSubcategoryOf(Category currentCategory, Category potentialParent) {
-        Category parent = potentialParent.getParentCategory();
-        while (parent != null) {
-            if
-            (parent.getId().equals(currentCategory.getId())) {
-                return true;
-            }
-            parent = parent.getParentCategory();
-        }
-        return false;
     }
 
     @PostMapping("/admin/add-category")
@@ -191,8 +164,8 @@ public class AdminController {
             if (isParentCategory) {
                 return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", "Cannot delete category because it is a parent to other categories"));
             }
-
             categoryRepository.deleteById(categoryId);
+
             return ResponseEntity.ok().body(Map.of("message", "Category deleted successfully"));
         } catch (NumberFormatException e) {
             e.printStackTrace();
@@ -206,13 +179,8 @@ public class AdminController {
     @PostMapping("/admin/suspend-user")
     @PreAuthorize("hasRole('ADMIN')")
     public String suspendUser(@RequestParam Long userId, @RequestParam int suspensionDays, RedirectAttributes redirectAttributes) {
-        userRepository.findById(userId).ifPresent(user -> {
-            Calendar calendar = Calendar.getInstance();
-            calendar.add(Calendar.DAY_OF_MONTH, suspensionDays);
-            user.setSuspensionEndDate(calendar.getTime());
-            user.setStatus(UserStatus.SUSPENDED);
-            userRepository.save(user);
-            redirectAttributes.addAttribute("username", user.getUsername());
+        adminService.suspendUser(userId, suspensionDays).ifPresent(username -> {
+            redirectAttributes.addAttribute("username", username);
             redirectAttributes.addFlashAttribute("successMessage", "User suspended successfully for " + suspensionDays + " days.");
         });
         return "redirect:/user/{username}";
@@ -221,10 +189,8 @@ public class AdminController {
     @PostMapping("/admin/ban-user")
     @PreAuthorize("hasRole('ADMIN')")
     public String banUser(@RequestParam Long userId, RedirectAttributes redirectAttributes) {
-        userRepository.findById(userId).ifPresent(user -> {
-            user.setStatus(UserStatus.BANNED);
-            userRepository.save(user);
-            redirectAttributes.addAttribute("username", user.getUsername());
+        adminService.banUser(userId).ifPresent(username -> {
+            redirectAttributes.addAttribute("username", username);
             redirectAttributes.addFlashAttribute("successMessage", "User banned successfully");
         });
         return "redirect:/user/{username}";
@@ -233,25 +199,20 @@ public class AdminController {
     @PostMapping("/admin/unban-user")
     @PreAuthorize("hasRole('ADMIN')")
     public String unbanUser(@RequestParam Long userId, RedirectAttributes redirectAttributes) {
-        userRepository.findById(userId).ifPresent(user -> {
-            user.setStatus(UserStatus.ACTIVE);
-            userRepository.save(user);
-            redirectAttributes.addAttribute("username", user.getUsername());
+        adminService.unbanUser(userId).ifPresent(username -> {
+            redirectAttributes.addAttribute("username", username);
+            redirectAttributes.addFlashAttribute("successMessage", "User unbanned successfully.");
         });
-        redirectAttributes.addFlashAttribute("successMessage", "User unbanned successfully.");
         return "redirect:/user/{username}";
     }
 
     @PostMapping("/admin/unsuspend-user")
     @PreAuthorize("hasRole('ADMIN')")
     public String unsuspendUser(@RequestParam Long userId, RedirectAttributes redirectAttributes) {
-        userRepository.findById(userId).ifPresent(user -> {
-            user.setSuspensionEndDate(null);
-            user.setStatus(UserStatus.ACTIVE);
-            userRepository.save(user);
-            redirectAttributes.addAttribute("username", user.getUsername());
+        adminService.unsuspendUser(userId).ifPresent(username -> {
+            redirectAttributes.addAttribute("username", username);
+            redirectAttributes.addFlashAttribute("successMessage", "User suspension lifted successfully.");
         });
-        redirectAttributes.addFlashAttribute("successMessage", "User suspension lifted successfully.");
         return "redirect:/user/{username}";
     }
 }
