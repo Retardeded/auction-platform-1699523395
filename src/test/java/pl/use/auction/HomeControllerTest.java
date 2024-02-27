@@ -54,27 +54,31 @@ class HomeControllerTest {
         List<Category> parentCategories = List.of(new Category());
         List<Auction> cheapestAuctions = List.of(new Auction());
         List<Auction> expensiveAuctions = List.of(new Auction());
+        List<Auction> goodDealAuctions = List.of(new Auction());
 
         when(authentication.getPrincipal()).thenReturn(userDetails);
         when(userDetails.getUsername()).thenReturn(username);
         when(userRepository.findByEmail(username)).thenReturn(Optional.of(auctionUser));
         when(categoryRepository.findByParentCategoryIsNull()).thenReturn(parentCategories);
-        when(auctionService.setCheapestAuctions(6)).thenReturn(cheapestAuctions);
-        when(auctionService.setExpensiveAuctions(6)).thenReturn(expensiveAuctions);
+        when(auctionService.getCheapestAuctions(6)).thenReturn(cheapestAuctions);
+        when(auctionService.getExpensiveAuctions(6)).thenReturn(expensiveAuctions);
+        when(auctionService.getGoodDealAuctions(6)).thenReturn(goodDealAuctions);
 
         String viewName = homeController.home(model, authentication);
 
         verify(userDetails).getUsername();
-        verify(userRepository).findByEmail("test@example.com");
+        verify(userRepository).findByEmail(username);
         verify(categoryRepository).findByParentCategoryIsNull();
-        verify(auctionService).setCheapestAuctions(6);
-        verify(auctionService).setExpensiveAuctions(6);
+        verify(auctionService).getCheapestAuctions(6);
+        verify(auctionService).getExpensiveAuctions(6);
+        verify(auctionService).getGoodDealAuctions(6);
 
         assertEquals("home", viewName);
         verify(model).addAttribute(eq("username"), anyString());
         verify(model).addAttribute(eq("parentCategories"), anyList());
         verify(model).addAttribute(eq("cheapestAuctions"), anyList());
         verify(model).addAttribute(eq("expensiveAuctions"), anyList());
+        verify(model).addAttribute(eq("goodDealAuctions"), anyList());
     }
 
     @Test

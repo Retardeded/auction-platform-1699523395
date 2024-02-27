@@ -71,6 +71,7 @@ public class SecurityConfigTest {
         testUser.setUsername("testUser");
         testUser.setPassword(passwordEncoder.encode("userPassword"));
         testUser.setVerified(true);
+        testUser.setRole("USER");
         userRepository.save(testUser);
 
         mockMvc.perform(formLogin("/login").user("email", "testUser@example.com").password("password", "userPassword"))

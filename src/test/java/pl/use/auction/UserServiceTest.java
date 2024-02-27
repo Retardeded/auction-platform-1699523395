@@ -71,6 +71,7 @@ public class UserServiceTest {
         auctionUser.setEmail(email);
         auctionUser.setPassword("password");
         auctionUser.setVerified(true);
+        auctionUser.setRole("USER");
 
         when(userRepository.findByEmail(email)).thenReturn(Optional.of(auctionUser));
 
@@ -91,18 +92,19 @@ public class UserServiceTest {
     }
 
     @Test
-    public void whenLoadUserByUsernameAndUserNotVerified_thenThrowsUsernameNotFoundException() {
+    public void whenLoadUserByUsernameAndUserNotVerified_thenEnabledIsFalse() {
         String email = "unverified@example.com";
         AuctionUser auctionUser = new AuctionUser();
         auctionUser.setEmail(email);
         auctionUser.setPassword("password");
         auctionUser.setVerified(false);
+        auctionUser.setRole("USER");
 
         when(userRepository.findByEmail(email)).thenReturn(Optional.of(auctionUser));
 
-        assertThrows(UsernameNotFoundException.class, () -> {
-            userService.loadUserByUsername(email);
-        });
+        UserDetails userDetails = userService.loadUserByUsername(email);
+
+        assertFalse(userDetails.isEnabled());
     }
 
     @Test

@@ -98,7 +98,7 @@ class AuctionControllerTest {
         String viewName = auctionController.createAuction(auction, files, categoryId, bindingResult, authentication);
 
         verify(auctionService).createAndSaveAuction(auction, categoryId, files, "test@example.com");
-        assertEquals("redirect:/profile/auctions", viewName);
+        assertEquals("redirect:/profile/user-auctions", viewName);
     }
 
     @Test
@@ -300,7 +300,7 @@ class AuctionControllerTest {
         String viewName = auctionController.updateAuction(slug, auctionDetails, newImages, imagesToDelete, authentication, redirectAttributes);
 
         verify(auctionService).updateAuction(slug, auctionDetails, newImages, imagesToDelete);
-        assertEquals("redirect:/profile/auctions", viewName);
+        assertEquals("redirect:/auction/some-slug", viewName);
     }
 
     @Test
