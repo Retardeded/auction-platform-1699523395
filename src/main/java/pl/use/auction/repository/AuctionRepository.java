@@ -47,4 +47,5 @@ public interface AuctionRepository extends JpaRepository<Auction, Long> {
     List<Auction> findByEndTimeBetweenAndStatus(LocalDateTime now, LocalDateTime plusHours, AuctionStatus active);
 
     List<Auction> findByFeaturedType(FeaturedType cheap, PageRequest of);
+    boolean existsByCategoryId(Long categoryId);
 }

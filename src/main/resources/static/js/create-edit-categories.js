@@ -87,3 +87,46 @@ function submitNewCategory() {
         alert('Failed to create category');
     });
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('categories-data').addEventListener('click', function(e) {
+        if (e.target.classList.contains('delete-category')) {
+            var categoryId = e.target.getAttribute('data-category-id');
+            confirmDeleteCategory(categoryId);
+            e.preventDefault();
+        }
+    });
+});
+
+function confirmDeleteCategory(categoryId) {
+    if (confirm('Are you sure you want to delete this category?')) {
+        deleteCategory(categoryId);
+    }
+}
+
+function deleteCategory(categoryId) {
+    fetch('/admin/delete-category', {
+        method: 'DELETE',
+        body: JSON.stringify({ categoryId: categoryId }),
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="_csrf"]').getAttribute('content')
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(errData => {
+                throw new Error(errData.error || 'Failed to delete category');
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        alert(data.message);
+        window.location.reload();
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert(error.message);
+    });
+}

@@ -10,9 +10,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import pl.use.auction.model.*;
 import pl.use.auction.repository.AuctionRepository;
@@ -175,6 +173,33 @@ public class AdminController {
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Failed to create category"));
+        }
+    }
+
+    @DeleteMapping("/admin/delete-category")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> deleteCategory(@RequestBody Map<String, Object> payload) {
+        try {
+            Long categoryId = Long.parseLong((String) payload.get("categoryId"));
+
+            boolean isCategoryInUse = auctionRepository.existsByCategoryId(categoryId);
+            if (isCategoryInUse) {
+                return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", "Cannot delete category because it has associated auctions"));
+            }
+
+            boolean isParentCategory = categoryRepository.existsByParentCategoryId(categoryId);
+            if (isParentCategory) {
+                return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", "Cannot delete category because it is a parent to other categories"));
+            }
+
+            categoryRepository.deleteById(categoryId);
+            return ResponseEntity.ok().body(Map.of("message", "Category deleted successfully"));
+        } catch (NumberFormatException e) {
+            e.printStackTrace();
+            return ResponseEntity.badRequest().body(Map.of("error", "Invalid category ID format"));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Failed to delete category"));
         }
     }
 

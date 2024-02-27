@@ -5,9 +5,11 @@
   <meta name="_csrf" th:content="${_csrf.token}"/>
   <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
   <title>My Listings</title>
+
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css" rel="stylesheet"/>
+
   <link th:href="@{/css/search-bar.css}" rel="stylesheet" />
   <link th:href="@{/css/sidebar.css}" rel="stylesheet" />
-  <link th:href="@{/css/categories.css}" rel="stylesheet" />
   <link th:href="@{/css/all-categories.css}" rel="stylesheet" />
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.js"></script>
@@ -30,7 +32,7 @@
   <div class="main-content">
     <div id="categories">
       <h2>Edit Categories</h2>
-      <ul>
+      <ul id="categories-data">
         <li th:each="category : ${parentCategories}">
           <a href="javascript:void(0)"
              class="category-edit"
@@ -38,14 +40,18 @@
              th:data-category-name="${category.name}"
              th:data-parent-category-id="${null}"
              th:text="${category.name}">Parent Category Name</a>
+          <span class="delete-category fas fa-times" th:data-category-id="${category.id}" title="Delete Category"></span>
           <ul class="subcategories" th:if="${!category.childCategories.isEmpty()}">
             <li th:each="subCategory : ${category.childCategories}">
-              <a href="javascript:void(0)"
-                 class="category-edit"
-                 th:data-category-id="${subCategory.id}"
-                 th:data-category-name="${subCategory.name}"
-                 th:data-parent-category-id="${category.id}"
-                 th:text="${subCategory.name}">Subcategory Name</a>
+              <div class="subcategory-item">
+                <a href="javascript:void(0)"
+                   class="category-edit"
+                   th:data-category-id="${subCategory.id}"
+                   th:data-category-name="${subCategory.name}"
+                   th:data-parent-category-id="${category.id}"
+                   th:text="${subCategory.name}">Subcategory Name</a>
+                <span class="delete-category fas fa-times" th:data-category-id="${subCategory.id}" title="Delete Subcategory"></span>
+              </div>
             </li>
           </ul>
         </li>
