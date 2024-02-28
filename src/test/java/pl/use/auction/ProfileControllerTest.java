@@ -130,29 +130,31 @@ public class ProfileControllerTest {
 
         assertEquals("profile/change-password", viewName);
     }
-
     @Test
     void testUpdateProfile() {
-        String username = "user";
+        Authentication authentication = Mockito.mock(Authentication.class);
+        String originalUsername = "user";
+        String newUsername = "NewUsername";
+
         AuctionUser existingUser = new AuctionUser();
-        existingUser.setUsername(username);
+        existingUser.setUsername(originalUsername);
 
         AuctionUser updatedUser = new AuctionUser();
-        updatedUser.setUsername("NewUsername");
+        updatedUser.setUsername(newUsername);
         updatedUser.setFirstName("NewFirstName");
         updatedUser.setLastName("NewLastName");
         updatedUser.setLocation("NewLocation");
         updatedUser.setPhoneNumber("NewPhoneNumber");
 
-        when(authentication.getName()).thenReturn(username);
-
         String viewName = profileController.updateProfile(updatedUser, authentication);
 
+        ArgumentCaptor<Authentication> authCaptor = ArgumentCaptor.forClass(Authentication.class);
         ArgumentCaptor<AuctionUser> userCaptor = ArgumentCaptor.forClass(AuctionUser.class);
-        verify(userService).updateProfile(eq(username), userCaptor.capture());
+        verify(userService).updateProfile(authCaptor.capture(), userCaptor.capture());
+
         AuctionUser capturedUser = userCaptor.getValue();
 
-        assertEquals("NewUsername", capturedUser.getUsername());
+        assertEquals(newUsername, capturedUser.getUsername());
         assertEquals("NewFirstName", capturedUser.getFirstName());
         assertEquals("NewLastName", capturedUser.getLastName());
         assertEquals("NewLocation", capturedUser.getLocation());

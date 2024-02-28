@@ -5,10 +5,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.security.authentication.LockedException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -48,8 +49,8 @@ public class UserService implements UserDetailsService {
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + username));
     }
 
-    public void updateProfile(String username, AuctionUser updatedUser) {
-        AuctionUser existingUser = findByUsernameOrThrow(username);
+    public void updateProfile(Authentication authentication, AuctionUser updatedUser) {
+        AuctionUser existingUser = findByUsernameOrThrow(authentication.getName());
 
         existingUser.setUsername(updatedUser.getUsername());
         existingUser.setFirstName(updatedUser.getFirstName());
@@ -58,6 +59,9 @@ public class UserService implements UserDetailsService {
         existingUser.setPhoneNumber(updatedUser.getPhoneNumber());
 
         userRepository.save(existingUser);
+
+        Authentication newAuth = new UsernamePasswordAuthenticationToken(updatedUser.getUsername(), authentication.getCredentials(), authentication.getAuthorities());
+        SecurityContextHolder.getContext().setAuthentication(newAuth);
     }
 
     public void sendVerificationEmail(AuctionUser user, String token) {

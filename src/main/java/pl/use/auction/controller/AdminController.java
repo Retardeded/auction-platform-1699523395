@@ -6,7 +6,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -14,7 +13,6 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import pl.use.auction.model.*;
 import pl.use.auction.repository.AuctionRepository;
 import pl.use.auction.repository.CategoryRepository;
-import pl.use.auction.repository.UserRepository;
 import pl.use.auction.service.AdminService;
 import pl.use.auction.service.AuctionService;
 import pl.use.auction.service.UserService;
@@ -26,8 +24,6 @@ public class AdminController {
 
     @Autowired
     private AuctionRepository auctionRepository;
-    @Autowired
-    private UserRepository userRepository;
     @Autowired
     private CategoryRepository categoryRepository;
     @Autowired

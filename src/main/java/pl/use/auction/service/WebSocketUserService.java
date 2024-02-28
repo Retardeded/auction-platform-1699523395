@@ -9,21 +9,21 @@ import java.util.concurrent.ConcurrentHashMap;
 @Service
 public class WebSocketUserService {
 
-    private final Set<String> connectedUseremails = ConcurrentHashMap.newKeySet();
+    private final Set<String> connectedUsernames = ConcurrentHashMap.newKeySet();
 
-    public Set<String> getConnectedUseremails() {
-        return new HashSet<>(connectedUseremails);
+    public Set<String> getConnectedUsernames() {
+        return new HashSet<>(connectedUsernames);
     }
 
-    public void registerConnectedUser(String email) {
-        connectedUseremails.add(email);
+    public void registerConnectedUser(String username) {
+        connectedUsernames.add(username);
     }
 
-    public void deregisterDisconnectedUser(String email) {
-        connectedUseremails.remove(email);
+    public void deregisterDisconnectedUser(String username) {
+        connectedUsernames.remove(username);
     }
 
-    public boolean isUserOnline(String email) {
-        return connectedUseremails.contains(email);
+    public boolean isUserOnline(String username) {
+        return connectedUsernames.contains(username);
     }
 }
