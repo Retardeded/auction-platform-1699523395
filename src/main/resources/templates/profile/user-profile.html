@@ -13,48 +13,55 @@
 
     <script th:src="@{/js/dropdown.js}"></script>
     <script th:src="@{/js/auction-search.js}"></script>
+    <script th:src="@{/js/confirm-action.js}"></script>
 
 </head>
 <body>
 
-<nav class="navbar">
-    <div class="search-container">
-        <form action="/search" method="get" class="search-form">
-            <input type="text" placeholder="What you search for..." name="search" th:value="${param.search}" class="search-input" />
-            <input type="text" placeholder="Location..." name="location" th:value="${param.location}" class="location-input" />
-            <input type="hidden" name="category" th:value="${param.category}" class="category-input" />
-            <button type="submit" class="search-button">Search</button>
-        </form>
-    </div>
-    <div class="navbar-right">
-        <button onclick="window.location.href='/auctions/create';" class="create-auction-button">Create Auction</button>
-        <div class="profile-container">
-            <button class="profile-button" onclick="toggleDropdown()" th:text="${currentUser.email}">User Email</button>
-            <div id="myDropdown" class="dropdown-content">
-                <div class="dropdown-button" onclick="window.location.href='/profile';">
-                    My Profile
-                </div>
-                <div class="dropdown-button" onclick="document.getElementById('logout-form').submit();">
-                    Logout
-                </div>
-                <form id="logout-form" action="/logout" method="post" style="display: none;">
-                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
-                    <input type="submit" value="Logout" />
-                </form>
-            </div>
-        </div>
-        <div class="notification-container">
-            <span class="notification-bell" onclick="toggleNotificationsDropdown()">🔔</span>
-            <span class="notification-count">0</span>
-            <div id="notificationDropdown" class="notification-dropdown-content" style="display: none;">
-            </div>
-        </div>
-    </div>
-</nav>
+<div th:replace="navbar :: navbar"></div>
 
 <div class="layout-container">
 
     <div class="main-content">
+
+        <div th:if="${currentUser.role == 'ADMIN'}" class="admin-actions">
+
+            <div th:if="${profileUser.status.name() == 'SUSPENDED'}">
+                    <form th:action="@{/admin/unsuspend-user}" method="post" onsubmit="confirmAction(event, 'Are you sure you want to unsuspend this user?')">
+                        <input type="hidden" name="userId" th:value="${profileUser.id}" />
+                        <input type="hidden" name="_csrf" th:value="${_csrf.token}"/>
+                        <button type="submit" class="btn">Unsuspend User</button>
+                    </form>
+            </div>
+            <div th:if="${profileUser.status.name() != 'SUSPENDED'}">
+                <form th:action="@{/admin/suspend-user}" method="post" onsubmit="confirmAction(event, 'Are you sure you want to suspend this user?')">
+                    <input type="hidden" name="userId" th:value="${profileUser.id}" />
+                    <label for="suspensionDays">Suspension Duration (Days):</label>
+                    <input type="number" id="suspensionDays" name="suspensionDays" min="1" value="1" />
+                    <input type="hidden" name="_csrf" th:value="${_csrf.token}"/>
+                    <button type="submit" class="btn">Suspend User</button>
+                </form>
+            </div>
+            <div th:if="${profileUser.status.name() == 'BANNED'}">
+                    <form th:action="@{/admin/unban-user}" method="post" onsubmit="confirmAction(event, 'Are you sure you want to unban this user?')">
+                        <input type="hidden" name="userId" th:value="${profileUser.id}" />
+                        <input type="hidden" name="_csrf" th:value="${_csrf.token}"/>
+                        <button type="submit" class="btn">Unban User</button>
+                    </form>
+            </div>
+            <div th:if="${profileUser.status.name() != 'BANNED'}">
+                <form th:action="@{/admin/ban-user}" method="post" onsubmit="confirmAction(event, 'Are you sure you want to ban this user?')">
+                    <input type="hidden" name="userId" th:value="${profileUser.id}" />
+                    <input type="hidden" name="_csrf" th:value="${_csrf.token}"/>
+                    <button type="submit" class="btn">Ban User</button>
+                </form>
+            </div>
+        </div>
+
+        <div th:if="${not #strings.isEmpty(successMessage)}" class="alert alert-success">
+            <p th:text="${successMessage}"></p>
+        </div>
+
         <div class="profile-details">
             <p><strong>Email:</strong> <span th:text="${profileUser.email}"></span></p>
             <p><strong>Username:</strong> <span th:text="${profileUser.username}"></span></p>
@@ -62,6 +69,7 @@
             <p><strong>Last Name:</strong> <span th:text="${profileUser.lastName}"></span></p>
             <p><strong>Location:</strong> <span th:text="${profileUser.location}"></span></p>
             <p><strong>Phone Number:</strong> <span th:text="${profileUser.phoneNumber}"></span></p>
+            <p><strong>Status:</strong> <span th:text="${profileUser.status}"></span></p>
         </div>
 
         <div>
@@ -93,7 +101,6 @@
                 </div>
             </div>
         </div>
-
     </div>
 </div>
 </body>

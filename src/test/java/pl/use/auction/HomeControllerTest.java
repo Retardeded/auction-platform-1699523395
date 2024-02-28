@@ -15,6 +15,7 @@ import pl.use.auction.model.Category;
 import pl.use.auction.repository.CategoryRepository;
 import pl.use.auction.repository.UserRepository;
 import pl.use.auction.service.AuctionService;
+import pl.use.auction.service.UserService;
 
 import java.util.List;
 import java.util.Optional;
@@ -38,7 +39,7 @@ class HomeControllerTest {
     private AuctionService auctionService;
 
     @Mock
-    private UserRepository userRepository;
+    private UserService userService;
 
     @Mock
     private Authentication authentication;
@@ -48,58 +49,62 @@ class HomeControllerTest {
 
     @Test
     void testHome() {
-        String username = "test@example.com";
+        String username = "test";
         AuctionUser auctionUser = new AuctionUser();
-        auctionUser.setEmail(username);
+        auctionUser.setUsername(username);
         List<Category> parentCategories = List.of(new Category());
         List<Auction> cheapestAuctions = List.of(new Auction());
         List<Auction> expensiveAuctions = List.of(new Auction());
+        List<Auction> goodDealAuctions = List.of(new Auction());
 
         when(authentication.getPrincipal()).thenReturn(userDetails);
         when(userDetails.getUsername()).thenReturn(username);
-        when(userRepository.findByEmail(username)).thenReturn(Optional.of(auctionUser));
+        when(userService.findByUsernameOrThrow(auctionUser.getUsername())).thenReturn(auctionUser);
         when(categoryRepository.findByParentCategoryIsNull()).thenReturn(parentCategories);
-        when(auctionService.findCheapestAuctions(6)).thenReturn(cheapestAuctions);
-        when(auctionService.findExpensiveAuctions(6)).thenReturn(expensiveAuctions);
+        when(auctionService.getCheapestAuctions(6)).thenReturn(cheapestAuctions);
+        when(auctionService.getExpensiveAuctions(6)).thenReturn(expensiveAuctions);
+        when(auctionService.getGoodDealAuctions(6)).thenReturn(goodDealAuctions);
 
         String viewName = homeController.home(model, authentication);
 
         verify(userDetails).getUsername();
-        verify(userRepository).findByEmail("test@example.com");
+        verify(userService).findByUsernameOrThrow(username);
         verify(categoryRepository).findByParentCategoryIsNull();
-        verify(auctionService).findCheapestAuctions(6);
-        verify(auctionService).findExpensiveAuctions(6);
+        verify(auctionService).getCheapestAuctions(6);
+        verify(auctionService).getExpensiveAuctions(6);
+        verify(auctionService).getGoodDealAuctions(6);
 
         assertEquals("home", viewName);
         verify(model).addAttribute(eq("username"), anyString());
         verify(model).addAttribute(eq("parentCategories"), anyList());
         verify(model).addAttribute(eq("cheapestAuctions"), anyList());
         verify(model).addAttribute(eq("expensiveAuctions"), anyList());
+        verify(model).addAttribute(eq("goodDealAuctions"), anyList());
     }
 
     @Test
     void testSearch() {
-        String username = "user@example.com";
+        String username = "user";
         String searchQuery = "example";
         String location = "location1";
         String category = "category1";
         String sort = "date";
 
         AuctionUser auctionUser = new AuctionUser();
-        auctionUser.setEmail(username);
+        auctionUser.setUsername(username);
 
         List<Category> parentCategories = List.of(new Category());
         List<Auction> searchResults = List.of(new Auction());
 
         when(authentication.getPrincipal()).thenReturn(userDetails);
         when(userDetails.getUsername()).thenReturn(username);
-        when(userRepository.findByEmail(username)).thenReturn(Optional.of(auctionUser));
+        when(userService.findByUsernameOrThrow(auctionUser.getUsername())).thenReturn(auctionUser);
         when(categoryRepository.findByParentCategoryIsNull()).thenReturn(parentCategories);
         when(auctionService.searchAuctions(searchQuery, location, category, sort)).thenReturn(searchResults);
 
         String viewName = homeController.search(searchQuery, location, category, sort, model, authentication);
 
-        verify(userRepository).findByEmail(username);
+        verify(userService).findByUsernameOrThrow(username);
         verify(categoryRepository).findByParentCategoryIsNull();
         verify(auctionService).searchAuctions(searchQuery, location, category, sort);
 

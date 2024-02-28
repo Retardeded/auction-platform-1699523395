@@ -8,14 +8,14 @@
 <div class="container">
     <h2>Login</h2>
 
-    <div th:if="${param.error}" style="color: red;">
-        Invalid username or password.
+    <div th:if="${errorMessage}" style="color: red;">
+        <p th:text="${errorMessage}"></p>
     </div>
 
     <form th:action="@{/login}" th:object="${userLogin}" method="post">
         <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
-        <label for="email">Email:</label>
-        <input type="text" id="email" th:field="*{email}" />
+        <label for="username">Username:</label>
+        <input type="text" id="username" th:field="*{username}" />
 
         <label for="password">Password:</label>
         <input type="password" id="password" th:field="*{password}" />

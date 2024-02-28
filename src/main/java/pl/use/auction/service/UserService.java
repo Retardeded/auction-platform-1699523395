@@ -5,7 +5,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.security.core.userdetails.User;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -15,14 +19,13 @@ import pl.use.auction.dto.UserRegistrationDto;
 import pl.use.auction.exception.InvalidTokenException;
 import pl.use.auction.exception.TokenExpiredException;
 import pl.use.auction.model.AuctionUser;
+import pl.use.auction.model.CustomUserDetails;
 import pl.use.auction.model.PasswordChangeResult;
+import pl.use.auction.model.UserStatus;
 import pl.use.auction.repository.UserRepository;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 public class UserService implements UserDetailsService {
@@ -41,6 +44,26 @@ public class UserService implements UserDetailsService {
     @Value("${app.url}")
     private String appUrl;
 
+    public AuctionUser findByUsernameOrThrow(String username) {
+        return userRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + username));
+    }
+
+    public void updateProfile(Authentication authentication, AuctionUser updatedUser) {
+        AuctionUser existingUser = findByUsernameOrThrow(authentication.getName());
+
+        existingUser.setUsername(updatedUser.getUsername());
+        existingUser.setFirstName(updatedUser.getFirstName());
+        existingUser.setLastName(updatedUser.getLastName());
+        existingUser.setLocation(updatedUser.getLocation());
+        existingUser.setPhoneNumber(updatedUser.getPhoneNumber());
+
+        userRepository.save(existingUser);
+
+        Authentication newAuth = new UsernamePasswordAuthenticationToken(updatedUser.getUsername(), authentication.getCredentials(), authentication.getAuthorities());
+        SecurityContextHolder.getContext().setAuthentication(newAuth);
+    }
+
     public void sendVerificationEmail(AuctionUser user, String token) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(user.getEmail());
@@ -52,6 +75,8 @@ public class UserService implements UserDetailsService {
 
     public AuctionUser registerNewUser(UserRegistrationDto registrationDto, String token) {
         AuctionUser auctionUser = new AuctionUser();
+        auctionUser.setRole("USER");
+        auctionUser.setVerified(false);
         auctionUser.setEmail(registrationDto.getEmail());
         auctionUser.setUsername(registrationDto.getUsername());
         auctionUser.setPassword(passwordEncoder.encode(registrationDto.getPassword()));
@@ -64,20 +89,26 @@ public class UserService implements UserDetailsService {
     }
 
     @Override
-    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        Optional<AuctionUser> user = userRepository.findByEmail(email);
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        AuctionUser auctionUser = findByUsernameOrThrow(username);
 
-        if (user.isEmpty()) {
-            throw new UsernameNotFoundException("User not found with email: " + email);
-        }
+        boolean enabled = true;
+        boolean accountNonLocked = true;
 
-        AuctionUser auctionUser = user.get();
         if (!auctionUser.isVerified()) {
-            throw new UsernameNotFoundException("User not verified");
+            enabled = false;
+        } else if (auctionUser.getStatus() == UserStatus.BANNED) {
+            accountNonLocked = false;
+        } else if (auctionUser.getSuspensionEndDate() != null && auctionUser.getSuspensionEndDate().after(new Date())) {
+            accountNonLocked = false;
         }
 
-        return new User(auctionUser.getEmail(), auctionUser.getPassword(), new ArrayList<>());
+        List<GrantedAuthority> authorities = Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + auctionUser.getRole().toUpperCase()));
+
+        return new CustomUserDetails(auctionUser.getUsername(), auctionUser.getPassword(), enabled,
+                true, true, accountNonLocked, authorities);
     }
+
     @Transactional
     public PasswordChangeResult changeUserPassword(String oldPassword, String newPassword, String confirmNewPassword, AuctionUser user) {
         if (!passwordEncoder.matches(oldPassword, user.getPassword())) {

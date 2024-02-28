@@ -62,7 +62,7 @@ public class RegistrationController {
             auctionUser.setVerified(true);
             userRepository.save(auctionUser);
 
-            System.out.println("User Verified: " + auctionUser.getEmail());
+            System.out.println("User Verified: " + auctionUser.getUsername());
 
             return "redirect:/authentication/login";
         } else {

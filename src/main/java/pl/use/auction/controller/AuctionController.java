@@ -1,6 +1,7 @@
 package pl.use.auction.controller;
 
 import com.stripe.model.checkout.Session;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -26,6 +27,7 @@ import pl.use.auction.service.CategoryService;
 
 import com.stripe.Stripe;
 import com.stripe.exception.StripeException;
+import pl.use.auction.service.UserService;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -38,16 +40,16 @@ public class AuctionController {
     private AuctionRepository auctionRepository;
 
     @Autowired
-    private UserRepository userRepository;
-
-    @Autowired
     private CategoryRepository categoryRepository;
 
     @Autowired
     private AuctionService auctionService;
 
     @Autowired
-    CategoryService categoryService;
+    private CategoryService categoryService;
+
+    @Autowired
+    private UserService userService;
 
     @Value("${stripe.api.publishablekey}")
     private String stripePublishableKey;
@@ -63,8 +65,7 @@ public class AuctionController {
 
         Auction auction = auctionRepository.findBySlug(auctionSlug)
                 .orElseThrow(() -> new IllegalArgumentException("Invalid auction slug:" + auctionSlug));
-        AuctionUser bidder = userRepository.findByEmail(authentication.getName())
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        AuctionUser bidder = userService.findByUsernameOrThrow(authentication.getName());
 
         if (!auction.getStatus().equals(AuctionStatus.ACTIVE)) {
             redirectAttributes.addFlashAttribute("errorMessage", "This auction is no longer active and cannot accept bids.");
@@ -101,8 +102,7 @@ public class AuctionController {
                                     Authentication authentication) {
             Auction auction = auctionRepository.findBySlug(auctionSlug)
                     .orElseThrow(() -> new IllegalArgumentException("Invalid auction slug: " + auctionSlug));
-            AuctionUser currentUser = userRepository.findByEmail(authentication.getName())
-                    .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+            AuctionUser currentUser = userService.findByUsernameOrThrow(authentication.getName());
 
             if (!(auction.getStatus() == AuctionStatus.AWAITING_PAYMENT &&
                     auction.getHighestBidder().equals(currentUser))) {
@@ -121,8 +121,7 @@ public class AuctionController {
             Session session = Session.retrieve(sessionId);
             String auctionSlug = session.getMetadata().get("auction_slug");
 
-            AuctionUser user = userRepository.findByEmail(authentication.getName())
-                    .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+            AuctionUser user = userService.findByUsernameOrThrow(authentication.getName());
 
             Long amountPaid = session.getAmountTotal();
             BigDecimal finalPrice = BigDecimal.valueOf(amountPaid).divide(BigDecimal.valueOf(100));
@@ -168,9 +167,10 @@ public class AuctionController {
             return "auctions/create-auction";
         }
 
-        return "redirect:/profile/auctions";
+        return "redirect:/profile/user-auctions";
     }
 
+    @Transactional
     @DeleteMapping("/auctions/delete/{auctionId}")
     public ResponseEntity<?> deleteAuction(@PathVariable Long auctionId, Authentication authentication) {
         Auction auction = auctionRepository.findById(auctionId).orElse(null);
@@ -181,7 +181,10 @@ public class AuctionController {
 
         if (auction.getHighestBid().compareTo(BigDecimal.ZERO) == 0
                 && auction.getAuctionCreator().getEmail().equals(authentication.getName())) {
+
+            auctionService.removeAuctionFromObservers(auction);
             auctionRepository.delete(auction);
+
             return ResponseEntity.ok("Auction deleted successfully.");
         } else {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("You cannot delete an auction with bids or that you did not create.");
@@ -190,8 +193,7 @@ public class AuctionController {
 
     @GetMapping("/auction/{slug}")
     public String viewAuctionDetail(@PathVariable("slug") String auctionSlug, Model model, Authentication authentication) {
-        AuctionUser user = userRepository.findByEmail(authentication.getName())
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        AuctionUser user = userService.findByUsernameOrThrow(authentication.getName());
         Auction auction = auctionRepository.findBySlug(auctionSlug)
                 .orElseThrow(() -> new IllegalArgumentException("Invalid auction slug: " + auctionSlug));
 
@@ -211,8 +213,7 @@ public class AuctionController {
     public String editAuction(@PathVariable("slug") String slug, Model model, Authentication authentication) {
         Auction auction = auctionRepository.findBySlug(slug)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Auction not found"));
-        AuctionUser currentUser = userRepository.findByEmail(authentication.getName())
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        AuctionUser currentUser = userService.findByUsernameOrThrow(authentication.getName());
 
         if (auction.getStatus() != AuctionStatus.ACTIVE) {
             model.addAttribute("errorMessage", "This auction is no longer active.");
@@ -243,8 +244,7 @@ public class AuctionController {
 
         Auction auction = auctionRepository.findBySlug(slug)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Auction not found"));
-        AuctionUser currentUser = userRepository.findByEmail(authentication.getName())
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        AuctionUser currentUser = userService.findByUsernameOrThrow(authentication.getName());
 
         if (!currentUser.getId().equals(auction.getAuctionCreator().getId())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
@@ -263,13 +263,12 @@ public class AuctionController {
             return "redirect:/auction/" + slug + "/edit";
         }
 
-        return "redirect:/profile/auctions";
+        return "redirect:/auction/" + slug;
     }
 
     @PostMapping("/add-to-watchlist/{auctionId}")
     public ResponseEntity<?> addToWatchlist(@PathVariable Long auctionId, Authentication authentication, RedirectAttributes redirectAttributes) {
-        AuctionUser currentUser = userRepository.findByEmail(authentication.getName())
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        AuctionUser currentUser = userService.findByUsernameOrThrow(authentication.getName());
         Auction auction = auctionRepository.findById(auctionId)
                 .orElseThrow(() -> new IllegalArgumentException("Invalid auction Id:" + auctionId));
         auctionService.addToWatchlist(currentUser, auction);
@@ -279,8 +278,7 @@ public class AuctionController {
 
     @PostMapping("/remove-from-watchlist/{auctionId}")
     public ResponseEntity<?> removeFromWatchlist(@PathVariable Long auctionId, Authentication authentication, RedirectAttributes redirectAttributes) {
-        AuctionUser currentUser = userRepository.findByEmail(authentication.getName())
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        AuctionUser currentUser = userService.findByUsernameOrThrow(authentication.getName());
         Auction auction = auctionRepository.findById(auctionId)
                 .orElseThrow(() -> new IllegalArgumentException("Invalid auction Id:" + auctionId));
         auctionService.removeFromWatchlist(currentUser, auction);

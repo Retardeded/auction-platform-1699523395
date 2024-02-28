@@ -336,7 +336,7 @@ class AuctionServiceTest {
         when(auctionRepository.findByEndTimeAfterAndStatusNot(any(LocalDateTime.class), any(AuctionStatus.class)))
                 .thenReturn(auctions);
 
-        List<Auction> result = auctionService.findCheapestAuctions(2);
+        List<Auction> result = auctionService.setCheapestAuctions(2);
 
         assertEquals(2, result.size());
         assertEquals(new BigDecimal("50.00"), result.get(0).getHighestBid());
@@ -375,7 +375,7 @@ class AuctionServiceTest {
 
         AuctionUser currentUser = new AuctionUser();
 
-        List<Auction> result = auctionService.findExpensiveAuctions(2);
+        List<Auction> result = auctionService.setExpensiveAuctions(2);
 
         assertEquals(2, result.size());
         assertEquals(new BigDecimal("100.00"), result.get(0).getHighestBid());

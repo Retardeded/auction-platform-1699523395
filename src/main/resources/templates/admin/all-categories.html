@@ -1,0 +1,113 @@
+
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta name="_csrf" th:content="${_csrf.token}"/>
+  <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
+  <title>My Listings</title>
+
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css" rel="stylesheet"/>
+
+  <link th:href="@{/css/search-bar.css}" rel="stylesheet" />
+  <link th:href="@{/css/sidebar.css}" rel="stylesheet" />
+  <link th:href="@{/css/all-categories.css}" rel="stylesheet" />
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.js"></script>
+
+  <script th:src="@{/js/dropdown.js}"></script>
+  <script th:src="@{/js/auction-search.js}"></script>
+  <script th:src="@{/js/create-edit-categories.js}"></script>
+</head>
+<body>
+
+<div th:replace="navbar :: navbar"></div>
+
+<div class="layout-container">
+  <div class="sidebar">
+    <h2>Categories Sections</h2>
+    <a href="#" class="sidebar-link" id="categoriesLink">All Categories</a>
+    <a href="/admin/profile" class="sidebar-link">Back to Profile</a>
+  </div>
+  <div class="main-content">
+    <div id="categories">
+      <h2>Edit Categories</h2>
+      <ul id="categories-data">
+        <li th:each="category : ${parentCategories}">
+          <a href="javascript:void(0)"
+             class="category-edit"
+             th:data-category-id="${category.id}"
+             th:data-category-name="${category.name}"
+             th:data-parent-category-id="${null}"
+             th:text="${category.name}">Parent Category Name</a>
+          <span class="delete-category fas fa-times" th:data-category-id="${category.id}" title="Delete Category"></span>
+          <ul class="subcategories" th:if="${!category.childCategories.isEmpty()}">
+            <li th:each="subCategory : ${category.childCategories}">
+              <div class="subcategory-item">
+                <a href="javascript:void(0)"
+                   class="category-edit"
+                   th:data-category-id="${subCategory.id}"
+                   th:data-category-name="${subCategory.name}"
+                   th:data-parent-category-id="${category.id}"
+                   th:text="${subCategory.name}">Subcategory Name</a>
+                <span class="delete-category fas fa-times" th:data-category-id="${subCategory.id}" title="Delete Subcategory"></span>
+              </div>
+            </li>
+          </ul>
+        </li>
+      </ul>
+
+      <button type="button" onclick="showAddCategoryModal()">Add New Category</button>
+
+    </div>
+
+    <div id="editCategoryModal" class="modal">
+      <div class="modal-content">
+        <span class="close" onclick="closeEditModal()">&times;</span>
+        <form id="editCategoryForm" class="category-form">
+          <input type="hidden" id="modalCategoryId" name="categoryId" value="">
+          <div>
+            <label for="modalCategoryName">Category Name:</label>
+            <input type="text" id="modalCategoryName" name="name">
+          </div>
+          <div>
+            <label for="modalParentCategory">Parent Category:</label>
+            <select id="modalParentCategory" name="parentCategoryId">
+              <option value="">No Parent</option>
+              <option th:each="parentCategory : ${parentCategories}"
+                      th:value="${parentCategory.id}"
+                      th:text="${parentCategory.name}">
+              </option>
+            </select>
+          </div>
+          <button type="button" onclick="submitEditCategory()">Save Changes</button>
+        </form>
+      </div>
+    </div>
+
+    <div id="addCategoryModal" class="modal">
+      <div class="modal-content">
+        <span class="close" onclick="closeAddModal()">&times;</span>
+        <form id="addCategoryForm" class="category-form">
+          <div>
+            <label for="newCategoryName">Category Name:</label>
+            <input type="text" id="newCategoryName" name="name" required>
+          </div>
+          <div>
+            <label for="newParentCategory">Parent Category:</label>
+            <select id="newParentCategory" name="parentCategoryId">
+              <option value="">No Parent</option>
+              <option th:each="parentCategory : ${parentCategories}"
+                      th:value="${parentCategory.id}" th:text="${parentCategory.name}"></option>
+            </select>
+          </div>
+          <button type="button" onclick="submitNewCategory()">Create Category</button>
+        </form>
+      </div>
+    </div>
+
+  </div>
+</div>
+</body>
+<script th:src="@{/js/show-user-auctions.js}"></script>
+</html>

@@ -3,18 +3,15 @@ package pl.use.auction.config;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import pl.use.auction.model.Auction;
-import pl.use.auction.model.AuctionStatus;
-import pl.use.auction.model.AuctionUser;
-import pl.use.auction.model.Category;
+import pl.use.auction.model.*;
 import pl.use.auction.repository.AuctionRepository;
 import pl.use.auction.repository.CategoryRepository;
 import pl.use.auction.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import pl.use.auction.service.AuctionService;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
@@ -66,17 +63,22 @@ public class DefaultUserConfig {
     CommandLineRunner createDefaultUsersAndAuctions(UserRepository userRepository,
                                                     AuctionRepository auctionRepository,
                                                     CategoryRepository categoryRepository,
+                                                    AuctionService auctionService,
                                                     PasswordEncoder passwordEncoder) {
         return args -> {
-            AuctionUser defaultUser = createUserIfNotFound(userRepository, passwordEncoder, "default@gmail.com", "default", "default", "Krakow");
+            AuctionUser defaultUser = createUserIfNotFound(userRepository, passwordEncoder, "default@gmail.com", "default", "default", "Krakow", "USER");
 
-            AuctionUser anotherUser = createUserIfNotFound(userRepository, passwordEncoder, "another@gmail.com", "another", "another", "Warsaw");
+            AuctionUser anotherUser = createUserIfNotFound(userRepository, passwordEncoder, "another@gmail.com", "another", "another", "Warsaw", "USER");
 
-            AuctionUser basicUser = createUserIfNotFound(userRepository, passwordEncoder, "basic@gmail.com", "basic", "basic", "Krakow");
+            AuctionUser basicUser = createUserIfNotFound(userRepository, passwordEncoder, "basic@gmail.com", "basic", "basic", "Krakow", "USER");
 
-            AuctionUser testUser = createUserIfNotFound(userRepository, passwordEncoder, "test@gmail.com", "test", "test", "Warsaw");
+            AuctionUser testUser = createUserIfNotFound(userRepository, passwordEncoder, "test@gmail.com", "test", "test", "Warsaw", "USER");
+            testUser.setStatus(UserStatus.BANNED);
+            userRepository.save(testUser);
 
-            AuctionUser bottomUser = createUserIfNotFound(userRepository, passwordEncoder, "bottom@gmail.com", "bottom", "bottom", "Wroclaw");
+            AuctionUser bottomUser = createUserIfNotFound(userRepository, passwordEncoder, "bottom@gmail.com", "bottom", "bottom", "Wroclaw", "USER");
+
+            AuctionUser adminUser = createUserIfNotFound(userRepository, passwordEncoder, "admin@gmail.com", "admin", "admin", "Wroclaw", "ADMIN");
 
             if (auctionRepository.findByAuctionCreator(defaultUser).isEmpty()) {
                 createSampleAuctions(testUser, auctionRepository, defaultUser, categoryRepository, userRepository);
@@ -94,12 +96,17 @@ public class DefaultUserConfig {
             if (auctionRepository.findByAuctionCreator(testUser).isEmpty()) {
                 createSampleAuctions(defaultUser, auctionRepository, bottomUser, categoryRepository, userRepository);
             }
+
+            auctionService.setCheapestAuctions(6);
+            auctionService.setExpensiveAuctions(6);
         };
     }
 
-    private AuctionUser createUserIfNotFound(UserRepository userRepository, PasswordEncoder passwordEncoder, String email, String username, String password, String location) {
+    private AuctionUser createUserIfNotFound(UserRepository userRepository, PasswordEncoder passwordEncoder,
+                                             String email, String username, String password, String location, String role) {
         return userRepository.findByEmail(email).orElseGet(() -> {
             AuctionUser user = new AuctionUser();
+            user.setRole(role);
             user.setEmail(email);
             user.setUsername(username);
             user.setPassword(passwordEncoder.encode(password));

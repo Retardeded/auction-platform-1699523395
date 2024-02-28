@@ -42,9 +42,6 @@ public class ProfileControllerTest {
     private MockMvc mockMvc;
 
     @Mock
-    private UserRepository userRepository;
-
-    @Mock
     private UserService userService;
 
     @Mock
@@ -86,80 +83,82 @@ public class ProfileControllerTest {
     void viewProfile_ShouldReturnProfileView() {
         Model model = new ExtendedModelMap();
 
-        String email = "user@example.com";
+        String username = "user";
         AuctionUser user = new AuctionUser();
-        user.setEmail(email);
-        when(authentication.getName()).thenReturn(email);
-        when(userRepository.findByEmail(email)).thenReturn(Optional.of(user));
+        user.setUsername(username);
+
+        when(authentication.getName()).thenReturn(user.getUsername());
+        when(userService.findByUsernameOrThrow(user.getUsername())).thenReturn(user);
 
         String viewName = profileController.viewProfile(model, authentication);
 
-        verify(userRepository).findByEmail(email);
+        verify(userService).findByUsernameOrThrow(username);
         assertEquals("profile/profile", viewName);
         assertEquals(user, model.getAttribute("currentUser"), "The model should contain the currentUser attribute");
     }
 
     @Test
-    public void editProfile_ShouldReturnEditProfileView() throws Exception {
-        String email = "user@example.com";
-        AuctionUser mockUser = new AuctionUser();
-        mockUser.setEmail(email);
-        when(userRepository.findByEmail(email)).thenReturn(Optional.of(mockUser));
+    void editProfile_ShouldReturnEditProfileView() {
+        Model model = new ExtendedModelMap();
+        String username = "user";
+        AuctionUser user = new AuctionUser();
+        user.setUsername(username);
 
-        Authentication auth = Mockito.mock(Authentication.class);
-        when(auth.getName()).thenReturn(email);
+        when(authentication.getName()).thenReturn(username);
+        when(userService.findByUsernameOrThrow(username)).thenReturn(user);
 
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
-        SecurityContextHolder.setContext(securityContext);
+        String viewName = profileController.editProfile(model, authentication);
 
-        mockMvc.perform(get("/profile/edit").principal(auth))
-                .andExpect(status().isOk())
-                .andExpect(view().name("profile/profile-edit"))
-                .andExpect(model().attributeExists("user"));
-
-        SecurityContextHolder.clearContext();
+        verify(userService).findByUsernameOrThrow(username);
+        assertEquals("profile/profile-edit", viewName, "The returned view name should be 'profile/profile-edit'");
+        assertEquals(user, model.getAttribute("user"), "The model should contain the user attribute");
     }
 
     @Test
     void testShowChangePasswordForm() {
+        String username = "user";
         AuctionUser user = new AuctionUser();
-        user.setEmail("user@example.com");
+        user.setUsername(username);
 
-        when(authentication.getName()).thenReturn("user@example.com");
-        when(userRepository.findByEmail("user@example.com")).thenReturn(Optional.of(user));
+        when(authentication.getName()).thenReturn(user.getUsername());
+        when(userService.findByUsernameOrThrow(user.getUsername())).thenReturn(user);
 
         String viewName = profileController.showChangePasswordForm(model, authentication);
 
-        verify(userRepository).findByEmail("user@example.com");
+        verify(userService).findByUsernameOrThrow("user");
         verify(model).addAttribute("user", user);
 
         assertEquals("profile/change-password", viewName);
     }
-
     @Test
     void testUpdateProfile() {
+        Authentication authentication = Mockito.mock(Authentication.class);
+        String originalUsername = "user";
+        String newUsername = "NewUsername";
+
         AuctionUser existingUser = new AuctionUser();
-        existingUser.setEmail("existing@example.com");
+        existingUser.setUsername(originalUsername);
 
         AuctionUser updatedUser = new AuctionUser();
-        updatedUser.setUsername("NewUsername");
+        updatedUser.setUsername(newUsername);
         updatedUser.setFirstName("NewFirstName");
         updatedUser.setLastName("NewLastName");
         updatedUser.setLocation("NewLocation");
         updatedUser.setPhoneNumber("NewPhoneNumber");
 
-        when(authentication.getName()).thenReturn("existing@example.com");
-        when(userRepository.findByEmail("existing@example.com")).thenReturn(Optional.of(existingUser));
-
         String viewName = profileController.updateProfile(updatedUser, authentication);
 
-        verify(userRepository).findByEmail("existing@example.com");
-        verify(userRepository).save(existingUser);
-        assertEquals("NewUsername", existingUser.getUsername());
-        assertEquals("NewFirstName", existingUser.getFirstName());
-        assertEquals("NewLastName", existingUser.getLastName());
-        assertEquals("NewLocation", existingUser.getLocation());
-        assertEquals("NewPhoneNumber", existingUser.getPhoneNumber());
+        ArgumentCaptor<Authentication> authCaptor = ArgumentCaptor.forClass(Authentication.class);
+        ArgumentCaptor<AuctionUser> userCaptor = ArgumentCaptor.forClass(AuctionUser.class);
+        verify(userService).updateProfile(authCaptor.capture(), userCaptor.capture());
+
+        AuctionUser capturedUser = userCaptor.getValue();
+
+        assertEquals(newUsername, capturedUser.getUsername());
+        assertEquals("NewFirstName", capturedUser.getFirstName());
+        assertEquals("NewLastName", capturedUser.getLastName());
+        assertEquals("NewLocation", capturedUser.getLocation());
+        assertEquals("NewPhoneNumber", capturedUser.getPhoneNumber());
 
         assertEquals("redirect:/profile", viewName);
     }
@@ -173,10 +172,10 @@ public class ProfileControllerTest {
         String newPassword = "newPassword";
         String confirmNewPassword = "newPassword";
         AuctionUser user = new AuctionUser();
-        user.setEmail("user@example.com");
+        user.setUsername("user");
 
-        when(authentication.getName()).thenReturn("user@example.com");
-        when(userRepository.findByEmail("user@example.com")).thenReturn(Optional.of(user));
+        when(authentication.getName()).thenReturn(user.getUsername());
+        when(userService.findByUsernameOrThrow(user.getUsername())).thenReturn(user);
         when(userService.changeUserPassword(oldPassword, newPassword, confirmNewPassword, user))
                 .thenReturn(PasswordChangeResult.SUCCESS);
 
@@ -195,10 +194,10 @@ public class ProfileControllerTest {
         String newPassword = "newPassword";
         String confirmNewPassword = "newPassword";
         AuctionUser user = new AuctionUser();
-        user.setEmail("user@example.com");
+        user.setUsername("user");
 
-        when(authentication.getName()).thenReturn("user@example.com");
-        when(userRepository.findByEmail("user@example.com")).thenReturn(Optional.of(user));
+        when(authentication.getName()).thenReturn(user.getUsername());
+        when(userService.findByUsernameOrThrow(user.getUsername())).thenReturn(user);
         when(userService.changeUserPassword(oldPassword, newPassword, confirmNewPassword, user))
                 .thenReturn(PasswordChangeResult.INVALID_OLD_PASSWORD);
 
@@ -216,10 +215,10 @@ public class ProfileControllerTest {
         String newPassword = "newPassword";
         String confirmNewPassword = "differentNewPassword";
         AuctionUser user = new AuctionUser();
-        user.setEmail("user@example.com");
+        user.setUsername("user");
 
-        when(authentication.getName()).thenReturn("user@example.com");
-        when(userRepository.findByEmail("user@example.com")).thenReturn(Optional.of(user));
+        when(authentication.getName()).thenReturn(user.getUsername());
+        when(userService.findByUsernameOrThrow(user.getUsername())).thenReturn(user);
         when(userService.changeUserPassword(oldPassword, newPassword, confirmNewPassword, user))
                 .thenReturn(PasswordChangeResult.PASSWORD_MISMATCH);
 
@@ -240,16 +239,16 @@ public class ProfileControllerTest {
     @Test
     void testViewUserAuctions() {
         AuctionUser user = new AuctionUser();
-        user.setEmail("user@example.com");
+        user.setUsername("user");
         List<Auction> createdAuctions = createSampleAuctions();
         user.setCreatedAuctions(createdAuctions);
 
-        when(authentication.getName()).thenReturn("user@example.com");
-        when(userRepository.findByEmail("user@example.com")).thenReturn(Optional.of(user));
+        when(authentication.getName()).thenReturn(user.getUsername());
+        when(userService.findByUsernameOrThrow(user.getUsername())).thenReturn(user);;
 
         String viewName = profileController.viewUserAuctions(model, authentication);
 
-        verify(userRepository).findByEmail("user@example.com");
+        verify(userService).findByUsernameOrThrow("user");
 
         verify(model).addAttribute(eq("ongoingAuctions"), ongoingAuctionListCaptor.capture());
         List<Auction> ongoingAuctions = ongoingAuctionListCaptor.getValue();
@@ -264,18 +263,17 @@ public class ProfileControllerTest {
 
     @Test
     void testViewBoughtAuctions() {
-        String email = "user@example.com";
+        String username = "user";
         AuctionUser currentUser = new AuctionUser();
-        currentUser.setEmail(email);
-        List<Auction> boughtAuctions = List.of(new Auction(), new Auction()); // Mock some bought auctions
+        currentUser.setEmail(username);
+        List<Auction> boughtAuctions = List.of(new Auction(), new Auction());
 
-        when(authentication.getName()).thenReturn(email);
-        when(userRepository.findByEmail(email)).thenReturn(Optional.of(currentUser));
+        when(authentication.getName()).thenReturn(currentUser.getUsername());
+        when(userService.findByUsernameOrThrow(currentUser.getUsername())).thenReturn(currentUser);
         when(auctionRepository.findByBuyer(currentUser)).thenReturn(boughtAuctions);
 
         String viewName = profileController.viewBoughtAuctions(model, authentication);
 
-        verify(userRepository).findByEmail(email);
         verify(auctionRepository).findByBuyer(currentUser);
         verify(model).addAttribute("currentUser", currentUser);
         verify(model).addAttribute("boughtAuctions", boughtAuctions);
@@ -299,17 +297,17 @@ public class ProfileControllerTest {
     @Test
     void testViewUserHighestBids() {
         AuctionUser user = new AuctionUser();
-        user.setEmail("user@example.com");
+        user.setUsername("user");
         Auction specificAuction = createSpecificAuction("Unique Title", new BigDecimal("100.00"));
         List<Auction> highestBidAuctions = List.of(specificAuction);
 
-        when(authentication.getName()).thenReturn("user@example.com");
-        when(userRepository.findByEmail("user@example.com")).thenReturn(Optional.of(user));
+        when(authentication.getName()).thenReturn(user.getUsername());
+        when(userService.findByUsernameOrThrow(user.getUsername())).thenReturn(user);
         when(auctionRepository.findByHighestBidder(user)).thenReturn(highestBidAuctions);
 
         String viewName = profileController.viewUserHighestBids(model, authentication);
 
-        verify(userRepository).findByEmail("user@example.com");
+        verify(userService).findByUsernameOrThrow("user");
         verify(auctionRepository).findByHighestBidder(user);
         verify(model).addAttribute("highestBidAuctions", highestBidAuctions);
 
@@ -330,16 +328,16 @@ public class ProfileControllerTest {
     @Test
     void testShowObservedAuctions() {
         AuctionUser currentUser = new AuctionUser();
-        currentUser.setEmail("user@example.com");
+        currentUser.setUsername("user");
         Set<Auction> observedAuctions = Set.of(createSpecificAuction("Observed Auction", new BigDecimal("50.00")));
         currentUser.setObservedAuctions(observedAuctions);
 
-        when(authentication.getName()).thenReturn("user@example.com");
-        when(userRepository.findByEmail("user@example.com")).thenReturn(Optional.of(currentUser));
+        when(authentication.getName()).thenReturn(currentUser.getUsername());
+        when(userService.findByUsernameOrThrow(currentUser.getUsername())).thenReturn(currentUser);
 
         String viewName = profileController.showObservedAuctions(model, authentication);
 
-        verify(userRepository).findByEmail("user@example.com");
+        verify(userService).findByUsernameOrThrow("user");
         verify(model).addAttribute("currentUser", currentUser);
         verify(model).addAttribute("observedAuctions", observedAuctions);
 
@@ -351,7 +349,7 @@ public class ProfileControllerTest {
     @Test
     void testViewMyBidsAndWatches() {
         AuctionUser currentUser = new AuctionUser();
-        currentUser.setEmail("user@example.com");
+        currentUser.setUsername("user");
 
         Auction highestBidAuction = createSpecificAuction("Highest Bid Auction", new BigDecimal("100.00"));
         Auction observedAuction = createSpecificAuction("Observed Auction", new BigDecimal("50.00"));
@@ -360,15 +358,15 @@ public class ProfileControllerTest {
         Set<Auction> observedAuctions = new HashSet<>();
         observedAuctions.add(observedAuction);
 
-        when(authentication.getName()).thenReturn("user@example.com");
-        when(userRepository.findByEmail("user@example.com")).thenReturn(Optional.of(currentUser));
+        when(authentication.getName()).thenReturn(currentUser.getUsername());
+        when(userService.findByUsernameOrThrow(currentUser.getUsername())).thenReturn(currentUser);
         when(auctionRepository.findByHighestBidderAndStatusIn(eq(currentUser), anyList())).thenReturn(highestBidAuctions);
 
         currentUser.setObservedAuctions(observedAuctions);
 
         String viewName = profileController.viewMyBidsAndWatches(model, authentication);
 
-        verify(userRepository).findByEmail("user@example.com");
+        verify(userService).findByUsernameOrThrow("user");
         verify(auctionRepository).findByHighestBidderAndStatusIn(eq(currentUser), anyList());
 
         verify(model).addAttribute("watchedAuctions", observedAuctions);
@@ -387,7 +385,7 @@ public class ProfileControllerTest {
 
     @Test
     void testViewUserProfile() {
-        String currentUserName = "user@example.com";
+        String currentUserName = "user";
         String profileUsername = "profileUser";
         AuctionUser currentUser = createSpecificUser(currentUserName);
         AuctionUser profileUser = createSpecificUser(profileUsername);
@@ -395,15 +393,14 @@ public class ProfileControllerTest {
         String cumulativeRating = "80% Positive";
 
         when(authentication.getName()).thenReturn(currentUserName);
-        when(userRepository.findByEmail(currentUserName)).thenReturn(Optional.of(currentUser));
-        when(userRepository.findByUsername(profileUsername)).thenReturn(Optional.of(profileUser));
+
+        when(userService.findByUsernameOrThrow(currentUserName)).thenReturn(currentUser);
+        when(userService.findByUsernameOrThrow(profileUsername)).thenReturn(profileUser);
         when(transactionFeedbackRepository.findBySellerOrBuyer(profileUser, profileUser)).thenReturn(feedbackList);
         when(profileService.calculateCumulativeRating(feedbackList, feedbackList.size())).thenReturn(cumulativeRating);
 
         String viewName = profileController.viewUserProfile(profileUsername, authentication, model);
 
-        verify(userRepository).findByEmail(currentUserName);
-        verify(userRepository).findByUsername(profileUsername);
         verify(transactionFeedbackRepository).findBySellerOrBuyer(profileUser, profileUser);
         verify(model).addAttribute("currentUser", currentUser);
         verify(model).addAttribute("profileUser", profileUser);
@@ -421,14 +418,14 @@ public class ProfileControllerTest {
         AuctionUser seller = new AuctionUser();
         auction.setAuctionCreator(seller);
 
-        when(authentication.getName()).thenReturn(seller.getEmail());
         when(auctionRepository.findBySlug(auctionSlug)).thenReturn(Optional.of(auction));
-        when(userRepository.findByEmail(seller.getEmail())).thenReturn(Optional.of(seller));
+        when(authentication.getName()).thenReturn(seller.getUsername());
+        when(userService.findByUsernameOrThrow(seller.getUsername())).thenReturn(seller);
 
         String viewName = profileController.showRatingPage(auctionSlug, model, authentication);
 
         verify(auctionRepository).findBySlug(auctionSlug);
-        verify(userRepository).findByEmail(seller.getEmail());
+        verify(userService).findByUsernameOrThrow(seller.getUsername());
         verify(model).addAttribute("auction", auction);
         verify(model).addAttribute("currentUser", seller);
         verify(model).addAttribute("role", "seller");
@@ -444,14 +441,14 @@ public class ProfileControllerTest {
         AuctionUser seller = new AuctionUser();
         auction.setAuctionCreator(seller);
 
-        when(authentication.getName()).thenReturn(buyer.getEmail());
+        when(authentication.getName()).thenReturn(buyer.getUsername());
+        when(userService.findByUsernameOrThrow(buyer.getUsername())).thenReturn(buyer);
         when(auctionRepository.findBySlug(auctionSlug)).thenReturn(Optional.of(auction));
-        when(userRepository.findByEmail(buyer.getEmail())).thenReturn(Optional.of(buyer));
 
         String viewName = profileController.showRatingPage(auctionSlug, model, authentication);
 
         verify(auctionRepository).findBySlug(auctionSlug);
-        verify(userRepository).findByEmail(buyer.getEmail());
+        verify(userService).findByUsernameOrThrow(buyer.getUsername());
         verify(model).addAttribute("auction", auction);
         verify(model).addAttribute("currentUser", buyer);
         verify(model).addAttribute("role", "buyer");
@@ -465,7 +462,7 @@ public class ProfileControllerTest {
         Auction auction = new Auction();
         auction.setSlug(auctionSlug);
         AuctionUser buyer = new AuctionUser();
-        buyer.setEmail("buyer@example.com");
+        buyer.setUsername("buyer");
         AuctionUser seller = new AuctionUser();
         auction.setAuctionCreator(seller);
 
@@ -473,10 +470,10 @@ public class ProfileControllerTest {
         transactionFeedbackDTO.setComment("Great transaction!");
         transactionFeedbackDTO.setRating(Rating.POSITIVE);
 
-        when(authentication.getName()).thenReturn(buyer.getEmail());
+        when(authentication.getName()).thenReturn(buyer.getUsername());
+        when(userService.findByUsernameOrThrow(buyer.getUsername())).thenReturn(buyer);
 
         when(auctionRepository.findBySlug(auctionSlug)).thenReturn(Optional.of(auction));
-        when(userRepository.findByEmail(buyer.getEmail())).thenReturn(Optional.of(buyer));
         when(transactionFeedbackRepository.findByAuction(auction)).thenReturn(Optional.empty());
 
         ResponseEntity<?> response = profileController.submitBuyerFeedback(auctionSlug, transactionFeedbackDTO, authentication);
@@ -491,7 +488,7 @@ public class ProfileControllerTest {
         Auction auction = new Auction();
         auction.setSlug(auctionSlug);
         AuctionUser buyer = new AuctionUser();
-        buyer.setEmail("buyer@example.com");
+        buyer.setUsername("buyer");
         AuctionUser seller = new AuctionUser();
         auction.setAuctionCreator(seller);
 
@@ -513,16 +510,16 @@ public class ProfileControllerTest {
         Auction auction = new Auction();
         auction.setSlug(auctionSlug);
         AuctionUser seller = new AuctionUser();
-        seller.setEmail("seller@example.com");
+        seller.setUsername("seller");
         auction.setAuctionCreator(seller);
 
         TransactionFeedbackDTO transactionFeedbackDTO = new TransactionFeedbackDTO();
         transactionFeedbackDTO.setComment("Excellent buyer!");
         transactionFeedbackDTO.setRating(Rating.POSITIVE);
 
-        when(authentication.getName()).thenReturn(seller.getEmail());
+        when(authentication.getName()).thenReturn(seller.getUsername());
+        when(userService.findByUsernameOrThrow(seller.getUsername())).thenReturn(seller);
         when(auctionRepository.findBySlug(auctionSlug)).thenReturn(Optional.of(auction));
-        when(userRepository.findByEmail(seller.getEmail())).thenReturn(Optional.of(seller));
         when(transactionFeedbackRepository.findByAuction(auction)).thenReturn(Optional.empty());
 
         ResponseEntity<?> response = profileController.submitSellerFeedback(auctionSlug, transactionFeedbackDTO, authentication);

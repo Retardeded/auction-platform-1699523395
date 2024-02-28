@@ -25,6 +25,7 @@ import pl.use.auction.repository.AuctionRepository;
 import pl.use.auction.repository.UserRepository;
 import pl.use.auction.service.AuctionService;
 import pl.use.auction.service.CategoryService;
+import pl.use.auction.service.UserService;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -48,7 +49,7 @@ class AuctionControllerTest {
     private AuctionRepository auctionRepository;
 
     @Mock
-    private UserRepository userRepository;
+    private UserService userService;
 
     @Mock
     private CategoryService categoryService;
@@ -98,7 +99,7 @@ class AuctionControllerTest {
         String viewName = auctionController.createAuction(auction, files, categoryId, bindingResult, authentication);
 
         verify(auctionService).createAndSaveAuction(auction, categoryId, files, "test@example.com");
-        assertEquals("redirect:/profile/auctions", viewName);
+        assertEquals("redirect:/profile/user-auctions", viewName);
     }
 
     @Test
@@ -170,15 +171,15 @@ class AuctionControllerTest {
         auction.setCategory(category);
 
         AuctionUser user = new AuctionUser();
-        user.setEmail("test@example.com");
+        user.setUsername("test");
 
-        when(authentication.getName()).thenReturn("test@example.com");
-        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(user));
+        when(authentication.getName()).thenReturn(user.getUsername());
+        when(userService.findByUsernameOrThrow(user.getUsername())).thenReturn(user);
         when(auctionRepository.findBySlug(auctionSlug)).thenReturn(Optional.of(auction));
 
         String viewName = auctionController.viewAuctionDetail(auctionSlug, model, authentication);
 
-        verify(userRepository).findByEmail("test@example.com");
+        verify(userService).findByUsernameOrThrow(user.getUsername());
         verify(auctionRepository).findBySlug(auctionSlug);
 
         ArgumentCaptor<Auction> auctionCaptor = ArgumentCaptor.forClass(Auction.class);
@@ -203,13 +204,13 @@ class AuctionControllerTest {
         auction.setHighestBid(BigDecimal.ZERO);
         AuctionUser creator = new AuctionUser();
         creator.setId(1L);
-        creator.setEmail("creator@example.com");
+        creator.setUsername("creator");
         auction.setAuctionCreator(creator);
         List<Category> categories = new ArrayList<>();
 
         Authentication authentication = mock(Authentication.class);
-        when(authentication.getName()).thenReturn("creator@example.com");
-        when(userRepository.findByEmail("creator@example.com")).thenReturn(Optional.of(creator));
+        when(authentication.getName()).thenReturn(creator.getUsername());
+        when(userService.findByUsernameOrThrow(creator.getUsername())).thenReturn(creator);
         when(auctionRepository.findBySlug(slug)).thenReturn(Optional.of(auction));
         when(categoryService.findAllMainCategoriesWithSubcategories()).thenReturn(categories);
 
@@ -246,8 +247,8 @@ class AuctionControllerTest {
         auction.setAuctionCreator(creator);
 
         Authentication authentication = mock(Authentication.class);
-        when(authentication.getName()).thenReturn("notcreator@example.com");
-        when(userRepository.findByEmail("notcreator@example.com")).thenReturn(Optional.of(currentUser));
+        when(authentication.getName()).thenReturn("notcreator");
+        when(userService.findByUsernameOrThrow("notcreator")).thenReturn(currentUser);
         when(auctionRepository.findBySlug(slug)).thenReturn(Optional.of(auction));
 
         assertThrows(ResponseStatusException.class, () -> {
@@ -267,8 +268,8 @@ class AuctionControllerTest {
         auction.setAuctionCreator(creator);
 
         Authentication authentication = mock(Authentication.class);
-        when(authentication.getName()).thenReturn("creator@example.com");
-        when(userRepository.findByEmail("creator@example.com")).thenReturn(Optional.of(creator));
+        when(authentication.getName()).thenReturn(creator.getUsername());
+        when(userService.findByUsernameOrThrow(creator.getUsername())).thenReturn(creator);
         when(auctionRepository.findBySlug(slug)).thenReturn(Optional.of(auction));
 
         assertThrows(ResponseStatusException.class, () -> {
@@ -290,8 +291,8 @@ class AuctionControllerTest {
         List<String> imagesToDelete = new ArrayList<>();
 
         Authentication authentication = mock(Authentication.class);
-        when(authentication.getName()).thenReturn("creator@example.com");
-        when(userRepository.findByEmail("creator@example.com")).thenReturn(Optional.of(creator));
+        when(authentication.getName()).thenReturn(creator.getUsername());
+        when(userService.findByUsernameOrThrow(creator.getUsername())).thenReturn(creator);
         when(auctionRepository.findBySlug(slug)).thenReturn(Optional.of(auction));
         when(auctionService.updateAuction(slug, auctionDetails, newImages, imagesToDelete)).thenReturn(auction);
 
@@ -300,7 +301,7 @@ class AuctionControllerTest {
         String viewName = auctionController.updateAuction(slug, auctionDetails, newImages, imagesToDelete, authentication, redirectAttributes);
 
         verify(auctionService).updateAuction(slug, auctionDetails, newImages, imagesToDelete);
-        assertEquals("redirect:/profile/auctions", viewName);
+        assertEquals("redirect:/auction/some-slug", viewName);
     }
 
     @Test
@@ -312,6 +313,7 @@ class AuctionControllerTest {
         AuctionUser creator = new AuctionUser();
         creator.setId(1L);
         AuctionUser nonCreator = new AuctionUser();
+        nonCreator.setUsername("noncreator");
         nonCreator.setId(2L);
         auction.setAuctionCreator(creator);
 
@@ -320,8 +322,8 @@ class AuctionControllerTest {
         List<String> imagesToDelete = new ArrayList<>();
 
         Authentication authentication = mock(Authentication.class);
-        when(authentication.getName()).thenReturn("noncreator@example.com");
-        when(userRepository.findByEmail("noncreator@example.com")).thenReturn(Optional.of(nonCreator));
+        when(authentication.getName()).thenReturn(nonCreator.getUsername());
+        when(userService.findByUsernameOrThrow(nonCreator.getUsername())).thenReturn(nonCreator);
         when(auctionRepository.findBySlug(slug)).thenReturn(Optional.of(auction));
 
         assertThrows(ResponseStatusException.class, () -> {
@@ -344,8 +346,8 @@ class AuctionControllerTest {
         List<String> imagesToDelete = new ArrayList<>();
 
         Authentication authentication = mock(Authentication.class);
-        when(authentication.getName()).thenReturn("creator@example.com");
-        when(userRepository.findByEmail("creator@example.com")).thenReturn(Optional.of(creator));
+        when(authentication.getName()).thenReturn(creator.getUsername());
+        when(userService.findByUsernameOrThrow(creator.getUsername())).thenReturn(creator);
         when(auctionRepository.findBySlug(slug)).thenReturn(Optional.of(auction));
 
         RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
@@ -365,17 +367,17 @@ class AuctionControllerTest {
     void testAddToWatchlist() {
         Long auctionId = 1L;
         AuctionUser currentUser = new AuctionUser();
-        currentUser.setEmail("test@example.com");
+        currentUser.setUsername("test");
         Auction auction = new Auction();
         auction.setId(auctionId);
 
-        when(authentication.getName()).thenReturn("test@example.com");
-        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(currentUser));
+        when(authentication.getName()).thenReturn(currentUser.getUsername());
+        when(userService.findByUsernameOrThrow(currentUser.getUsername())).thenReturn(currentUser);
         when(auctionRepository.findById(auctionId)).thenReturn(Optional.of(auction));
 
         ResponseEntity<?> response = auctionController.addToWatchlist(auctionId, authentication, redirectAttributes);
 
-        verify(userRepository).findByEmail("test@example.com");
+        verify(userService).findByUsernameOrThrow(currentUser.getUsername());
         verify(auctionRepository).findById(auctionId);
         verify(auctionService).addToWatchlist(currentUser, auction);
         verify(redirectAttributes).addFlashAttribute("watchMessage", "Added to watchlist.");
@@ -387,17 +389,17 @@ class AuctionControllerTest {
     void testRemoveFromWatchlist() {
         Long auctionId = 1L;
         AuctionUser currentUser = new AuctionUser();
-        currentUser.setEmail("test@example.com");
+        currentUser.setUsername("test");
         Auction auction = new Auction();
         auction.setId(auctionId);
 
-        when(authentication.getName()).thenReturn("test@example.com");
-        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(currentUser));
+        when(authentication.getName()).thenReturn(currentUser.getUsername());
+        when(userService.findByUsernameOrThrow(currentUser.getUsername())).thenReturn(currentUser);
         when(auctionRepository.findById(auctionId)).thenReturn(Optional.of(auction));
 
         ResponseEntity<?> response = auctionController.removeFromWatchlist(auctionId, authentication, redirectAttributes);
 
-        verify(userRepository).findByEmail("test@example.com");
+        verify(userService).findByUsernameOrThrow("test");
         verify(auctionRepository).findById(auctionId);
         verify(auctionService).removeFromWatchlist(currentUser, auction);
         verify(redirectAttributes).addFlashAttribute("watchMessage", "Removed from watchlist.");
@@ -410,20 +412,20 @@ class AuctionControllerTest {
         String auctionSlug = "some-auction-slug";
         BigDecimal bidAmount = new BigDecimal("100.00");
         AuctionUser bidder = new AuctionUser();
-        bidder.setEmail("bidder@example.com");
+        bidder.setUsername("bidder");
         Auction auction = new Auction();
         auction.setSlug(auctionSlug);
         auction.setStatus(AuctionStatus.ACTIVE);
 
-        when(authentication.getName()).thenReturn("bidder@example.com");
-        when(userRepository.findByEmail("bidder@example.com")).thenReturn(Optional.of(bidder));
+        when(authentication.getName()).thenReturn(bidder.getUsername());
+        when(userService.findByUsernameOrThrow(bidder.getUsername())).thenReturn(bidder);
         when(auctionRepository.findBySlug(auctionSlug)).thenReturn(Optional.of(auction));
         when(auctionService.placeBid(auction, bidder, bidAmount)).thenReturn(true);
 
         String viewName = auctionController.placeBid(auctionSlug, bidAmount, authentication, redirectAttributes);
 
         verify(auctionRepository).findBySlug(auctionSlug);
-        verify(userRepository).findByEmail("bidder@example.com");
+        verify(userService).findByUsernameOrThrow("bidder");
         verify(auctionService).placeBid(auction, bidder, bidAmount);
         verify(redirectAttributes).addFlashAttribute("successMessage", "Bid placed successfully!");
 
@@ -435,13 +437,13 @@ class AuctionControllerTest {
         String auctionSlug = "another-auction-slug";
         BigDecimal bidAmount = new BigDecimal("100.00");
         AuctionUser bidder = new AuctionUser();
-        bidder.setEmail("bidder@example.com");
+        bidder.setEmail("bidder");
         Auction auction = new Auction();
         auction.setSlug(auctionSlug);
         auction.setStatus(AuctionStatus.ACTIVE);
 
-        when(authentication.getName()).thenReturn("bidder@example.com");
-        when(userRepository.findByEmail("bidder@example.com")).thenReturn(Optional.of(bidder));
+        when(authentication.getName()).thenReturn(bidder.getUsername());
+        when(userService.findByUsernameOrThrow(bidder.getUsername())).thenReturn(bidder);
         when(auctionRepository.findBySlug(auctionSlug)).thenReturn(Optional.of(auction));
         when(auctionService.placeBid(auction, bidder, bidAmount)).thenReturn(false);
 
@@ -493,11 +495,12 @@ class AuctionControllerTest {
         auction.setSlug(auctionSlug);
         auction.setStatus(AuctionStatus.AWAITING_PAYMENT);
         AuctionUser highestBidder = new AuctionUser();
+        highestBidder.setUsername("highestBidder");
         auction.setHighestBidder(highestBidder);
 
         when(auctionRepository.findBySlug(auctionSlug)).thenReturn(Optional.of(auction));
-        when(userRepository.findByEmail(anyString())).thenReturn(Optional.of(highestBidder));
-        when(authentication.getName()).thenReturn("highestBidder@example.com");
+        when(authentication.getName()).thenReturn(highestBidder.getUsername());
+        when(userService.findByUsernameOrThrow(highestBidder.getUsername())).thenReturn(highestBidder);
         when(auctionService.proceedToPayment(anyString(), any(BigDecimal.class)))
                 .thenReturn(ResponseEntity.ok().build());
 
@@ -528,10 +531,11 @@ class AuctionControllerTest {
         auction.setSlug(auctionSlug);
         auction.setStatus(AuctionStatus.ACTIVE); // Not awaiting payment
         AuctionUser currentUser = new AuctionUser();
+        currentUser.setUsername("currentUser");
 
         when(auctionRepository.findBySlug(auctionSlug)).thenReturn(Optional.of(auction));
-        when(userRepository.findByEmail(anyString())).thenReturn(Optional.of(currentUser));
-        when(authentication.getName()).thenReturn("currentUser@example.com");
+        when(authentication.getName()).thenReturn(currentUser.getUsername());
+        when(userService.findByUsernameOrThrow(currentUser.getUsername())).thenReturn(currentUser);
 
         ResponseEntity<?> response = auctionController.finalizeAuctionPayment(auctionSlug, highestBidPrice, authentication);
 
@@ -545,9 +549,9 @@ class AuctionControllerTest {
         String auctionSlug = "unique-auction-slug";
         BigDecimal finalPrice = new BigDecimal("100.00");
         AuctionUser user = new AuctionUser();
-        user.setEmail("user@example.com");
+        user.setUsername("user");
 
-        when(authentication.getName()).thenReturn("user@example.com");
+        when(authentication.getName()).thenReturn(user.getUsername());
 
         Session session = mock(Session.class);
         when(session.getAmountTotal()).thenReturn(10000L);
@@ -557,7 +561,7 @@ class AuctionControllerTest {
 
         when(Session.retrieve(sessionId)).thenReturn(session);
 
-        when(userRepository.findByEmail("user@example.com")).thenReturn(Optional.of(user));
+        when(userService.findByUsernameOrThrow(user.getUsername())).thenReturn(user);
         doNothing().when(auctionService).finalizeAuctionSale(eq(auctionSlug), eq(user), any(BigDecimal.class));
 
         String viewName = auctionController.handlePaymentSuccess(sessionId, authentication, model);

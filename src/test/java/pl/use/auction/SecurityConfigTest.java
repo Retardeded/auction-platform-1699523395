@@ -71,9 +71,10 @@ public class SecurityConfigTest {
         testUser.setUsername("testUser");
         testUser.setPassword(passwordEncoder.encode("userPassword"));
         testUser.setVerified(true);
+        testUser.setRole("USER");
         userRepository.save(testUser);
 
-        mockMvc.perform(formLogin("/login").user("email", "testUser@example.com").password("password", "userPassword"))
+        mockMvc.perform(formLogin("/login").user("username", "testUser").password("password", "userPassword"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/home"));
     }
