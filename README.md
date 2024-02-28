@@ -1,24 +1,30 @@
-# GenericTemplate
+# Online Auction Application Overview 
 
-**[Insert a brief description of your application here. Describe its purpose, functionality, etc.]**
+**This application is an online auction platform that facilitates the sale of items through bidding. It is designed to accommodate various user interactions related to auctions, user account management, and administrative oversight.**
 
 ## 🌐 Demo
 
-[Your Demo Link Here](http://replace-with-your-link.com)
+[Your Demo Link Here](https://buy-in-sell-out-3749cdf38c38.herokuapp.com/)
+(But it works mainly on mondays/tuesdays)
 
 **Demo Credentials (If applicable):**
-- **Username:** ReplaceThisWithUsername
-- **Password:** ReplaceThisWithPassword
+- **Username:** admin/default/test
+- **Password:** admin/default/test
 
 ## 📖 About this Software
 
-Provide a comprehensive explanation of your software here. Dive into its core functionalities, why you opted to create it, its target users, and its value proposition.
+The software serves as an online auction platform, designed to facilitate the buying and selling of items through a virtual auction process. It enables users to list items for auction, bid on items, and manage their auction activities. This system is intended for users who desire to engage in auction-based transactions and provides the necessary infrastructure for such activities to take place in a digital environment.
 
 ### Features:
 
-1. **Feature 1:** Brief description.
-2. **Feature 2:** Brief description.
-3. **...:** Continue listing out the core features of your application.
+1. **User Account Creation and Management:** Individuals can sign up to create personal accounts, which are then verified to ensure secure and authenticated access. Account holders have the ability to manage their personal information and preferences.
+2. **Auction Listing and Bidding Process:** The platform allows users to list items for auction, complete with detailed descriptions and images. Potential buyers can browse these listings and place bids on items they wish to purchase.
+3. **Search Functionality:** Users can search for auctions using various filters such as keywords, categories, and location. They can also sort auction listings according to different criteria to find items of interest.
+4. **Notifications System:** Users receive notifications about auction-related activities, such as bid updates or auction conclusions. These can be reviewed and marked as read by the user.
+5. **Password Reset Feature:** In case of forgotten passwords, the system provides a secure mechanism for users to reset their credentials, ensuring they can maintain access to their accounts.
+6. **Feedback and Ratings Post-Transaction:** Users can leave feedback and rate their transaction experience, contributing to the credibility and reliability of the auction community.
+7. **Home Page Features:** Displays a selection of auctions, categorized by pricing or deals, giving users a snapshot of current auctions that may interest them.
+8. **Administrative Functions:** Administrators have the ability to manage the platform by featuring certain auctions, handling user accounts, and organizing the auction inventory through category management.
 
 ## 🖼️ Screenshots
 
