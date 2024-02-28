@@ -17,6 +17,7 @@ import pl.use.auction.repository.CategoryRepository;
 import pl.use.auction.repository.UserRepository;
 import pl.use.auction.service.AdminService;
 import pl.use.auction.service.AuctionService;
+import pl.use.auction.service.UserService;
 
 import java.util.*;
 
@@ -32,15 +33,14 @@ public class AdminController {
     @Autowired
     private AuctionService auctionService;
     @Autowired
+    private UserService userService;
+    @Autowired
     private AdminService adminService;
 
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/admin/profile")
     public String viewAdminProfile(Model model, Authentication authentication) {
-        String currentUserName = authentication.getName();
-
-        AuctionUser currentUser = userRepository.findByEmail(currentUserName)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        AuctionUser currentUser = userService.findByUsernameOrThrow(authentication.getName());
         model.addAttribute("currentUser", currentUser);
 
         return "admin/profile";
@@ -49,10 +49,7 @@ public class AdminController {
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/admin/all-auctions")
     public String viewAllAuctionsForAdmin(Model model, Authentication authentication) {
-        String currentUserName = authentication.getName();
-
-        AuctionUser currentUser = userRepository.findByEmail(currentUserName)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        AuctionUser currentUser = userService.findByUsernameOrThrow(authentication.getName());
         model.addAttribute("currentUser", currentUser);
 
         List<Auction> ongoingAuctions = adminService.getAllOngoingAuctions();
@@ -81,10 +78,7 @@ public class AdminController {
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/admin/all-categories")
     public String viewAllCategoriesForAdmin(Model model, Authentication authentication) {
-        String currentUserName = authentication.getName();
-
-        AuctionUser currentUser = userRepository.findByEmail(currentUserName)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        AuctionUser currentUser = userService.findByUsernameOrThrow(authentication.getName());
         model.addAttribute("currentUser", currentUser);
 
         List<Category> parentCategories = categoryRepository.findByParentCategoryIsNull();

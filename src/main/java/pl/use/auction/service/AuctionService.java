@@ -153,6 +153,13 @@ public class AuctionService {
         userRepository.save(user);
     }
 
+    public void removeAuctionFromObservers(Auction auction) {
+        auction.getObservers().forEach(observer -> {
+            observer.getObservedAuctions().remove(auction);
+            userRepository.save(observer);
+        });
+    }
+
     public List<Auction> setCheapestAuctions(int limit) {
         List<Auction> auctions = auctionRepository.findByEndTimeAfterAndStatusNot(LocalDateTime.now(), AuctionStatus.SOLD).stream()
                 .sorted(Comparator.comparing(Auction::getHighestBid))

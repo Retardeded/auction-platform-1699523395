@@ -28,9 +28,6 @@ import java.util.stream.Collectors;
 public class ProfileController {
 
     @Autowired
-    private UserRepository userRepository;
-
-    @Autowired
     private UserService userService;
 
     @Autowired
@@ -44,9 +41,7 @@ public class ProfileController {
 
     @GetMapping("/profile/user-auctions")
     public String viewUserAuctions(Model model, Authentication authentication) {
-        String currentUserName = authentication.getName();
-        AuctionUser currentUser = userRepository.findByEmail(currentUserName)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        AuctionUser currentUser = userService.findByUsernameOrThrow(authentication.getName());
         model.addAttribute("currentUser", currentUser);
 
         List<Auction> allUserAuctions = currentUser.getCreatedAuctions();
@@ -73,9 +68,7 @@ public class ProfileController {
 
     @GetMapping("/profile/purchase-auctions")
     public String viewBoughtAuctions(Model model, Authentication authentication) {
-        String currentUserName = authentication.getName();
-        AuctionUser currentUser = userRepository.findByEmail(currentUserName)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        AuctionUser currentUser = userService.findByUsernameOrThrow(authentication.getName());
         model.addAttribute("currentUser", currentUser);
 
         List<Auction> boughtAuctions = auctionRepository.findByBuyer(currentUser);
@@ -94,10 +87,7 @@ public class ProfileController {
 
     @GetMapping("/profile/highest-bids")
     public String viewUserHighestBids(Model model, Authentication authentication) {
-        String currentUserName = authentication.getName();
-        AuctionUser user = userRepository.findByEmail(currentUserName)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
-
+        AuctionUser user = userService.findByUsernameOrThrow(authentication.getName());
         List<Auction> highestBidAuctions = auctionRepository.findByHighestBidder(user);
         model.addAttribute("highestBidAuctions", highestBidAuctions);
 
@@ -106,9 +96,7 @@ public class ProfileController {
 
     @GetMapping("/profile/observed-auctions")
     public String showObservedAuctions(Model model, Authentication authentication) {
-        String currentUserName = authentication.getName();
-        AuctionUser currentUser = userRepository.findByEmail(currentUserName)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        AuctionUser currentUser = userService.findByUsernameOrThrow(authentication.getName());
 
         Set<Auction> observedAuctions = currentUser.getObservedAuctions();
         model.addAttribute("currentUser", currentUser); // Pass the current user to the model
@@ -119,9 +107,7 @@ public class ProfileController {
 
     @GetMapping("/profile/my-bids-and-watches")
     public String viewMyBidsAndWatches(Model model, Authentication authentication) {
-        String currentUserName = authentication.getName();
-        AuctionUser currentUser = userRepository.findByEmail(currentUserName)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        AuctionUser currentUser = userService.findByUsernameOrThrow(authentication.getName());
 
         List<AuctionStatus> statuses = List.of(AuctionStatus.ACTIVE, AuctionStatus.AWAITING_PAYMENT);
         List<Auction> highestBidAuctions = auctionRepository.findByHighestBidderAndStatusIn(currentUser, statuses);
@@ -137,11 +123,8 @@ public class ProfileController {
 
     @GetMapping("/user/{username}")
     public String viewUserProfile(@PathVariable("username") String username, Authentication authentication, Model model) {
-        String currentUserName = authentication.getName();
-        AuctionUser currentUser = userRepository.findByEmail(currentUserName)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
-        AuctionUser user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+        AuctionUser currentUser = userService.findByUsernameOrThrow(authentication.getName());
+        AuctionUser user = userService.findByUsernameOrThrow(username);
 
         List<TransactionFeedback> feedbackList = transactionFeedbackRepository.findBySellerOrBuyer(user, user);
         long totalFeedback = feedbackList.size();
@@ -158,46 +141,28 @@ public class ProfileController {
 
     @GetMapping("/profile")
     public String viewProfile(Model model, Authentication authentication) {
-        String currentUserName = authentication.getName();
-
-        AuctionUser currentUser = userRepository.findByEmail(currentUserName)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        AuctionUser currentUser = userService.findByUsernameOrThrow(authentication.getName());
         model.addAttribute("currentUser", currentUser);
         return "profile/profile";
     }
 
     @GetMapping("/profile/edit")
     public String editProfile(Model model, Authentication authentication) {
-        String currentUserName = authentication.getName();
-        AuctionUser user = userRepository.findByEmail(currentUserName).orElse(null);
+        AuctionUser user = userService.findByUsernameOrThrow(authentication.getName());
         model.addAttribute("user", user);
         return "profile/profile-edit";
     }
 
     @GetMapping("/profile/change-password")
     public String showChangePasswordForm(Model model, Authentication authentication) {
-        String currentUserName = authentication.getName();
-        AuctionUser user = userRepository.findByEmail(currentUserName)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
-
+        AuctionUser user = userService.findByUsernameOrThrow(authentication.getName());
         model.addAttribute("user", user);
         return "profile/change-password";
     }
 
     @PostMapping("/profile/update")
     public String updateProfile(@ModelAttribute AuctionUser updatedUser, Authentication authentication) {
-        String email = authentication.getName();
-        AuctionUser existingUser = userRepository.findByEmail(email)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
-
-        existingUser.setUsername(updatedUser.getUsername());
-        existingUser.setFirstName(updatedUser.getFirstName());
-        existingUser.setLastName(updatedUser.getLastName());
-        existingUser.setLocation(updatedUser.getLocation());
-        existingUser.setPhoneNumber(updatedUser.getPhoneNumber());
-
-        userRepository.save(existingUser);
-
+        userService.updateProfile(authentication.getName(), updatedUser);
         return "redirect:/profile";
     }
 
@@ -208,8 +173,7 @@ public class ProfileController {
                                  Authentication authentication,
                                  RedirectAttributes redirectAttributes,
                                  Model model) {
-        AuctionUser user = userRepository.findByEmail(authentication.getName())
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        AuctionUser user = userService.findByUsernameOrThrow(authentication.getName());
 
         PasswordChangeResult result = userService.changeUserPassword(oldPassword, newPassword, confirmNewPassword, user);
 
@@ -236,8 +200,7 @@ public class ProfileController {
         Auction auction = auctionRepository.findBySlug(auctionSlug)
                 .orElseThrow(() -> new IllegalArgumentException("Invalid auction slug: " + auctionSlug));
 
-        AuctionUser currentUser = userRepository.findByEmail(authentication.getName())
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        AuctionUser currentUser = userService.findByUsernameOrThrow(authentication.getName());
 
         String role = auction.getAuctionCreator().equals(currentUser) ? "seller" : "buyer";
 
@@ -255,8 +218,7 @@ public class ProfileController {
                                                  Authentication authentication) {
         Auction auction = auctionRepository.findBySlug(auctionSlug)
                 .orElseThrow(() -> new IllegalArgumentException("Invalid Auction slug: " + auctionSlug));
-        AuctionUser buyer = userRepository.findByEmail(authentication.getName())
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        AuctionUser buyer = userService.findByUsernameOrThrow(authentication.getName());
 
         TransactionFeedback feedback = transactionFeedbackRepository.findByAuction(auction)
                 .orElseGet(() -> {
@@ -289,8 +251,7 @@ public class ProfileController {
                                                   Authentication authentication) {
         Auction auction = auctionRepository.findBySlug(auctionSlug)
                 .orElseThrow(() -> new IllegalArgumentException("Invalid Auction slug: " + auctionSlug));
-        AuctionUser seller = userRepository.findByEmail(authentication.getName())
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        AuctionUser seller = userService.findByUsernameOrThrow(authentication.getName());
 
         if (!auction.getAuctionCreator().equals(seller)) {
             return ResponseEntity.badRequest().body("You are not authorized to submit feedback as the seller for this auction.");

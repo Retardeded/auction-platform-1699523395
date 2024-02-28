@@ -18,6 +18,7 @@ import pl.use.auction.model.AuctionUser;
 import pl.use.auction.model.Notification;
 import pl.use.auction.repository.NotificationRepository;
 import pl.use.auction.repository.UserRepository;
+import pl.use.auction.service.UserService;
 
 import java.util.List;
 import java.util.Optional;
@@ -26,7 +27,7 @@ import java.util.Optional;
 public class NotificationControllerTest {
 
     @Mock
-    private UserRepository userRepository;
+    private UserService userService;
 
     @Mock
     private NotificationRepository notificationRepository;
@@ -39,9 +40,9 @@ public class NotificationControllerTest {
 
     @Test
     void testGetNotifications() {
-        String userEmail = "user@example.com";
+        String username = "user";
         AuctionUser currentUser = new AuctionUser();
-        currentUser.setEmail(userEmail);
+        currentUser.setUsername(username);
 
         Notification notification1 = new Notification();
         notification1.setId(1L);
@@ -60,8 +61,9 @@ public class NotificationControllerTest {
         List<Notification> notifications = List.of(notification1, notification2);
 
         Authentication authentication = mock(Authentication.class);
-        when(authentication.getName()).thenReturn(userEmail);
-        when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(currentUser));
+        when(authentication.getName()).thenReturn(currentUser.getUsername());
+        when(userService.findByUsernameOrThrow(currentUser.getUsername())).thenReturn(currentUser);
+        when(authentication.getName()).thenReturn(username);
         when(notificationRepository.findByUserAndReadIsFalse(currentUser)).thenReturn(notifications);
 
         ResponseEntity<?> response = notificationController.getNotifications(authentication);
@@ -79,17 +81,17 @@ public class NotificationControllerTest {
 
     @Test
     void testMarkNotificationAsRead_Success() {
-        String userEmail = "user@example.com";
+        String username = "user";
         AuctionUser currentUser = new AuctionUser();
-        currentUser.setEmail(userEmail);
+        currentUser.setUsername(username);
 
         Notification notification = new Notification();
         notification.setId(1L);
         notification.setUser(currentUser);
         notification.setRead(false);
 
-        when(authentication.getName()).thenReturn(userEmail);
-        when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(currentUser));
+        when(authentication.getName()).thenReturn(currentUser.getUsername());
+        when(userService.findByUsernameOrThrow(currentUser.getUsername())).thenReturn(currentUser);
         when(notificationRepository.findById(1L)).thenReturn(Optional.of(notification));
 
         ResponseEntity<?> response = notificationController.markNotificationAsRead(1L, authentication);
@@ -101,12 +103,12 @@ public class NotificationControllerTest {
 
     @Test
     void testMarkNotificationAsRead_NotFound() {
-        String userEmail = "user@example.com";
+        String username = "user";
         AuctionUser currentUser = new AuctionUser();
-        currentUser.setEmail(userEmail);
+        currentUser.setUsername(username);
 
-        when(authentication.getName()).thenReturn(userEmail);
-        when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(currentUser));
+        when(authentication.getName()).thenReturn(currentUser.getUsername());
+        when(userService.findByUsernameOrThrow(currentUser.getUsername())).thenReturn(currentUser);
         when(notificationRepository.findById(anyLong())).thenReturn(Optional.empty());
 
         ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> {
@@ -119,9 +121,9 @@ public class NotificationControllerTest {
 
     @Test
     void testMarkNotificationAsRead_Forbidden() {
-        String userEmail = "user@example.com";
+        String username = "user";
         AuctionUser currentUser = new AuctionUser();
-        currentUser.setEmail(userEmail);
+        currentUser.setUsername(username);
 
         AuctionUser otherUser = new AuctionUser();
         otherUser.setEmail("other@example.com");
@@ -131,8 +133,8 @@ public class NotificationControllerTest {
         notification.setUser(otherUser);
         notification.setRead(false);
 
-        when(authentication.getName()).thenReturn(userEmail);
-        when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(currentUser));
+        when(authentication.getName()).thenReturn(currentUser.getUsername());
+        when(userService.findByUsernameOrThrow(currentUser.getUsername())).thenReturn(currentUser);
         when(notificationRepository.findById(1L)).thenReturn(Optional.of(notification));
 
         ResponseEntity<?> response = notificationController.markNotificationAsRead(1L, authentication);

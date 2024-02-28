@@ -22,6 +22,7 @@ import pl.use.auction.repository.AuctionRepository;
 import pl.use.auction.repository.CategoryRepository;
 import pl.use.auction.repository.UserRepository;
 import pl.use.auction.service.AdminService;
+import pl.use.auction.service.UserService;
 
 import java.util.*;
 
@@ -49,6 +50,9 @@ public class AdminControllerTest {
     @Mock
     private RedirectAttributes redirectAttributes;
 
+    @Mock
+    private UserService userService;
+
     @InjectMocks
     private AdminController adminController;
 
@@ -56,19 +60,19 @@ public class AdminControllerTest {
     public void testViewAdminProfile() {
         String expectedUserName = "test@example.com";
         AuctionUser expectedUser = new AuctionUser();
-        expectedUser.setEmail(expectedUserName);
+        expectedUser.setUsername(expectedUserName);
 
         when(authentication.getName()).thenReturn(expectedUserName);
-        when(userRepository.findByEmail(expectedUserName)).thenReturn(Optional.of(expectedUser));
+        when(userService.findByUsernameOrThrow(expectedUserName)).thenReturn(expectedUser);
 
         String viewName = adminController.viewAdminProfile(model, authentication);
 
         assertEquals("admin/profile", viewName);
+        verify(model).addAttribute("currentUser", expectedUser);
     }
 
     @Test
     public void testViewAllAuctionsForAdmin() {
-        // Arrange
         String expectedUserName = "admin@example.com";
         AuctionUser expectedUser = new AuctionUser();
         expectedUser.setEmail(expectedUserName);
@@ -82,7 +86,7 @@ public class AdminControllerTest {
         List<Auction> pastAuctions = Collections.singletonList(soldAuction);
 
         when(authentication.getName()).thenReturn(expectedUserName);
-        when(userRepository.findByEmail(expectedUserName)).thenReturn(Optional.of(expectedUser));
+        when(userService.findByUsernameOrThrow(expectedUserName)).thenReturn(expectedUser);
         when(adminService.getAllOngoingAuctions()).thenReturn(ongoingAuctions);
         when(adminService.getAllPastAuctions()).thenReturn(pastAuctions);
 
@@ -90,7 +94,7 @@ public class AdminControllerTest {
 
         assertEquals("admin/all-auctions", viewName);
 
-        verify(userRepository).findByEmail(expectedUserName);
+        verify(userService).findByUsernameOrThrow(expectedUserName);
         verify(adminService).getAllOngoingAuctions();
         verify(adminService).getAllPastAuctions();
     }
@@ -125,14 +129,13 @@ public class AdminControllerTest {
 
     @Test
     public void testViewAllCategoriesForAdmin() {
-        // Setup
         String expectedUserName = "admin@example.com";
         AuctionUser expectedUser = new AuctionUser();
         expectedUser.setEmail(expectedUserName);
         List<Category> expectedParentCategories = Arrays.asList(new Category(), new Category()); // Simplified example
 
         when(authentication.getName()).thenReturn(expectedUserName);
-        when(userRepository.findByEmail(expectedUserName)).thenReturn(Optional.of(expectedUser));
+        when(userService.findByUsernameOrThrow(expectedUserName)).thenReturn(expectedUser);
         when(categoryRepository.findByParentCategoryIsNull()).thenReturn(expectedParentCategories);
 
         String viewName = adminController.viewAllCategoriesForAdmin(model, authentication);

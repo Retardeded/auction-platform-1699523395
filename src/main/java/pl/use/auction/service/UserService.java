@@ -43,6 +43,23 @@ public class UserService implements UserDetailsService {
     @Value("${app.url}")
     private String appUrl;
 
+    public AuctionUser findByUsernameOrThrow(String username) {
+        return userRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + username));
+    }
+
+    public void updateProfile(String username, AuctionUser updatedUser) {
+        AuctionUser existingUser = findByUsernameOrThrow(username);
+
+        existingUser.setUsername(updatedUser.getUsername());
+        existingUser.setFirstName(updatedUser.getFirstName());
+        existingUser.setLastName(updatedUser.getLastName());
+        existingUser.setLocation(updatedUser.getLocation());
+        existingUser.setPhoneNumber(updatedUser.getPhoneNumber());
+
+        userRepository.save(existingUser);
+    }
+
     public void sendVerificationEmail(AuctionUser user, String token) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(user.getEmail());
@@ -68,9 +85,8 @@ public class UserService implements UserDetailsService {
     }
 
     @Override
-    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        AuctionUser auctionUser = userRepository.findByEmail(email)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        AuctionUser auctionUser = findByUsernameOrThrow(username);
 
         boolean enabled = true;
         boolean accountNonLocked = true;
@@ -85,7 +101,7 @@ public class UserService implements UserDetailsService {
 
         List<GrantedAuthority> authorities = Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + auctionUser.getRole().toUpperCase()));
 
-        return new CustomUserDetails(auctionUser.getEmail(), auctionUser.getPassword(), enabled,
+        return new CustomUserDetails(auctionUser.getUsername(), auctionUser.getPassword(), enabled,
                 true, true, accountNonLocked, authorities);
     }
 

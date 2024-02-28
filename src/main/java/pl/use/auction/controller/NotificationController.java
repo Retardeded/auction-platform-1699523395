@@ -15,6 +15,7 @@ import pl.use.auction.model.AuctionUser;
 import pl.use.auction.model.Notification;
 import pl.use.auction.repository.NotificationRepository;
 import pl.use.auction.repository.UserRepository;
+import pl.use.auction.service.UserService;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -23,15 +24,14 @@ import java.util.stream.Collectors;
 public class NotificationController {
 
     @Autowired
-    private UserRepository userRepository;
+    private UserService userService;
 
     @Autowired
     private NotificationRepository notificationRepository;
 
     @GetMapping("/notifications")
     public ResponseEntity<?> getNotifications(Authentication authentication) {
-        AuctionUser user = userRepository.findByEmail(authentication.getName())
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        AuctionUser user = userService.findByUsernameOrThrow(authentication.getName());
         List<Notification> notifications = notificationRepository.findByUserAndReadIsFalse(user);
 
         List<NotificationDTO> notificationDTOs = notifications.stream()
@@ -47,8 +47,7 @@ public class NotificationController {
 
     @PostMapping("/notifications/mark-read/{notificationId}")
     public ResponseEntity<?> markNotificationAsRead(@PathVariable Long notificationId, Authentication authentication) {
-        AuctionUser user = userRepository.findByEmail(authentication.getName())
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        AuctionUser user = userService.findByUsernameOrThrow(authentication.getName());
         Notification notification = notificationRepository.findById(notificationId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Notification not found"));
 

@@ -1,5 +1,6 @@
 package pl.use.auction.controller;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -13,23 +14,22 @@ import pl.use.auction.model.Category;
 import pl.use.auction.repository.CategoryRepository;
 import pl.use.auction.repository.UserRepository;
 import pl.use.auction.service.AuctionService;
+import pl.use.auction.service.UserService;
 
 import java.util.List;
 
 @Controller
 public class HomeController {
 
-    private final CategoryRepository categoryRepository;
+    @Autowired
+    private CategoryRepository categoryRepository;
 
-    private final UserRepository userRepository;
+    @Autowired
+    private AuctionService auctionService;
 
-    private final AuctionService auctionService;
+    @Autowired
+    private UserService userService;
 
-    public HomeController(CategoryRepository categoryRepository, UserRepository userRepository, AuctionService auctionService) {
-        this.categoryRepository = categoryRepository;
-        this.userRepository = userRepository;
-        this.auctionService = auctionService;
-    }
 
     @GetMapping("/home")
     public String home(Model model, Authentication authentication) {
@@ -37,8 +37,7 @@ public class HomeController {
         String username = userDetails.getUsername();
         model.addAttribute("username", username);
 
-        AuctionUser currentUser = userRepository.findByEmail(username)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        AuctionUser currentUser = userService.findByUsernameOrThrow(username);
 
 
         model.addAttribute("currentUser", currentUser);
@@ -71,8 +70,7 @@ public class HomeController {
         String username = userDetails.getUsername();
         model.addAttribute("username", username);
 
-        AuctionUser currentUser = userRepository.findByEmail(username)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        AuctionUser currentUser = userService.findByUsernameOrThrow(username);
         model.addAttribute("currentUser", currentUser);
 
         List<Category> parentCategories = categoryRepository.findByParentCategoryIsNull();
