@@ -4,7 +4,7 @@
 
 ## 🌐 Demo
 
-[Your Demo Link Here](https://buy-in-sell-out-3749cdf38c38.herokuapp.com/)
+[APP LINK](https://buy-in-sell-out-3749cdf38c38.herokuapp.com/)
 (But it works mainly on mondays/tuesdays)
 
 **Demo Credentials (If applicable):**
@@ -30,13 +30,38 @@ The software serves as an online auction platform, designed to facilitate the bu
 
 To give you a visual overview of the application, here are some screenshots:
 
-### [Feature or Page Name]
-![Description of Image](http://link-to-your-image.com/image1.png)
+### [Login Page]
+![Login Page](https://drive.google.com/uc?export=view&id=1UbeJxL0YuFR8ZJZAlj8P4rviUumkwdLE)
 
-### [Another Feature or Page Name]
-![Description of Image](http://link-to-your-image.com/image2.png)
+### [Home Page]
+![Home Page](https://drive.google.com/uc?export=view&id=18vMFEdldVWK-UKMzfN3ZRcqW68ZvqldK)
 
-Add more screenshots as needed. Ensure to replace placeholders with appropriate links and descriptions.
+### [Search Results]
+![Search Results](https://drive.google.com/uc?export=view&id=1Qg_BXc03XpmHQNAFjVGu3MJwQvh0NIqE)
+
+### [Profile Page]
+![Profile Page](https://drive.google.com/uc?export=view&id=1tvIeXm39VFn5akHsPQnK-X1RSy9niLOr)
+
+### [User Ended Aucions]
+![User Ended Auctions](https://drive.google.com/uc?export=view&id=19syxqmXTQ7afi0iyEU3TXToZGtW47Mkv)
+
+### [User Bids]
+![User Bids](https://drive.google.com/uc?export=view&id=1JgZTjwFIhbFMB_ioX5WP-j-P00J5Fn9H)
+
+### [Edit Auction]
+![Edit Auction](https://drive.google.com/uc?export=view&id=1-uF7cqCTE_3RTz0ZBhz9NUou7mUkDQzf)
+
+### [Create Auction]
+![Create Auction](https://drive.google.com/uc?export=view&id=1aoP6RuRg32xz9MhCfvpP4lj2DK_zbBc5)
+
+### [Auction Detail]
+![Auction Detail](https://drive.google.com/uc?export=view&id=1m0cBb7S7v3OTfaZPBS8NKAaSWzGmTKEq)
+
+### [Admin Profile]
+![Admin Profile](https://drive.google.com/uc?export=view&id=1mzwv-XsX6ygiZu3JFqKVE0vii8uTaJGY)
+
+### [Admin Edit Categories]
+![Admin Edit Categories](https://drive.google.com/uc?export=view&id=1YX23vuYLURxIqxXIGURn5_Jh1mMFWYzx)
 
 ## ⚠️ Warning
 
