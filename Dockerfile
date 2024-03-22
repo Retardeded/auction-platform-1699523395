@@ -11,7 +11,6 @@ COPY gradle /app/gradle
 
 # Copy the source code
 COPY src /app/src
-
 # Use the installed Gradle to run a clean build. No need to set executable permission.
 RUN gradle clean build -x test --no-daemon
 
@@ -21,6 +20,8 @@ WORKDIR /app
 
 # Copy only the built jar from the build stage to the runtime stage
 COPY --from=build /app/build/libs/auction-0.0.1-SNAPSHOT.jar /app/auction.jar
+
+COPY src/main/resources /app/src/main/resources
 
 # Add a volume pointing to /tmp
 VOLUME /tmp
