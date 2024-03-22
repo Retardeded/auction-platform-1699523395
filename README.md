@@ -4,7 +4,7 @@
 
 ## 🌐 Demo
 
-[APP LINK](https://buy-in-sell-out.onrender.com/)
+[APP LINK](https://buy-in-sell-out.onrender.com/home)
 
 **Demo Credentials :**
 - **Username:** admin/default/test/another
@@ -46,6 +46,9 @@ To give you a visual overview of the application, here are some screenshots:
 
 ### [User Bids]
 ![User Bids](https://drive.google.com/uc?export=view&id=1JgZTjwFIhbFMB_ioX5WP-j-P00J5Fn9H)
+
+### [Confirm Transaction with Stripe]
+![Confirm Transaction with Stripe](https://drive.google.com/uc?export=view&id=1czNuUZVXsopZ7JUHDLlz2DtOWe1GyhTq)
 
 ### [Edit Auction]
 ![Edit Auction](https://drive.google.com/uc?export=view&id=1-uF7cqCTE_3RTz0ZBhz9NUou7mUkDQzf)
