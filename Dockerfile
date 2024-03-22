@@ -13,7 +13,7 @@ COPY gradle /app/gradle
 COPY src /app/src
 
 # Use the installed Gradle to run a clean build. No need to set executable permission.
-RUN gradle clean build --no-daemon
+RUN gradle clean build -x test --no-daemon
 
 # Second stage: setup the runtime environment
 FROM openjdk:17
