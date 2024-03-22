@@ -4,12 +4,11 @@
 
 ## 🌐 Demo
 
-[APP LINK](https://buy-in-sell-out-3749cdf38c38.herokuapp.com/)
-(But it works mainly on mondays/tuesdays)
+[APP LINK](https://buy-in-sell-out.onrender.com/)
 
-**Demo Credentials (If applicable):**
-- **Username:** admin/default/test
-- **Password:** admin/default/test
+**Demo Credentials :**
+- **Username:** admin/default/test/another
+- **Password:** admin/default/test/another
 
 ## 📖 About this Software
 
