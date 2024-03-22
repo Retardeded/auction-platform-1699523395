@@ -1,8 +1,8 @@
-# First stage: build the application
-FROM openjdk:17 as build
+# Define the build stage with an official Gradle image
+FROM gradle:7.3.3-jdk17 as build
 WORKDIR /app
 
-# Copy the Gradle configuration files first (for caching purposes)
+# Copy the Gradle configuration files and wrapper script
 COPY gradlew /app/
 COPY gradle /app/gradle
 COPY build.gradle /app/
@@ -11,8 +11,8 @@ COPY settings.gradle /app/
 # Copy the source code
 COPY src /app/src
 
-# Grant execution permissions and run the build
-RUN chmod +x /app/gradlew && ./app/gradlew clean build --no-daemon
+# Use the Gradle Wrapper to run a clean build
+RUN ./gradlew clean build --no-daemon
 
 # Second stage: setup the runtime environment
 FROM openjdk:17
